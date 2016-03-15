@@ -9,7 +9,7 @@ app.context.setDefaultReferenceFrame(app.context.localOriginEastUpSouth);
 app.vuforia.init();
 app.vuforia.startCamera();
 app.vuforia.startObjectTracker();
-var dataset = app.vuforia.createDataSet('/resources/datasets/StonesAndChips.xml');
+var dataset = app.vuforia.createDataSet('../resources/datasets/StonesAndChips.xml');
 dataset.trackablesPromise.then(function (trackables) {
     // We subscribe to the stones trackable in order to start receiving updates for it
     var stonesEntity = app.context.subscribeToEntityById(trackables['stones'].id);
