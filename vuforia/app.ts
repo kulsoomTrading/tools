@@ -18,7 +18,7 @@ app.vuforia.init();
 app.vuforia.startCamera();
 app.vuforia.startObjectTracker();
 
-const dataset = app.vuforia.createDataSet('/resources/datasets/StonesAndChips.xml');
+const dataset = app.vuforia.createDataSet('../resources/datasets/StonesAndChips.xml');
 
 dataset.trackablesPromise.then((trackables) => {
 
