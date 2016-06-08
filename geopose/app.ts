@@ -1,6 +1,13 @@
 /// <reference path="../typings/browser.d.ts"/>
 declare const Argon:any;
 
+// grab some handles on APIs we use
+const Cesium = Argon.Cesium;
+const Cartesian3 = Argon.Cesium.Cartesian3;
+const ReferenceFrame = Argon.Cesium.ReferenceFrame;
+const JulianDate = Argon.Cesium.JulianDate;
+const CesiumMath = Argon.Cesium.CesiumMath;
+
 const app = Argon.init();
 
 const scene = new THREE.Scene();
@@ -64,9 +71,9 @@ loader.load( 'buzz.png', function ( texture ) {
 // near Georgia Tech in Atlanta.
 // you should probably adjust this to a spot closer to you 
 // (we found the lon/lat of Georgia Tech using Google Maps)
-var gatechGeoEntity = new Argon.Cesium.Entity({
+var gatechGeoEntity = new Cesium.Entity({
     name: "Georgia Tech",
-    position: Argon.Cesium.Cartesian3.fromDegrees(-84.398881, 33.778463)
+    position: Cartesian3.fromDegrees(-84.398881, 33.778463)
 });
 
 var gatechGeoTarget = new THREE.Object3D;
@@ -94,12 +101,10 @@ var boxGeoEntity = new Argon.Cesium.Entity({
 boxGeoObject.add(box);
 
 // create a position property that we'll set later
-const boxPosition = new Argon.Cesium.ConstantPositionProperty(
-            Argon.Cesium.Cartesian3.ZERO.clone(),
-            Argon.Cesium.ReferenceFrame.FIXED);
+const boxPosition = new Cesium.ConstantPositionProperty(Cartesian3.ZERO.clone(), ReferenceFrame.FIXED);
 boxGeoEntity.position = boxPosition;
-const boxOrientation = new Argon.Cesium.ConstantProperty(Argon.Cesium.Quaternion);
-boxOrientation.setValue(Argon.Cesium.Quaternion.IDENTITY);
+const boxOrientation = new Cesium.ConstantProperty(Cesium.Quaternion);
+boxOrientation.setValue(Cesium.Quaternion.IDENTITY);
 
 var realityInit = false;
 var boxCartographicDeg = [0,0,0];
@@ -128,16 +133,16 @@ app.updateEvent.addEventListener(() => {
         const boxPos = userPose.position.clone();
         boxPos.x += 10;
         boxPosition.setValue(boxPos, frame);        
-        boxOrientation.setValue(Argon.Cesium.Quaternion.IDENTITY);
+        boxOrientation.setValue(Cesium.Quaternion.IDENTITY);
 
         // get box position in global coordinates and reset it's
         // position to be independent of the user location, in the 
         // global frame of reference
-        const boxPoseFIXED = app.context.getEntityPose(boxGeoEntity,
-                        Argon.Cesium.ReferenceFrame.FIXED);
+        const boxPoseFIXED = app.context.getEntityPose(boxGeoEntity, ReferenceFrame.FIXED);
+
         if (boxPoseFIXED.poseStatus & Argon.PoseStatus.KNOWN) {
             realityInit = true;
-            boxPosition.setValue(boxPoseFIXED.position, Argon.Cesium.ReferenceFrame.FIXED);
+            boxPosition.setValue(boxPoseFIXED.position, ReferenceFrame.FIXED);
             boxOrientation.setValue(boxPoseFIXED.orientation);
             scene.add(boxGeoObject);
         }
@@ -152,16 +157,15 @@ app.updateEvent.addEventListener(() => {
 
     var deltaTime = 0;
     if (lastTime) {
-        deltaTime = Argon.Cesium.JulianDate.secondsDifference(app.context.getTime(), lastTime);
+        deltaTime = JulianDate.secondsDifference(app.context.getTime(), lastTime);
     } else {
-        lastTime = new Argon.Cesium.JulianDate();
+        lastTime = new JulianDate();
     }
     lastTime = app.context.getTime().clone(lastTime);
      
     // make it a little less boring
     buzz.rotateY(2 * deltaTime);
     box.rotateY( 3 * deltaTime);
-
 
     //
     // stuff to print out the status message
@@ -171,23 +175,22 @@ app.updateEvent.addEventListener(() => {
     var gpsCartographicDeg = [0,0,0];
 
     // get user position in global coordinates
-    const userPoseFIXED = app.context.getEntityPose(app.context.user,
-                    Argon.Cesium.ReferenceFrame.FIXED);
-    const userLLA = Argon.Cesium.Ellipsoid.WGS84.cartesianToCartographic(userPoseFIXED.position);
+    const userPoseFIXED = app.context.getEntityPose(app.context.user, ReferenceFrame.FIXED);
+    const userLLA = Cesium.Ellipsoid.WGS84.cartesianToCartographic(userPoseFIXED.position);
     if (userLLA) {
         gpsCartographicDeg = [
-            Argon.Cesium.CesiumMath.toDegrees(userLLA.longitude),
-            Argon.Cesium.CesiumMath.toDegrees(userLLA.latitude),
+            CesiumMath.toDegrees(userLLA.longitude),
+            CesiumMath.toDegrees(userLLA.latitude),
             userLLA.height
         ];
     }
 
-    const boxPoseFIXED = app.context.getEntityPose(boxGeoEntity, Argon.Cesium.ReferenceFrame.FIXED);
-    const boxLLA = Argon.Cesium.Ellipsoid.WGS84.cartesianToCartographic(boxPoseFIXED.position);
+    const boxPoseFIXED = app.context.getEntityPose(boxGeoEntity, ReferenceFrame.FIXED);
+    const boxLLA = Cesium.Ellipsoid.WGS84.cartesianToCartographic(boxPoseFIXED.position);
     if (boxLLA) {
         boxCartographicDeg = [
-            Argon.Cesium.CesiumMath.toDegrees(boxLLA.longitude),
-            Argon.Cesium.CesiumMath.toDegrees(boxLLA.latitude),
+            CesiumMath.toDegrees(boxLLA.longitude),
+            CesiumMath.toDegrees(boxLLA.latitude),
             boxLLA.height
         ];
     }
