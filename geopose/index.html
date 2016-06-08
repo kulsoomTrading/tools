@@ -1,13 +1,25 @@
 <html>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
-<head>
-    <title>Geopose</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+  <head>
+    <title>Geo</title>
     <script src="../resources/lib/three/three.min.js"></script>
-    <script src="../resources/lib/three/modifiers/ExplodeModifier.js"></script>
-    <script src="../resources/lib/three/modifiers/TessellateModifier.js"></script>
+    <script src="../resources/lib/CSS3DArgonRenderer.js"></script>
     <script src="../resources/lib/argon.umd.js"></script>
-    <script src="app.js"></script>
-</head>
-<body>
-</body>
+    <link rel="stylesheet" type="text/css" href="style.css">
+  </head>
+  <body>
+ 	<div id="menu" class="menu">
+  		<button class="location">lon (0) lat (0)</button>
+    </div>
+    <div onclick="hideMe(this)" style="background-color:rgba(255,255,255,0.7)">
+    <h2>A Simple Geo example</h2>
+  	<h5>(click to dismiss)</h5>
+    <p>This example takes the current location of the viewer, and positions a cube at a well known nearby location (the Georgia Tech campus, for us), and creates a second cube a small distance away from where the viewer was positioned when the example was loaded.  We do this by adding a small amount to our current east-west location, in the local Three.js cartesian coordinates.  This illustrates how to create geospatial content based on the current location, and update the internal geospatial location of the object.</p>
+    </div>
+  </body>
+	<script>
+		function hideMe(elem) {
+		    elem.style.display = 'none';
+		}	
+	</script>  <script src="./app.js"></script>
 </html>

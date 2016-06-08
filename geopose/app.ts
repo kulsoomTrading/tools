@@ -9,112 +9,237 @@ const userLocation = new THREE.Object3D;
 scene.add(camera);
 scene.add(userLocation);
 
+const cssRenderer = new (<any>THREE).CSS3DArgonRenderer();
 const renderer = new THREE.WebGLRenderer({ 
     alpha: true, 
     logarithmicDepthBuffer: true
 });
 renderer.setPixelRatio(window.devicePixelRatio);
 app.view.element.appendChild(renderer.domElement);
+app.view.element.appendChild(cssRenderer.domElement);
+
+// We put some elements in the index.html, for convenience. 
+// So let's duplicate and move the information box to the hudElements 
+// of the css renderer
+let menu = document.getElementById('menu');
+let menu2: HTMLElement = menu.cloneNode( true ) as HTMLElement;
+menu2.id = "menu2";   // make the id unique
+
+var menuchild = menu.getElementsByClassName('location');
+let elem = menuchild.item(0) as HTMLElement;
+menuchild = menu2.getElementsByClassName('location');
+let elem2 = menuchild.item(0) as HTMLElement;
+
+menu.remove();
+menu2.remove();
+cssRenderer.hudElements[0].appendChild(menu);
+cssRenderer.hudElements[1].appendChild(menu2);
 
 app.context.setDefaultReferenceFrame(app.context.localOriginEastUpSouth);
 
-const geometry = new THREE.SphereGeometry( 30, 32, 32 );
+// All geospatial objects need to have an Object3D linked to a Cesium Entity.
+// We need to do this because Argon needs a mapping between Entities and Object3Ds.
+//
+// Here we create two objects, showing two slightly different approaches.
+//
+// First, we position a cube near Georgia Tech using a known LLA.
+//
+// Second, we will position a cube near our starting location.  This geolocated object starts without a
+// location, until our reality is set and we know the location.  Each time the reality changes, we update
+// the cube position.
 
-let mat = new THREE.MeshBasicMaterial( {color: 0xff0000, opacity: 0.6} );
+// create a 100m cube with a Buzz texture on it, that we will attach to a geospatial object at Georgia Tech
+var buzz = new THREE.Object3D;
+var loader = new THREE.TextureLoader();
+loader.load( 'buzz.png', function ( texture ) {
+    var geometry = new THREE.BoxGeometry(10, 10, 10)
+    var material = new THREE.MeshBasicMaterial( { map: texture } )
 
-const posXSphere = new THREE.Mesh( geometry, mat );
-posXSphere.position.x = 200;
-userLocation.add( posXSphere );
- 
-mat = new THREE.MeshBasicMaterial( {color: 0xffaaaa, opacity: 0.6} );
+    var mesh = new THREE.Mesh( geometry, material )
+    mesh.scale.set(100,100,100)
+    buzz.add( mesh )
+});
 
-const negXSphere = new THREE.Mesh( geometry, mat );
-negXSphere.position.x = -200;
-userLocation.add( negXSphere );
+// have our geolocated object start somewhere, in this case 
+// near Georgia Tech in Atlanta.
+// you should probably adjust this to a spot closer to you 
+// (we found the lon/lat of Georgia Tech using Google Maps)
+var gatechGeoEntity = new Argon.Cesium.Entity({
+    name: "Georgia Tech",
+    position: Argon.Cesium.Cartesian3.fromDegrees(-84.398881, 33.778463)
+});
 
-mat = new THREE.MeshBasicMaterial( {color: 0x00ff00, opacity: 0.6} );
+var gatechGeoTarget = new THREE.Object3D;
+gatechGeoTarget.add(buzz)
+scene.add(gatechGeoTarget);
 
-const posYSphere = new THREE.Mesh( geometry, mat );
-posYSphere.position.y = 200;
-userLocation.add( posYSphere );
+// create a 1m cube with a wooden box texture on it, that we will attach to the geospatial object when we create it
+// Box texture from https://www.flickr.com/photos/photoshoproadmap/8640003215/sizes/l/in/photostream/
+//, licensed under https://creativecommons.org/licenses/by/2.0/legalcode
+var boxGeoObject = new THREE.Object3D;
 
-mat = new THREE.MeshBasicMaterial( {color: 0xaaffaa, opacity: 0.6} );
-
-const negYSphere = new THREE.Mesh( geometry, mat );
-negYSphere.position.y = -200;
-userLocation.add( negYSphere );
-
-mat = new THREE.MeshBasicMaterial( {color: 0x0000ff, opacity: 0.6} );
-
-const posZSphere = new THREE.Mesh( geometry, mat );
-posZSphere.position.z = 200;
-userLocation.add( posZSphere );
-
-mat = new THREE.MeshBasicMaterial( {color: 0xaaaaff, opacity: 0.6} );
-
-const negZSphere = new THREE.Mesh( geometry, mat );
-negZSphere.position.z = -200;
-userLocation.add( negZSphere );
-
-var loader = new THREE.FontLoader();
-loader.load( '../resources/fonts/helvetiker_regular.typeface.js', function ( font:THREE.Font ) {
-    
-    const textOptions = {
-        font: font,
-        size: 5,
-        height: 5,
-        curveSegments: 3,
-        bevelThickness: 0,
-        bevelSize: 0,
-        bevelEnabled: false
-    }
-    
-    var textMaterial = new THREE.MeshBasicMaterial({
-        color: 0x5588ff
-    })
-    
-    function createDirectionLabel(text, position, rotation) {
-        var textGeometry = new THREE.TextGeometry(text, textOptions);
-        textGeometry.center();
-        var textMesh = new THREE.Mesh(textGeometry, textMaterial);
-        if (position.x) textMesh.position.x = position.x;
-        if (position.y) textMesh.position.y = position.y;
-        if (position.z) textMesh.position.z = position.z;
-        if (rotation.x) textMesh.rotation.x = rotation.x;
-        if (rotation.y) textMesh.rotation.y = rotation.y;
-        if (rotation.z) textMesh.rotation.z = rotation.z;
-        userLocation.add(textMesh);
-    }
-    
-    createDirectionLabel("North", {z:-100}, {});
-    createDirectionLabel("South", {z:100}, {y:Math.PI});
-    createDirectionLabel("East", {x:100}, {y:-Math.PI/2});
-    createDirectionLabel("West", {x:-100}, {y:Math.PI/2});
-    createDirectionLabel("Up", {y:100}, {x:Math.PI/2});
-    createDirectionLabel("Down", {y:-100}, {x:-Math.PI/2});
-    
+var box = new THREE.Object3D
+var loader = new THREE.TextureLoader()
+loader.load( 'box.png', function ( texture ) {
+    var geometry = new THREE.BoxGeometry(1, 1, 1)
+    var material = new THREE.MeshBasicMaterial( { map: texture } )
+    var mesh = new THREE.Mesh( geometry, material )
+    box.add( mesh )
 })
+
+var boxGeoEntity = new Argon.Cesium.Entity({
+    name: "I have a box"
+});
+
+boxGeoObject.add(box);
+
+// create a position property that we'll set later
+const boxPosition = new Argon.Cesium.ConstantPositionProperty(
+            Argon.Cesium.Cartesian3.ZERO.clone(),
+            Argon.Cesium.ReferenceFrame.FIXED);
+boxGeoEntity.position = boxPosition;
+const boxOrientation = new Argon.Cesium.ConstantProperty(Argon.Cesium.Quaternion);
+boxOrientation.setValue(Argon.Cesium.Quaternion.IDENTITY);
+
+var realityInit = false;
+var boxCartographicDeg = [0,0,0];
+var lastInfoText = "";
+var lastTime = null;
+
+// make floating point output a little less ugly
+function toFixed(value, precision) {
+    var power = Math.pow(10, precision || 0);
+    return String(Math.round(value * power) / power);
+}
 
 app.updateEvent.addEventListener(() => {
     const userPose = app.context.getEntityPose(app.context.user);
-
     if (userPose.poseStatus & Argon.PoseStatus.KNOWN) {
         userLocation.position.copy(userPose.position);
+    } else {
+        // if we don't know the user pose we can't do anything
+        return;
+    }
+
+    if (!realityInit) {
+        const frame = app.context.getDefaultReferenceFrame();
+
+        // set the box's position to 10 meters away from the user.
+        const boxPos = userPose.position.clone();
+        boxPos.x += 10;
+        boxPosition.setValue(boxPos, frame);        
+        boxOrientation.setValue(Argon.Cesium.Quaternion.IDENTITY);
+
+        // get box position in global coordinates and reset it's
+        // position to be independent of the user location, in the 
+        // global frame of reference
+        const boxPoseFIXED = app.context.getEntityPose(boxGeoEntity,
+                        Argon.Cesium.ReferenceFrame.FIXED);
+        if (boxPoseFIXED.poseStatus & Argon.PoseStatus.KNOWN) {
+            realityInit = true;
+            boxPosition.setValue(boxPoseFIXED.position, Argon.Cesium.ReferenceFrame.FIXED);
+            boxOrientation.setValue(boxPoseFIXED.orientation);
+            scene.add(boxGeoObject);
+        }
+    }
+
+    var boxPose = app.context.getEntityPose(boxGeoEntity);
+    boxGeoObject.position.copy(boxPose.position);        
+    boxGeoObject.quaternion.copy(boxPose.orientation);
+
+    var geoPose = app.context.getEntityPose(gatechGeoEntity);
+    gatechGeoTarget.position.copy(geoPose.position);        
+
+    var deltaTime = 0;
+    if (lastTime) {
+        deltaTime = Argon.Cesium.JulianDate.secondsDifference(app.context.getTime(), lastTime);
+    } else {
+        lastTime = new Argon.Cesium.JulianDate();
+    }
+    lastTime = app.context.getTime().clone(lastTime);
+     
+    // make it a little less boring
+    buzz.rotateY(2 * deltaTime);
+    box.rotateY( 3 * deltaTime);
+
+
+    //
+    // stuff to print out the status message
+    //
+
+    // cartographicDegrees is a 3 element array containing [longitude, latitude, height]
+    var gpsCartographicDeg = [0,0,0];
+
+    // get user position in global coordinates
+    const userPoseFIXED = app.context.getEntityPose(app.context.user,
+                    Argon.Cesium.ReferenceFrame.FIXED);
+    const userLLA = Argon.Cesium.Ellipsoid.WGS84.cartesianToCartographic(userPoseFIXED.position);
+    if (userLLA) {
+        gpsCartographicDeg = [
+            Argon.Cesium.CesiumMath.toDegrees(userLLA.longitude),
+            Argon.Cesium.CesiumMath.toDegrees(userLLA.latitude),
+            userLLA.height
+        ];
+    }
+
+    const boxPoseFIXED = app.context.getEntityPose(boxGeoEntity, Argon.Cesium.ReferenceFrame.FIXED);
+    const boxLLA = Argon.Cesium.Ellipsoid.WGS84.cartesianToCartographic(boxPoseFIXED.position);
+    if (boxLLA) {
+        boxCartographicDeg = [
+            Argon.Cesium.CesiumMath.toDegrees(boxLLA.longitude),
+            Argon.Cesium.CesiumMath.toDegrees(boxLLA.latitude),
+            boxLLA.height
+        ];
+    }
+
+    // we'll compute the distance to the cube, just for fun. If the cube could be further away,
+    // we'd want to use Cesium.EllipsoidGeodesic, rather than Euclidean distance, but this is fine here.
+	var cameraPos = camera.getWorldPosition();
+    var buzzPos = buzz.getWorldPosition();
+    var boxPos = box.getWorldPosition();
+    var distanceToGT = cameraPos.distanceTo( boxPos );
+    var distanceToBuzz = cameraPos.distanceTo( buzzPos );
+
+    // create some feedback text
+    var infoText = "Geospatial Argon example:\n"
+    // infoText = "frame: " + state.frameNumber;
+    // infoText += " argon time (" + toFixed(three.argon.time.secondsOfDay, 1) + ")";
+    // infoText += " three time (" + toFixed(three.Time.now, 1) + ")\n";
+    infoText += "eye (" + toFixed(gpsCartographicDeg[0],6) + ", ";
+    infoText += toFixed(gpsCartographicDeg[1], 6) + ", " + toFixed(gpsCartographicDeg[2], 2) + ")\n";
+    infoText += "cube(" + toFixed(boxCartographicDeg[0], 6) + ", ";
+    infoText += toFixed(boxCartographicDeg[1], 6) + ", " + toFixed(boxCartographicDeg[2], 2) + ")\n";
+    infoText += "distance to GT (" + toFixed(distanceToGT,2) + ")";
+    infoText += " distance to box (" + toFixed(distanceToBuzz,2) + ")";
+
+    if (lastInfoText !== infoText) { // prevent unecessary DOM invalidations
+        elem.innerText = infoText;
+        elem2.innerText = infoText;
+        lastInfoText = infoText;
     }
 })
     
 app.renderEvent.addEventListener(() => {
     const viewport = app.view.getViewport();
     renderer.setSize(viewport.width, viewport.height);
-    
+    cssRenderer.setSize(viewport.width, viewport.height);
+
+    var i = 0;
     for (let subview of app.view.getSubviews()) {
         camera.position.copy(subview.pose.position);
         camera.quaternion.copy(subview.pose.orientation);
         camera.projectionMatrix.fromArray(subview.projectionMatrix);
         let {x,y,width,height} = subview.viewport;
+
+        var fov = camera.fov;
+        cssRenderer.updateCameraFOVFromProjection(camera);
+        cssRenderer.setViewport(x,y,width,height, i);
+        cssRenderer.render(scene, camera, i);
+
         renderer.setViewport(x,y,width,height);
         renderer.setScissor(x,y,width,height);
         renderer.setScissorTest(true);
         renderer.render(scene, camera);
     }
 })
+
