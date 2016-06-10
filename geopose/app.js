@@ -1,4 +1,10 @@
 /// <reference path="../typings/browser.d.ts"/>
+// grab some handles on APIs we use
+var Cesium = Argon.Cesium;
+var Cartesian3 = Argon.Cesium.Cartesian3;
+var ReferenceFrame = Argon.Cesium.ReferenceFrame;
+var JulianDate = Argon.Cesium.JulianDate;
+var CesiumMath = Argon.Cesium.CesiumMath;
 var app = Argon.init();
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera();
@@ -52,9 +58,9 @@ loader.load('buzz.png', function (texture) {
 // near Georgia Tech in Atlanta.
 // you should probably adjust this to a spot closer to you 
 // (we found the lon/lat of Georgia Tech using Google Maps)
-var gatechGeoEntity = new Argon.Cesium.Entity({
+var gatechGeoEntity = new Cesium.Entity({
     name: "Georgia Tech",
-    position: Argon.Cesium.Cartesian3.fromDegrees(-84.398881, 33.778463)
+    position: Cartesian3.fromDegrees(-84.398881, 33.778463)
 });
 var gatechGeoTarget = new THREE.Object3D;
 gatechGeoTarget.add(buzz);
@@ -72,14 +78,20 @@ loader.load('box.png', function (texture) {
     box.add(mesh);
 });
 var boxGeoEntity = new Argon.Cesium.Entity({
-    name: "I have a box"
+    name: "I have a box",
+    position: Cartesian3.ZERO,
+    orientation: Cesium.Quaternion.IDENTITY
 });
 boxGeoObject.add(box);
-// create a position property that we'll set later
-var boxPosition = new Argon.Cesium.ConstantPositionProperty(Argon.Cesium.Cartesian3.ZERO.clone(), Argon.Cesium.ReferenceFrame.FIXED);
-boxGeoEntity.position = boxPosition;
-var boxOrientation = new Argon.Cesium.ConstantProperty(Argon.Cesium.Quaternion);
-boxOrientation.setValue(Argon.Cesium.Quaternion.IDENTITY);
+// putting position and orientation in the constructor above is the 
+// equivalent of doing this:
+//
+//     const boxPosition = new Cesium.ConstantPositionProperty
+//                   (Cartesian3.ZERO.clone(), ReferenceFrame.FIXED);
+//     boxGeoEntity.position = boxPosition;
+//     const boxOrientation = new Cesium.ConstantProperty(Cesium.Quaternion);
+//     boxOrientation.setValue(Cesium.Quaternion.IDENTITY);
+//     boxGeoEntity.orientation = boxOrientation;
 var realityInit = false;
 var boxCartographicDeg = [0, 0, 0];
 var lastInfoText = "";
@@ -103,16 +115,16 @@ app.updateEvent.addEventListener(function () {
         // set the box's position to 10 meters away from the user.
         var boxPos_1 = userPose.position.clone();
         boxPos_1.x += 10;
-        boxPosition.setValue(boxPos_1, frame);
-        boxOrientation.setValue(Argon.Cesium.Quaternion.IDENTITY);
+        boxGeoEntity.position.setValue(boxPos_1, frame);
+        boxGeoEntity.orientation.setValue(Cesium.Quaternion.IDENTITY);
         // get box position in global coordinates and reset it's
         // position to be independent of the user location, in the 
         // global frame of reference
-        var boxPoseFIXED_1 = app.context.getEntityPose(boxGeoEntity, Argon.Cesium.ReferenceFrame.FIXED);
+        var boxPoseFIXED_1 = app.context.getEntityPose(boxGeoEntity, ReferenceFrame.FIXED);
         if (boxPoseFIXED_1.poseStatus & Argon.PoseStatus.KNOWN) {
             realityInit = true;
-            boxPosition.setValue(boxPoseFIXED_1.position, Argon.Cesium.ReferenceFrame.FIXED);
-            boxOrientation.setValue(boxPoseFIXED_1.orientation);
+            boxGeoEntity.position.setValue(boxPoseFIXED_1.position, ReferenceFrame.FIXED);
+            boxGeoEntity.orientation.setValue(boxPoseFIXED_1.orientation);
             scene.add(boxGeoObject);
         }
     }
@@ -123,10 +135,10 @@ app.updateEvent.addEventListener(function () {
     gatechGeoTarget.position.copy(geoPose.position);
     var deltaTime = 0;
     if (lastTime) {
-        deltaTime = Argon.Cesium.JulianDate.secondsDifference(app.context.getTime(), lastTime);
+        deltaTime = JulianDate.secondsDifference(app.context.getTime(), lastTime);
     }
     else {
-        lastTime = new Argon.Cesium.JulianDate();
+        lastTime = new JulianDate();
     }
     lastTime = app.context.getTime().clone(lastTime);
     // make it a little less boring
@@ -138,21 +150,21 @@ app.updateEvent.addEventListener(function () {
     // cartographicDegrees is a 3 element array containing [longitude, latitude, height]
     var gpsCartographicDeg = [0, 0, 0];
     // get user position in global coordinates
-    var userPoseFIXED = app.context.getEntityPose(app.context.user, Argon.Cesium.ReferenceFrame.FIXED);
-    var userLLA = Argon.Cesium.Ellipsoid.WGS84.cartesianToCartographic(userPoseFIXED.position);
+    var userPoseFIXED = app.context.getEntityPose(app.context.user, ReferenceFrame.FIXED);
+    var userLLA = Cesium.Ellipsoid.WGS84.cartesianToCartographic(userPoseFIXED.position);
     if (userLLA) {
         gpsCartographicDeg = [
-            Argon.Cesium.CesiumMath.toDegrees(userLLA.longitude),
-            Argon.Cesium.CesiumMath.toDegrees(userLLA.latitude),
+            CesiumMath.toDegrees(userLLA.longitude),
+            CesiumMath.toDegrees(userLLA.latitude),
             userLLA.height
         ];
     }
-    var boxPoseFIXED = app.context.getEntityPose(boxGeoEntity, Argon.Cesium.ReferenceFrame.FIXED);
-    var boxLLA = Argon.Cesium.Ellipsoid.WGS84.cartesianToCartographic(boxPoseFIXED.position);
+    var boxPoseFIXED = app.context.getEntityPose(boxGeoEntity, ReferenceFrame.FIXED);
+    var boxLLA = Cesium.Ellipsoid.WGS84.cartesianToCartographic(boxPoseFIXED.position);
     if (boxLLA) {
         boxCartographicDeg = [
-            Argon.Cesium.CesiumMath.toDegrees(boxLLA.longitude),
-            Argon.Cesium.CesiumMath.toDegrees(boxLLA.latitude),
+            CesiumMath.toDegrees(boxLLA.longitude),
+            CesiumMath.toDegrees(boxLLA.latitude),
             boxLLA.height
         ];
     }
@@ -161,7 +173,7 @@ app.updateEvent.addEventListener(function () {
     var cameraPos = camera.getWorldPosition();
     var buzzPos = buzz.getWorldPosition();
     var boxPos = box.getWorldPosition();
-    var distanceToGT = cameraPos.distanceTo(boxPos);
+    var distanceToBox = cameraPos.distanceTo(boxPos);
     var distanceToBuzz = cameraPos.distanceTo(buzzPos);
     // create some feedback text
     var infoText = "Geospatial Argon example:\n";
@@ -172,8 +184,8 @@ app.updateEvent.addEventListener(function () {
     infoText += toFixed(gpsCartographicDeg[1], 6) + ", " + toFixed(gpsCartographicDeg[2], 2) + ")\n";
     infoText += "cube(" + toFixed(boxCartographicDeg[0], 6) + ", ";
     infoText += toFixed(boxCartographicDeg[1], 6) + ", " + toFixed(boxCartographicDeg[2], 2) + ")\n";
-    infoText += "distance to GT (" + toFixed(distanceToGT, 2) + ")";
-    infoText += " distance to box (" + toFixed(distanceToBuzz, 2) + ")";
+    infoText += "distance to box (" + toFixed(distanceToBox, 2) + ")";
+    infoText += " distance to GT (" + toFixed(distanceToBuzz, 2) + ")";
     if (lastInfoText !== infoText) {
         elem.innerText = infoText;
         elem2.innerText = infoText;

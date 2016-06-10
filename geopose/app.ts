@@ -95,16 +95,22 @@ loader.load( 'box.png', function ( texture ) {
 })
 
 var boxGeoEntity = new Argon.Cesium.Entity({
-    name: "I have a box"
+    name: "I have a box",
+    position: Cartesian3.ZERO,
+    orientation: Cesium.Quaternion.IDENTITY
 });
 
 boxGeoObject.add(box);
 
-// create a position property that we'll set later
-const boxPosition = new Cesium.ConstantPositionProperty(Cartesian3.ZERO.clone(), ReferenceFrame.FIXED);
-boxGeoEntity.position = boxPosition;
-const boxOrientation = new Cesium.ConstantProperty(Cesium.Quaternion);
-boxOrientation.setValue(Cesium.Quaternion.IDENTITY);
+// putting position and orientation in the constructor above is the 
+// equivalent of doing this:
+//
+//     const boxPosition = new Cesium.ConstantPositionProperty
+//                   (Cartesian3.ZERO.clone(), ReferenceFrame.FIXED);
+//     boxGeoEntity.position = boxPosition;
+//     const boxOrientation = new Cesium.ConstantProperty(Cesium.Quaternion);
+//     boxOrientation.setValue(Cesium.Quaternion.IDENTITY);
+//     boxGeoEntity.orientation = boxOrientation;
 
 var realityInit = false;
 var boxCartographicDeg = [0,0,0];
@@ -132,8 +138,8 @@ app.updateEvent.addEventListener(() => {
         // set the box's position to 10 meters away from the user.
         const boxPos = userPose.position.clone();
         boxPos.x += 10;
-        boxPosition.setValue(boxPos, frame);        
-        boxOrientation.setValue(Cesium.Quaternion.IDENTITY);
+        boxGeoEntity.position.setValue(boxPos, frame);        
+        boxGeoEntity.orientation.setValue(Cesium.Quaternion.IDENTITY);
 
         // get box position in global coordinates and reset it's
         // position to be independent of the user location, in the 
@@ -142,8 +148,8 @@ app.updateEvent.addEventListener(() => {
 
         if (boxPoseFIXED.poseStatus & Argon.PoseStatus.KNOWN) {
             realityInit = true;
-            boxPosition.setValue(boxPoseFIXED.position, ReferenceFrame.FIXED);
-            boxOrientation.setValue(boxPoseFIXED.orientation);
+            boxGeoEntity.position.setValue(boxPoseFIXED.position, ReferenceFrame.FIXED);
+            boxGeoEntity.orientation.setValue(boxPoseFIXED.orientation);
             scene.add(boxGeoObject);
         }
     }
@@ -200,7 +206,7 @@ app.updateEvent.addEventListener(() => {
 	var cameraPos = camera.getWorldPosition();
     var buzzPos = buzz.getWorldPosition();
     var boxPos = box.getWorldPosition();
-    var distanceToGT = cameraPos.distanceTo( boxPos );
+    var distanceToBox = cameraPos.distanceTo( boxPos );
     var distanceToBuzz = cameraPos.distanceTo( buzzPos );
 
     // create some feedback text
@@ -212,8 +218,8 @@ app.updateEvent.addEventListener(() => {
     infoText += toFixed(gpsCartographicDeg[1], 6) + ", " + toFixed(gpsCartographicDeg[2], 2) + ")\n";
     infoText += "cube(" + toFixed(boxCartographicDeg[0], 6) + ", ";
     infoText += toFixed(boxCartographicDeg[1], 6) + ", " + toFixed(boxCartographicDeg[2], 2) + ")\n";
-    infoText += "distance to GT (" + toFixed(distanceToGT,2) + ")";
-    infoText += " distance to box (" + toFixed(distanceToBuzz,2) + ")";
+    infoText += "distance to box (" + toFixed(distanceToBox,2) + ")";
+    infoText += " distance to GT (" + toFixed(distanceToBuzz,2) + ")";
 
     if (lastInfoText !== infoText) { // prevent unecessary DOM invalidations
         elem.innerText = infoText;
