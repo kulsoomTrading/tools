@@ -1,6 +1,12 @@
 /// <reference path="../typings/browser.d.ts"/>
 declare const Argon:any;
 
+// any time we use an INERTIAL frame in Cesium, it needs to know where to find it's
+// ASSET folder on the web.  The SunMoonLights computation uses INERTIAL frames, so
+// so we need to put the assets on the web and point Cesium at them
+var CESIUM_BASE_URL='../../cesium/';
+
+// the App code
 const app = Argon.init();
 
 const scene = new THREE.Scene();
@@ -18,39 +24,46 @@ app.view.element.appendChild(renderer.domElement);
 
 app.context.setDefaultReferenceFrame(app.context.localOriginEastUpSouth);
 
+const sunMoonLights = new THREE.SunMoonLights();
+scene.add( sunMoonLights.lights );
+
+var ambientlight = new THREE.AmbientLight( 0x404040 ); // soft white ambient light 
+scene.add(ambientlight);
+
+// sphere's that sit behind the text labels, for visual clarity
 const geometry = new THREE.SphereGeometry( 30, 32, 32 );
 
-let mat = new THREE.MeshBasicMaterial( {color: 0xff0000, opacity: 0.6} );
+let mat = new THREE.MeshStandardMaterial( {color: 0xff0000, opacity: 0.6} );
 
 const posXSphere = new THREE.Mesh( geometry, mat );
 posXSphere.position.x = 200;
 userLocation.add( posXSphere );
  
-mat = new THREE.MeshBasicMaterial( {color: 0xffaaaa, opacity: 0.6} );
+mat = new THREE.MeshStandardMaterial( {color: 0xffaaaa, opacity: 0.6} );
 
 const negXSphere = new THREE.Mesh( geometry, mat );
 negXSphere.position.x = -200;
 userLocation.add( negXSphere );
 
-mat = new THREE.MeshBasicMaterial( {color: 0x00ff00, opacity: 0.6} );
+mat = new THREE.MeshStandardMaterial( {color: 0x00ff00, opacity: 0.6} );
 
 const posYSphere = new THREE.Mesh( geometry, mat );
 posYSphere.position.y = 200;
 userLocation.add( posYSphere );
 
-mat = new THREE.MeshBasicMaterial( {color: 0xaaffaa, opacity: 0.6} );
+mat = new THREE.MeshStandardMaterial( {color: 0xaaffaa, opacity: 0.6} );
 
 const negYSphere = new THREE.Mesh( geometry, mat );
 negYSphere.position.y = -200;
 userLocation.add( negYSphere );
 
-mat = new THREE.MeshBasicMaterial( {color: 0x0000ff, opacity: 0.6} );
+mat = new THREE.MeshStandardMaterial( {color: 0x0000ff, opacity: 0.6} );
 
 const posZSphere = new THREE.Mesh( geometry, mat );
 posZSphere.position.z = 200;
 userLocation.add( posZSphere );
 
-mat = new THREE.MeshBasicMaterial( {color: 0xaaaaff, opacity: 0.6} );
+mat = new THREE.MeshStandardMaterial( {color: 0xaaaaff, opacity: 0.6} );
 
 const negZSphere = new THREE.Mesh( geometry, mat );
 negZSphere.position.z = -200;
@@ -69,7 +82,7 @@ loader.load( '../resources/fonts/helvetiker_regular.typeface.js', function ( fon
         bevelEnabled: false
     }
     
-    var textMaterial = new THREE.MeshBasicMaterial({
+    var textMaterial = new THREE.MeshStandardMaterial({
         color: 0x5588ff
     })
     
@@ -101,8 +114,12 @@ app.updateEvent.addEventListener(() => {
     if (userPose.poseStatus & Argon.PoseStatus.KNOWN) {
         userLocation.position.copy(userPose.position);
     }
+
+    // get sun and moon positions, add/remove lights as necessary
+    var date = app.context.getTime();
+	sunMoonLights.update(date,app.context.getDefaultReferenceFrame());
 })
-    
+
 app.renderEvent.addEventListener(() => {
     const viewport = app.view.getViewport();
     renderer.setSize(viewport.width, viewport.height);
