@@ -1,8 +1,4 @@
 /// <reference path="../typings/browser.d.ts"/>
-// any time we use an INERTIAL frame in Cesium, it needs to know where to find it's
-// ASSET folder on the web.  The SunMoonLights computation uses INERTIAL frames, so
-// so we need to put the assets on the web and point Cesium at them
-var CESIUM_BASE_URL = '../../cesium/';
 // grab some handles on APIs we use
 var Cesium = Argon.Cesium;
 var Cartesian3 = Argon.Cesium.Cartesian3;
@@ -180,7 +176,6 @@ app.updateEvent.addEventListener(function () {
     // get the local coordinates of the GT box, and set the THREE object
     var geoPose = app.context.getEntityPose(gatechGeoEntity);
     gatechGeoTarget.position.copy(geoPose.position);
-    //gatechGeoTarget.quaternion.copy(geoPose.orientation);
     // rotate the boxes at a constant speed, independent of frame rates
     var deltaTime = 0;
     if (lastTime) {
