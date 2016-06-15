@@ -1,18 +1,39 @@
 /// <reference path="../typings/browser.d.ts"/>
 
+// When we distribute Argon typings, we can get rid of this, but for now
+// we need to shut up the Typescript compiler about missing Argon typings
 declare const Argon:any;
 
+// set up Argon
 const app = Argon.init();
 
+// set up THREE.  Create a scene, a perspective camera and an object
+// for the user's location
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera();
 const userLocation = new THREE.Object3D;
 scene.add(camera);
 scene.add(userLocation);
 
+// The CSS3DArgonRenderer supports mono and stereo views, and 
+// includes both 3D elements and a place to put things that appear 
+// fixed to the screen (heads-up-display) 
 const renderer = new (<any>THREE).CSS3DArgonRenderer();
 app.view.element.appendChild(renderer.domElement);
 
+// Tell argon what local coordinate system you want.  The default coordinate
+// frame used by Argon is Cesium's FIXED frame, which is centered at the center
+// of the earth and oriented with the earth's axes.  
+// The FIXED frame is inconvenient for a number of reasons: the numbers used are
+// large and cause issues with rendering, and the orientation of the user's "local
+// view of the world" is different that the FIXED orientation (my perception of "up"
+// does not correspond to one of the FIXED axes).  
+// Therefore, Argon uses a local coordinate frame that sits on a plane tangent to 
+// the earth near the user's current location.  This frame automatically changes if the
+// user moves more than a few kilometers.
+// The EUS frame cooresponds to the typical 3D computer graphics coordinate frame, so we use
+// that here.  The other option Argon supports is localOriginEastNorthUp, which is
+// more similar to what is used in the geospatial industry
 app.context.setDefaultReferenceFrame(app.context.localOriginEastUpSouth);
 
 // creating 6 divs to indicate the x y z positioning
@@ -45,37 +66,41 @@ sheet.insertRule(`
 // for X
 divXpos.className = "cssContent"
 divXpos.style.backgroundColor = "red"
-//divXpos.style.position = 'absolute'
 divXpos.innerText = "Pos X = East"
 
 divXneg.className = "cssContent"
 divXneg.style.backgroundColor = "red"
-//divXneg.style.position = 'absolute'
 divXneg.innerText = "Neg X = West"
 
 // for Y
 divYpos.className = "cssContent"
 divYpos.style.backgroundColor = "blue"
-//divYpos.style.position = 'absolute'
 divYpos.innerText = "Pos Y = Up"
 
 divYneg.className = "cssContent"
 divYneg.style.backgroundColor = "blue"
-//divYneg.style.position = 'absolute'
 divYneg.innerText = "Neg Y = Down"
 
 //for Z
 divZpos.className = "cssContent"
 divZpos.style.backgroundColor = "green"
-//divZpos.style.position = 'absolute'
 divZpos.innerText = "Pos Z = South"
 
 divZneg.className = "cssContent"
 divZneg.style.backgroundColor = "green"
-//divZneg.style.position = 'absolute'
 divZneg.innerText = "Neg Z = North"
 
-// create 6 CSS3DObjects in the scene graph
+// create 6 CSS3DObjects in the scene graph.  The CSS3DObject object 
+// is used by the CSS3DArgonRenderer. Because an HTML element can only
+// appear once in the DOM, we need two elements to create a stereo view.
+// The CSS3DArgonRenderer manages these for you, using the CSS3DObject.
+// You can pass a single DIV to the CSS3DObject, which
+// will be cloned to create a second matching DIV in stereo mode, or you
+// can pass in two DIVs in an array (one for the left and one for the 
+// right eyes).  If the content of the DIV does not change as the 
+// application runs, letting the CSS3DArgonRenderer clone them is 
+// simplest.  If it is changing, passing in two and updating both
+// yourself is simplest.
 var cssObjectXpos = new (<any>THREE).CSS3DObject(divXpos)
 var cssObjectXneg = new (<any>THREE).CSS3DObject(divXneg)
 var cssObjectYpos = new (<any>THREE).CSS3DObject(divYpos)
@@ -123,21 +148,32 @@ userLocation.add(cssObjectYneg)
 userLocation.add(cssObjectZpos)
 userLocation.add(cssObjectZneg)
 
+// the updateEvent is called each time the 3D world should be
+// rendered, before the renderEvent.  The state of your application
+// should be updated here.
 app.updateEvent.addEventListener(() => {
+    // get the position and orientation (the "pose") of the user
+    // in the local coordinate frame.
     const userPose = app.context.getEntityPose(app.context.user);
 
+    // assuming we know the user's pose, set the position of our 
+    // THREE user object to match it
     if (userPose.poseStatus & Argon.PoseStatus.KNOWN) {
         userLocation.position.copy(userPose.position);
     }
 })
     
-// for the CSS renderer, we really need to use rAF to 
-// limit the number of repairs of the DOM
+// for the CSS renderer, we want to use requestAnimationFrame to 
+// limit the number of repairs of the DOM.  Otherwise, as the 
+// DOM elements are updated, extra repairs of the DOM could be 
+// initiated.  Extra repairs do not appear to happen within the 
+// animation callback.
 var viewport = null;
 var subViews = null;
 var rAFpending = false;
 
 app.renderEvent.addEventListener(() => {
+    // only schedule a new callback if the old one has completed
     if (!rAFpending) {
         rAFpending = true;
         viewport = app.view.getViewport();
@@ -146,19 +182,34 @@ app.renderEvent.addEventListener(() => {
     }
 });
 
+// the animation callback.  
 function renderFunc() {
     rAFpending = false;
+
+    // set the renderer to know the current size of the viewport.
+    // This is the full size of the viewport, which would include
+    // both views if we are in stereo viewing mode
     renderer.setSize(viewport.width, viewport.height);
-    
-    var i = 0;
+
+    // there is 1 subview in monocular mode, 2 in stereo mode    
+    var i = 0;  // we pass the view number to the renderer so it knows 
+                // which div's to use for each view
     for (let subview of subViews) {
+        // set the position and orientation of the camera for 
+        // this subview
         camera.position.copy(subview.pose.position);
         camera.quaternion.copy(subview.pose.orientation);
+        // the underlying system provide a full projection matrix
+        // for the camera.  Use it, and then update the FOV of the 
+        // camera from it (needed by the CSS Perspective DIV)
         camera.projectionMatrix.fromArray(subview.projectionMatrix);
         renderer.updateCameraFOVFromProjection(camera);
 
+        // set the viewport for this view
         let {x,y,width,height} = subview.viewport;
         renderer.setViewport(x,y,width,height, i);
+
+        // render this view.
         renderer.render(scene, camera, i);
         i++;
     }

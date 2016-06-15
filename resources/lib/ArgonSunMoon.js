@@ -1,5 +1,9 @@
 (function () {
 
+// here we are using pure Cesium and THREE functions.
+// should consider adding in SunCalc (https://github.com/mourner/suncalc) support, to get
+// some more information about sun/moon,  such as time of day and phase of moon
+
 var Cesium = Argon.Cesium;
 var Cartesian3 = Cesium.Cartesian3;
 var Simon1994PlanetaryPositions = Cesium.Simon1994PlanetaryPositions;
@@ -71,7 +75,8 @@ if (typeof(THREE) !== 'undefined') {
         // get the natural light entities, make them available
         this.entities = Argon.GetSunMoon();
 
-        var moonlight = new THREE.DirectionalLight(0xeeeeff, 0.25);
+        // make the moon a dimmer, bluish light.  Not really correct, but a start
+        var moonlight = new THREE.DirectionalLight(0x9999aa, 0.25);
         var sunlight = new THREE.DirectionalLight(0xffffff, 1.0);
 
         // make the lights visible from outside
