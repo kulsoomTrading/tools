@@ -4,8 +4,19 @@
 // we need to shut up the Typescript compiler about missing Argon typings
 declare const Argon:any;
 
-// set up Argon
-const app = Argon.init();
+// save some local references to commonly used classes
+const Cartesian3 = Argon.Cesium.Cartesian3;
+const Quaternion = Argon.Cesium.Quaternion;
+const CesiumMath = Argon.Cesium.CesiumMath;
+
+// set up Argon (unlike regular apps, we call initReality instead of init)
+// Defining a protocol allows apps to communicate with the reality in a 
+// reliable way. 
+const app = Argon.initReality({
+    config: {
+        protocols: ['ael.gatech.panorama@v1'] 
+    }
+});
 
 // set up THREE.  Create a scene, a perspective camera and an object
 // for the user's location
@@ -40,57 +51,99 @@ app.view.element.appendChild(renderer.domElement);
 // more similar to what is used in the geospatial industry
 app.context.setDefaultReferenceFrame(app.context.localOriginEastUpSouth);
 
-// In this example, we are using the actual position of the sun and moon to create lights.
-// The SunMoonLights functions are created by ArgonSunMoon.js, and turn on the sun or moon
-// when they are above the horizon.  This package could be improved a lot (such as by 
-// adjusting the color of light based on distance above horizon, taking the phase of the
-// moon into account, etc) but it provides a simple starting point.
-const sunMoonLights = new THREE.SunMoonLights();
-// the SunMoonLights.update routine will add/remove the sun/moon lights depending on if
-// the sun/moon are above the horizon
-scene.add( sunMoonLights.lights );
+interface PanoramaInfo {
+    url: string,
+    longitude?: number,
+    latitude?: number,
+    height?: number,
+    offsetDegrees?: number
+}
 
-// add some ambient so things aren't so harshly illuminated
-var ambientlight = new THREE.AmbientLight( 0x404040 ); // soft white ambient light 
-scene.add(ambientlight);
+interface Panorama extends PanoramaInfo {
+    position:Argon.Cesium.ConstantPositionProperty,
+    texture?:Promise<THREE.Texture>
+}
 
-// create 6 3D words for the 6 directions.  
-var loader = new THREE.FontLoader();
-loader.load( '../resources/fonts/helvetiker_regular.typeface.js', function ( font:THREE.Font ) {    
-    const textOptions = {
-        font: font,
-        size: 15,
-        height: 10,
-        curveSegments: 10,
-        bevelThickness: 1,
-        bevelSize: 1,
-        bevelEnabled: true
-    }
-    
-    var textMaterial = new THREE.MeshStandardMaterial({
-        color: 0x5588ff
-    })
-    
-    function createDirectionLabel(text, position, rotation) {
-        var textGeometry = new THREE.TextGeometry(text, textOptions);
-        textGeometry.center();
-        var textMesh = new THREE.Mesh(textGeometry, textMaterial);
-        if (position.x) textMesh.position.x = position.x;
-        if (position.y) textMesh.position.y = position.y;
-        if (position.z) textMesh.position.z = position.z;
-        if (rotation.x) textMesh.rotation.x = rotation.x;
-        if (rotation.y) textMesh.rotation.y = rotation.y;
-        if (rotation.z) textMesh.rotation.z = rotation.z;
-        userLocation.add(textMesh);
-    }
-    
-    createDirectionLabel("North", {z:-100}, {});
-    createDirectionLabel("South", {z:100}, {y:Math.PI});
-    createDirectionLabel("East", {x:100}, {y:-Math.PI/2});
-    createDirectionLabel("West", {x:-100}, {y:Math.PI/2});
-    createDirectionLabel("Up", {y:100}, {x:Math.PI/2});
-    createDirectionLabel("Down", {y:-100}, {x:-Math.PI/2});
+// A map to store our panoramas
+var panoramas = new Map<string, Panorama>();
+var currentPano:Panorama;
+
+// Create two pano spheres we can transition between
+var sphereGeometry = new THREE.SphereGeometry(100, 32, 32);
+var panoSpheres:Array<THREE.Mesh> = [new THREE.Mesh, new THREE.Mesh];
+panoSpheres.forEach((mesh)=>{
+    mesh.geometry = sphereGeometry;
+    const material = new THREE.MeshBasicMaterial();
+    material.transparent = true;
+    mesh.material = material;
+    userLocation.add(mesh);
 })
+var currentSphere = 0;
+
+// We need to define a projection matrix for our reality view
+var perspectiveProjection = new Argon.Cesium.PerspectiveFrustum();
+perspectiveProjection.fov = Math.PI / 2;
+
+// For this example, we want to control the panorama using the device orientation.
+// Since we are using geolocated panoramas, we can disable location updates
+app.device.locationUpdatesEnabled = false;
+
+// Create an entity to represent the eye
+const eyeEntity = new Argon.Cesium.Entity({
+    orientation: new Argon.Cesium.ConstantProperty(Quaternion.IDENTITY)
+})
+
+// Creating a lot of garbage slows everything down. Not fun.
+// Let's create some recyclable objects that we can use later.
+const scratchCartesian = new Cartesian3;
+const scratchQuaternion = new Quaternion;
+const scratchArray = [];
+
+// Reality views must raise frame events at regular intervals in order to 
+// drive updates for the entire system. 
+function onFrame(time, index:number) {
+    
+    // Get the eye position from the current panorama
+    if (currentPano) {
+        eyeEntity.position = currentPano.position;
+    }
+    
+    // Get the current interface-aligned device orientation relative to the device location
+    app.device.update();
+    const deviceOrientation = Argon.getEntityOrientation(
+        app.device.interfaceEntity, 
+        time, 
+        app.device.locationEntity, 
+        scratchQuaternion
+    );
+    eyeEntity.orientation.setValue(deviceOrientation);
+    
+    const viewport = app.view.getMaximumViewport();
+    perspectiveProjection.aspectRatio = viewport.width / viewport.height;
+    const matrix = perspectiveProjection.infiniteProjectionMatrix;
+        
+    // By raising a frame state event, we are telling the manager how we would like
+    // to render (and likewise, how we would like apps to render). However, the manager
+    // may modify the view configuration depending on various conditions (i.e, 
+    // whether or not a stereo viewer is being used or not, etc).
+    app.reality.frameEvent.raiseEvent({
+        time,
+        index,
+        view: {
+            viewport,
+            pose: Argon.getSerializedEntityPose(eyeEntity, time),
+            subviews: [{
+                type: Argon.SubviewType.SINGULAR,
+                projectionMatrix: Argon.Cesium.Matrix4.toArray(matrix, scratchArray)
+            }]
+        }
+    })
+    app.timer.requestFrame(onFrame);
+}
+// We can use requestAnimationFrame, or the builtin Argon.TimerService (app.timer),
+// The TimerService is more convenient as it will provide the current time 
+// as a Cesium.JulianDate object which can be used directly when raising a frame event. 
+app.timer.requestFrame(onFrame)
 
 
 // the updateEvent is called each time the 3D world should be
@@ -106,11 +159,10 @@ app.updateEvent.addEventListener(() => {
     if (userPose.poseStatus & Argon.PoseStatus.KNOWN) {
         userLocation.position.copy(userPose.position);
     }
-
-    // get sun and moon positions, add/remove lights as necessary
-    var date = app.context.getTime();
-	sunMoonLights.update(date,app.context.getDefaultReferenceFrame());
+    
+    TWEEN.update();
 })
+
 
 // renderEvent is fired whenever argon wants the app to update its display
 app.renderEvent.addEventListener(() => {
@@ -140,3 +192,121 @@ app.renderEvent.addEventListener(() => {
         renderer.render(scene, camera);
     }
 })
+
+// create a texture loader
+const loader = new THREE.TextureLoader();
+loader.setCrossOrigin('anonymous');
+
+// when the a controlling session connects, we can communite with it to
+// receive commands (or even send information back, if appropriate)
+app.reality.connectEvent.addEventListener((controlSession)=>{
+    controlSession.on['edu.gatech.ael.panorama.loadPanorama'] = (pano:PanoramaInfo) => {
+        // if you throw an error in a message handler, the remote session will see the error!
+        if (!pano.url) throw new Error('Expected an equirectangular image url!')
+        
+        const offsetRadians = (pano.offsetDegrees || 0) * CesiumMath.DEGREES_PER_RADIAN;
+        
+        let positionProperty = new Argon.Cesium.ConstantPositionProperty(undefined);
+        if (Argon.Cesium.defined(pano.longitude) &&
+            Argon.Cesium.defined(pano.longitude)) {
+            const positionValue = Cartesian3.fromDegrees(pano.longitude, pano.latitude, pano.height || 0);
+            positionProperty.setValue(positionValue, Argon.Cesium.ReferenceFrame.FIXED);
+        }
+        
+        var texture = new Promise<THREE.Texture>((resolve)=>{
+            loader.load(pano.url, function ( texture ) {
+                texture.minFilter = THREE.LinearFilter;
+                resolve(texture);
+            });
+        });
+        
+        panoramas.set(pano.url, {
+            url: pano.url,
+            longitude: pano.longitude,
+            latitude: pano.latitude,
+            height: pano.height,
+            offsetDegrees: pano.offsetDegrees,
+            position: positionProperty,
+            texture
+        });
+        
+        // We can optionally return a value (or a promise of a value) in a message handler. 
+        // In this case, if three.js throws an error while attempting to load
+        // the texture, the error will be passed to the remote session. Otherwise,
+        // this function will respond as fulfilled when the texture is loaded. 
+        return texture.then(()=>{})
+    }
+    controlSession.on['edu.gatech.ael.panorama.deletePanorama'] = ({url}) => {
+        panoramas.delete(url);
+    }
+    controlSession.on['edu.gatech.ael.panorama.showPanorama'] = (options) => {
+        showPanorama(options);
+    }
+})
+
+interface Transition {
+    easing?:string,
+    duration?:number
+}
+
+interface ShowPanoramaOptions {
+    url:string,
+    transition:Transition,
+}
+
+function showPanorama(options:ShowPanoramaOptions) {
+    const url = options.url;
+    const transition:Transition = options.transition || {};
+    const easing = resolve(transition.easing, TWEEN.Easing) || TWEEN.Easing.Linear.None;
+    
+    if (!url) throw new Error('Expected a url');
+    if (!easing) throw new Error('Unknown easing: ' + easing);
+    
+    const panoOut = currentPano;
+    const panoIn = panoramas.get(url);
+    if (!panoIn) throw new Error('Unknown pano: '+ url + ' (did you forget to add the panorama first?)')
+    currentPano = panoIn;
+    
+    // get the threejs objects for rendering our panoramas
+    const sphereOut = panoSpheres[currentSphere];
+    currentSphere++; currentSphere %= 2;
+    const sphereIn = panoSpheres[currentSphere];
+    const inMaterial = sphereIn.material as THREE.MeshBasicMaterial;
+    const outMaterial = sphereOut.material as THREE.MeshBasicMaterial;
+    
+    // update the material for the incoming panorama
+    inMaterial.map = undefined;
+    inMaterial.opacity = 1;
+    inMaterial.needsUpdate = true;
+    panoIn.texture.then((texture)=>{
+        inMaterial.map = texture;
+        inMaterial.needsUpdate = true;
+    })
+    
+    // update the pose of the pano spheres
+    sphereIn.rotation.y = (panoIn.offsetDegrees || 0) * CesiumMath.RADIANS_PER_DEGREE;
+    
+    // negate one scale component to flip the spheres inside-out,
+    // and make the incoming sphere slightly smaller so it is seen infront of
+    // the outgoing sphere
+    sphereIn.scale.set(-1,1,1);
+    sphereOut.scale.set(-0.9,0.9,0.9);
+    
+    // force render order
+    sphereIn.renderOrder = 0;
+    sphereOut.renderOrder = 1;
+    
+    // fade out the old pano using tween.js!
+    TWEEN.removeAll();
+    var outTween = new TWEEN.Tween(outMaterial);
+    outTween.to({opacity:0}, transition.duration).onUpdate(()=>{
+        outMaterial.needsUpdate = true;
+    }).easing(easing).start();
+}
+
+function resolve(path:string, obj, safe:boolean=true) {
+    if (!path) return undefined;
+    return path.split('.').reduce(function(prev, curr) {
+        return !safe ? prev[curr] : (prev ? prev[curr] : undefined)
+    }, obj || self)
+}

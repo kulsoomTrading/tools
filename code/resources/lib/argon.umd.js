@@ -368,340 +368,7 @@ define("2", ["exports", "3"], function(exports, _aureliaPal) {
 });
 
 })();
-$__System.register("4", ["b", "5", "6", "7", "8", "9", "a"], function(exports_1, context_1) {
-  "use strict";
-  var __moduleName = context_1 && context_1.id;
-  var __decorate = (this && this.__decorate) || function(decorators, target, key, desc) {
-    var c = arguments.length,
-        r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc,
-        d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function")
-      r = Reflect.decorate(decorators, target, key, desc);
-    else
-      for (var i = decorators.length - 1; i >= 0; i--)
-        if (d = decorators[i])
-          r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-  };
-  var aurelia_dependency_injection_1,
-      cesium_imports_1,
-      common_1,
-      session_1,
-      reality_1,
-      timer_1,
-      utils_1;
-  var PoseStatus,
-      scratchDate,
-      scratchCartesian3,
-      scratchQuaternion,
-      scratchOriginCartesian3,
-      negX90,
-      ContextService;
-  function _stringFromReferenceFrame(referenceFrame) {
-    var rf = referenceFrame;
-    return cesium_imports_1.defined(rf.id) ? rf.id : '' + rf;
-  }
-  return {
-    setters: [function(aurelia_dependency_injection_1_1) {
-      aurelia_dependency_injection_1 = aurelia_dependency_injection_1_1;
-    }, function(cesium_imports_1_1) {
-      cesium_imports_1 = cesium_imports_1_1;
-    }, function(common_1_1) {
-      common_1 = common_1_1;
-    }, function(session_1_1) {
-      session_1 = session_1_1;
-    }, function(reality_1_1) {
-      reality_1 = reality_1_1;
-    }, function(timer_1_1) {
-      timer_1 = timer_1_1;
-    }, function(utils_1_1) {
-      utils_1 = utils_1_1;
-    }],
-    execute: function() {
-      (function(PoseStatus) {
-        PoseStatus[PoseStatus["KNOWN"] = 1] = "KNOWN";
-        PoseStatus[PoseStatus["FOUND"] = 2] = "FOUND";
-        PoseStatus[PoseStatus["LOST"] = 4] = "LOST";
-      })(PoseStatus || (PoseStatus = {}));
-      exports_1("PoseStatus", PoseStatus);
-      scratchDate = new cesium_imports_1.JulianDate(0, 0);
-      scratchCartesian3 = new cesium_imports_1.Cartesian3(0, 0);
-      scratchQuaternion = new cesium_imports_1.Quaternion(0, 0);
-      scratchOriginCartesian3 = new cesium_imports_1.Cartesian3(0, 0);
-      negX90 = cesium_imports_1.Quaternion.fromAxisAngle(cesium_imports_1.Cartesian3.UNIT_X, -cesium_imports_1.CesiumMath.PI_OVER_TWO);
-      ContextService = (function() {
-        function ContextService(sessionService, realityService, timerService) {
-          var _this = this;
-          this.sessionService = sessionService;
-          this.realityService = realityService;
-          this.timerService = timerService;
-          this.updateEvent = new utils_1.Event();
-          this.renderEvent = new utils_1.Event();
-          this.entities = new cesium_imports_1.EntityCollection();
-          this.localOriginChangeEvent = new utils_1.Event();
-          this.user = new cesium_imports_1.Entity({
-            id: 'ar.user',
-            name: 'user',
-            position: new cesium_imports_1.ConstantPositionProperty(cesium_imports_1.Cartesian3.ZERO, null),
-            orientation: new cesium_imports_1.ConstantProperty(cesium_imports_1.Quaternion.IDENTITY)
-          });
-          this.localOriginEastNorthUp = new cesium_imports_1.Entity({
-            id: 'ar.localENU',
-            name: 'localOriginENU',
-            position: new cesium_imports_1.ConstantPositionProperty(cesium_imports_1.Cartesian3.ZERO, null),
-            orientation: new cesium_imports_1.ConstantProperty(cesium_imports_1.Quaternion.IDENTITY)
-          });
-          this.localOriginEastUpSouth = new cesium_imports_1.Entity({
-            id: 'ar.localEUS',
-            name: 'localOriginEUS',
-            position: new cesium_imports_1.ConstantPositionProperty(cesium_imports_1.Cartesian3.ZERO, this.localOriginEastNorthUp),
-            orientation: new cesium_imports_1.ConstantProperty(cesium_imports_1.Quaternion.fromAxisAngle(cesium_imports_1.Cartesian3.UNIT_X, Math.PI / 2))
-          });
-          this._time = new cesium_imports_1.JulianDate(0, 0);
-          this._defaultReferenceFrame = this.localOriginEastNorthUp;
-          this._entityPoseCache = {};
-          this._entityPoseMap = new Map();
-          this._subscribedEntities = new WeakMap();
-          this._updatingEntities = new Set();
-          this._knownEntities = new Set();
-          this.entities.add(this.user);
-          if (this.sessionService.isManager) {
-            this.realityService.frameEvent.addEventListener(function(state) {
-              _this._update({
-                reality: _this.realityService.getCurrent(),
-                index: state.index,
-                time: state.time,
-                view: state.view,
-                entities: state.entities || {},
-                sendTime: cesium_imports_1.JulianDate.now()
-              });
-            });
-            this.sessionService.connectEvent.addEventListener(function(session) {
-              _this._subscribedEntities.set(session, new Set());
-              session.on['ar.context.subscribe'] = function(_a) {
-                var id = _a.id;
-                var subscriptions = _this._subscribedEntities.get(session);
-                subscriptions.add(id);
-              };
-            });
-          } else {
-            this.sessionService.manager.on['ar.context.update'] = function(state) {
-              _this._update(state);
-            };
-          }
-        }
-        Object.defineProperty(ContextService.prototype, "time", {
-          get: function() {
-            return this._time;
-          },
-          enumerable: true,
-          configurable: true
-        });
-        Object.defineProperty(ContextService.prototype, "state", {
-          get: function() {
-            return this._state;
-          },
-          enumerable: true,
-          configurable: true
-        });
-        ContextService.prototype.getTime = function() {
-          return this._time;
-        };
-        ContextService.prototype.setDefaultReferenceFrame = function(origin) {
-          this._defaultReferenceFrame = origin;
-        };
-        ContextService.prototype.getDefaultReferenceFrame = function() {
-          return this._defaultReferenceFrame;
-        };
-        ContextService.prototype.subscribeToEntityById = function(id) {
-          this.sessionService.manager.send('ar.context.subscribe', {id: id});
-          return this.entities.getOrCreateEntity(id);
-        };
-        ContextService.prototype.getEntityPose = function(entity, referenceFrame) {
-          if (referenceFrame === void 0) {
-            referenceFrame = this._defaultReferenceFrame;
-          }
-          var time = this._time;
-          var key = entity.id + _stringFromReferenceFrame(referenceFrame);
-          var entityPose = this._entityPoseMap.get(key);
-          if (entityPose && cesium_imports_1.JulianDate.equals(entityPose.time, time))
-            return entityPose;
-          if (!cesium_imports_1.defined(entityPose)) {
-            entityPose = {
-              position: new cesium_imports_1.Cartesian3,
-              orientation: new cesium_imports_1.Quaternion,
-              time: cesium_imports_1.JulianDate.clone(time),
-              poseStatus: 0
-            };
-            this._entityPoseMap.set(key, entityPose);
-          } else {
-            cesium_imports_1.JulianDate.clone(time, entityPose.time);
-          }
-          var position = utils_1.getEntityPositionInReferenceFrame(entity, time, referenceFrame, entityPose.position);
-          var orientation = utils_1.getEntityOrientationInReferenceFrame(entity, time, referenceFrame, entityPose.orientation);
-          var hasPose = position && orientation;
-          var poseStatus = 0;
-          var previousStatus = entityPose.poseStatus;
-          if (hasPose) {
-            poseStatus |= PoseStatus.KNOWN;
-          }
-          if (hasPose && !(previousStatus & PoseStatus.KNOWN)) {
-            poseStatus |= PoseStatus.FOUND;
-          } else if (!hasPose && previousStatus & PoseStatus.KNOWN) {
-            poseStatus |= PoseStatus.LOST;
-          }
-          entityPose.poseStatus = poseStatus;
-          return entityPose;
-        };
-        ContextService.prototype.getCurrentEntityState = function(entity, referenceFrame) {
-          console.warn('getCurrentEntityState is deprecated. Use getEntityPose instead.');
-          return this.getEntityPose(entity, referenceFrame);
-        };
-        ContextService.prototype._update = function(state) {
-          var _this = this;
-          state.entities[this.user.id] = state.view.pose;
-          state.view.subviews.forEach(function(subview, index) {
-            state.entities['ar.view_' + index] = subview.pose || state.view.pose;
-          });
-          this._knownEntities.clear();
-          for (var id in state.entities) {
-            this._updateEntity(id, state);
-            this._updatingEntities.add(id);
-            this._knownEntities.add(id);
-          }
-          this._updatingEntities.forEach(function(id) {
-            if (!_this._knownEntities.has(id)) {
-              var entity = _this.entities.getById(id);
-              entity.position = undefined;
-              entity.orientation = undefined;
-              _this._updatingEntities.delete(id);
-            }
-          });
-          this._updateLocalOrigin(state);
-          if (this.sessionService.isManager) {
-            this._entityPoseCache = {};
-            for (var _i = 0,
-                _a = this.sessionService.managedSessions; _i < _a.length; _i++) {
-              var session = _a[_i];
-              if (session.info.role === common_1.Role.APPLICATION)
-                this._sendUpdateForSession(state, session);
-            }
-          }
-          this._state = state;
-          cesium_imports_1.JulianDate.clone(this._state.time, this._time);
-          this.updateEvent.raiseEvent(undefined);
-          this.renderEvent.raiseEvent(undefined);
-        };
-        ContextService.prototype._updateEntity = function(id, state) {
-          var entityPose = state.entities[id];
-          if (!entityPose) {
-            this.entities.getOrCreateEntity(id);
-            return;
-          }
-          var referenceFrame;
-          if (cesium_imports_1.defined(entityPose.r)) {
-            if (typeof entityPose.r === 'number') {
-              referenceFrame = entityPose.r;
-            } else {
-              referenceFrame = this.entities.getById(entityPose.r);
-            }
-          } else {
-            referenceFrame = cesium_imports_1.ReferenceFrame.FIXED;
-          }
-          if (!cesium_imports_1.defined(referenceFrame)) {
-            this._updateEntity(entityPose.r, state);
-            referenceFrame = this.entities.getById(entityPose.r);
-          }
-          var positionValue = (entityPose.p === 0 ? cesium_imports_1.Cartesian3.ZERO : entityPose.p);
-          var orientationValue = entityPose.o === 0 ? cesium_imports_1.Quaternion.IDENTITY : entityPose.o;
-          var entity = this.entities.getOrCreateEntity(id);
-          var entityPosition = entity.position;
-          var entityOrientation = entity.orientation;
-          if (!cesium_imports_1.defined(entityPosition) || entityPosition.referenceFrame !== referenceFrame) {
-            entityPosition = new cesium_imports_1.SampledPositionProperty(referenceFrame);
-            entityPosition.forwardExtrapolationType = cesium_imports_1.ExtrapolationType.HOLD;
-            entityPosition.forwardExtrapolationDuration = 5 / 60;
-            entityPosition['maxNumSamples'] = 10;
-            entity.position = entityPosition;
-          }
-          if (entityPosition instanceof cesium_imports_1.ConstantPositionProperty) {
-            entityPosition.setValue(positionValue, referenceFrame);
-          } else if (entityPosition instanceof cesium_imports_1.SampledPositionProperty) {
-            entityPosition.addSample(cesium_imports_1.JulianDate.clone(state.time), positionValue);
-          }
-          if (!cesium_imports_1.defined(entityOrientation)) {
-            entityOrientation = new cesium_imports_1.SampledProperty(cesium_imports_1.Quaternion);
-            entityOrientation.forwardExtrapolationType = cesium_imports_1.ExtrapolationType.HOLD;
-            entityOrientation.forwardExtrapolationDuration = 5 / 60;
-            entityOrientation['maxNumSamples'] = 10;
-            entity.orientation = entityOrientation;
-          }
-          if (entityOrientation instanceof cesium_imports_1.ConstantProperty) {
-            entityOrientation.setValue(orientationValue);
-          } else if (entityOrientation instanceof cesium_imports_1.SampledProperty) {
-            entityOrientation.addSample(cesium_imports_1.JulianDate.clone(state.time), orientationValue);
-          }
-          return entity;
-        };
-        ContextService.prototype._updateLocalOrigin = function(state) {
-          var userRootFrame = utils_1.getRootReferenceFrame(this.user);
-          var userPosition = this.user.position.getValueInReferenceFrame(state.time, userRootFrame, scratchCartesian3);
-          var localENUFrame = this.localOriginEastNorthUp.position.referenceFrame;
-          var localENUPosition = this.localOriginEastNorthUp.position.getValueInReferenceFrame(state.time, localENUFrame, scratchOriginCartesian3);
-          if (!localENUPosition || localENUFrame !== userRootFrame || cesium_imports_1.Cartesian3.magnitudeSquared(cesium_imports_1.Cartesian3.subtract(userPosition, localENUPosition, scratchOriginCartesian3)) > 25000000) {
-            var localENUPositionProperty = this.localOriginEastNorthUp.position;
-            var localENUOrientationProperty = this.localOriginEastNorthUp.orientation;
-            localENUPositionProperty.setValue(userPosition, userRootFrame);
-            if (userRootFrame === cesium_imports_1.ReferenceFrame.FIXED) {
-              var enuOrientation = cesium_imports_1.Transforms.headingPitchRollQuaternion(userPosition, 0, 0, 0, undefined, scratchQuaternion);
-              localENUOrientationProperty.setValue(enuOrientation);
-            } else {
-              localENUOrientationProperty.setValue(negX90);
-            }
-            this.localOriginChangeEvent.raiseEvent(undefined);
-          }
-        };
-        ContextService.prototype._sendUpdateForSession = function(parentState, session) {
-          var _this = this;
-          var sessionPoseMap = {};
-          for (var id in parentState.entities) {
-            sessionPoseMap[id] = parentState.entities[id];
-          }
-          this._subscribedEntities.get(session).forEach(function(id) {
-            _this._addEntityAndAncestorsToPoseMap(sessionPoseMap, id, parentState.time);
-          });
-          var sessionState = {
-            reality: parentState.reality,
-            index: parentState.index,
-            time: parentState.time,
-            view: parentState.view,
-            entities: sessionPoseMap,
-            sendTime: cesium_imports_1.JulianDate.now()
-          };
-          session.send('ar.context.update', sessionState);
-        };
-        ContextService.prototype._addEntityAndAncestorsToPoseMap = function(poseMap, id, time) {
-          if (!cesium_imports_1.defined(this._entityPoseCache[id])) {
-            var entity = this.entities.getById(id);
-            if (!entity)
-              return;
-            this._entityPoseCache[id] = utils_1.getSerializedEntityPose(entity, time);
-            if (entity.position.referenceFrame instanceof cesium_imports_1.Entity) {
-              var refId = _stringFromReferenceFrame(entity.position.referenceFrame);
-              this._addEntityAndAncestorsToPoseMap(poseMap, refId, time);
-            }
-          }
-          poseMap[id] = this._entityPoseCache[id];
-        };
-        ContextService = __decorate([aurelia_dependency_injection_1.inject(session_1.SessionService, reality_1.RealityService, timer_1.TimerService)], ContextService);
-        return ContextService;
-      }());
-      exports_1("ContextService", ContextService);
-    }
-  };
-});
-
-$__System.register("c", ["b", "7", "4", "a"], function(exports_1, context_1) {
+$__System.register("4", ["8", "5", "6", "7"], function(exports_1, context_1) {
   "use strict";
   var __moduleName = context_1 && context_1.id;
   var __decorate = (this && this.__decorate) || function(decorators, target, key, desc) {
@@ -766,8 +433,8 @@ $__System.register("c", ["b", "7", "4", "a"], function(exports_1, context_1) {
             style.type = 'text/css';
             document.head.appendChild(style);
             var sheet = style.sheet;
-            sheet.insertRule("\n                #argon {\n                    position: fixed;\n                    transform: translateZ(0px);\n                    z-index: -9999;\n                    left: 0px;\n                    bottom: 0px;\n                    width: 100%;\n                    height: 100%;\n                    margin: 0;\n                    border: 0;\n                    padding: 0;\n                }\n            ", 0);
-            sheet.insertRule("\n                #argon > * {\n                    position: absolute;\n                    transform: translateZ(0px);\n                    left: 0px;\n                    bottom: 0px;\n                }\n            ", 1);
+            sheet.insertRule("\n                #argon {\n                    position: fixed;\n                    transform: translateZ(0px);\n                    left: 0px;\n                    bottom: 0px;\n                    width: 100%;\n                    height: 100%;\n                    margin: 0;\n                    border: 0;\n                    padding: 0;\n                }\n            ", 0);
+            sheet.insertRule("\n                #argon > canvas {\n                    z-index: -1;\n                    position: absolute;\n                    transform: translateZ(0px);\n                    left: 0px;\n                    bottom: 0px;\n                }\n            ", 1);
           }
           if (this.sessionService.isManager) {
             this.sessionService.connectEvent.addEventListener(function(session) {
@@ -803,6 +470,18 @@ $__System.register("c", ["b", "7", "4", "a"], function(exports_1, context_1) {
         ViewService.prototype.requestOwnership = function() {};
         ViewService.prototype.releaseOwnership = function() {};
         ViewService.prototype.isOwner = function() {};
+        ViewService.prototype.getMaximumViewport = function() {
+          if (window && document && document.documentElement) {
+            return {
+              x: 0,
+              y: 0,
+              width: document.documentElement.clientWidth,
+              height: document.documentElement.clientHeight
+            };
+          } else {
+            return undefined;
+          }
+        };
         ViewService.prototype._setViewParameters = function(view) {
           var viewportJSON = JSON.stringify(view.viewport);
           var previousViewport = this._current && this._current.viewport;
@@ -827,7 +506,1326 @@ $__System.register("c", ["b", "7", "4", "a"], function(exports_1, context_1) {
   };
 });
 
-$__System.register("9", ["5"], function(exports_1, context_1) {
+$__System.register("9", ["8", "a", "b", "c", "5", "7"], function(exports_1, context_1) {
+  "use strict";
+  var __moduleName = context_1 && context_1.id;
+  var __decorate = (this && this.__decorate) || function(decorators, target, key, desc) {
+    var c = arguments.length,
+        r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc,
+        d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function")
+      r = Reflect.decorate(decorators, target, key, desc);
+    else
+      for (var i = decorators.length - 1; i >= 0; i--)
+        if (d = decorators[i])
+          r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+  };
+  var aurelia_dependency_injection_1,
+      cesium_imports_1,
+      common_1,
+      focus_1,
+      session_1,
+      utils_1;
+  var RealityLoader,
+      RealityService;
+  return {
+    setters: [function(aurelia_dependency_injection_1_1) {
+      aurelia_dependency_injection_1 = aurelia_dependency_injection_1_1;
+    }, function(cesium_imports_1_1) {
+      cesium_imports_1 = cesium_imports_1_1;
+    }, function(common_1_1) {
+      common_1 = common_1_1;
+    }, function(focus_1_1) {
+      focus_1 = focus_1_1;
+    }, function(session_1_1) {
+      session_1 = session_1_1;
+    }, function(utils_1_1) {
+      utils_1 = utils_1_1;
+    }],
+    execute: function() {
+      RealityLoader = (function() {
+        function RealityLoader() {}
+        return RealityLoader;
+      }());
+      exports_1("RealityLoader", RealityLoader);
+      RealityService = (function() {
+        function RealityService(sessionService, focusService) {
+          var _this = this;
+          this.sessionService = sessionService;
+          this.focusService = focusService;
+          this.connectEvent = new utils_1.Event();
+          this.changeEvent = new utils_1.Event();
+          this.frameEvent = new utils_1.Event();
+          this.desiredRealityMap = new WeakMap();
+          this.desiredRealityMapInverse = new WeakMap();
+          this.sessionDesiredRealityChangeEvent = new utils_1.Event();
+          this._default = null;
+          this._current = null;
+          this._desired = null;
+          this._loaders = [];
+          if (sessionService.isManager) {
+            sessionService.manager.connectEvent.addEventListener(function() {
+              setTimeout(function() {
+                if (!_this._desired)
+                  _this._setNextReality(_this.onSelectReality());
+              });
+            });
+          } else if (sessionService.isRealityView) {
+            this.frameEvent.addEventListener(function(frameState) {
+              if (_this.sessionService.manager.isConnected) {
+                _this.sessionService.manager.send('ar.reality.frameState', frameState);
+              }
+            });
+          }
+          sessionService.connectEvent.addEventListener(function(session) {
+            if (session.info.role !== common_1.Role.REALITY_VIEW) {
+              session.on['ar.reality.desired'] = function(message, event) {
+                var reality = message.reality;
+                var previous = _this.desiredRealityMap.get(session);
+                console.log('Session set desired reality: ' + JSON.stringify(reality));
+                if (reality) {
+                  if (_this.isSupported(reality.type)) {
+                    _this.desiredRealityMap.set(session, reality);
+                    _this.desiredRealityMapInverse.set(reality, session);
+                  } else {
+                    session.sendError({message: 'Reality of type "' + reality.type + '" is not available on this platform'});
+                    return;
+                  }
+                } else {
+                  _this.desiredRealityMap.delete(session);
+                }
+                _this._setNextReality(_this.onSelectReality());
+                _this.sessionDesiredRealityChangeEvent.raiseEvent({
+                  session: session,
+                  previous: previous,
+                  current: reality
+                });
+              };
+            }
+          });
+          sessionService.manager.on['ar.reality.connect'] = function(_a) {
+            var id = _a.id;
+            var realityControlSession = _this.sessionService.createSessionPort();
+            var messageChannel = _this.sessionService.createSynchronousMessageChannel();
+            var ROUTE_MESSAGE_KEY = 'ar.reality.message.route.' + id;
+            var SEND_MESSAGE_KEY = 'ar.reality.message.send.' + id;
+            var CLOSE_SESSION_KEY = 'ar.reality.close.' + id;
+            messageChannel.port1.onmessage = function(msg) {
+              _this.sessionService.manager.send(ROUTE_MESSAGE_KEY, msg.data);
+            };
+            _this.sessionService.manager.on[SEND_MESSAGE_KEY] = function(message) {
+              messageChannel.port1.postMessage(message);
+            };
+            _this.sessionService.manager.on[CLOSE_SESSION_KEY] = function(message) {
+              realityControlSession.close();
+            };
+            realityControlSession.connectEvent.addEventListener(function() {
+              _this.connectEvent.raiseEvent(realityControlSession);
+            });
+            _this.sessionService.manager.closeEvent.addEventListener(function() {
+              realityControlSession.close();
+              delete _this.sessionService.manager.on[SEND_MESSAGE_KEY];
+              delete _this.sessionService.manager.on[CLOSE_SESSION_KEY];
+            });
+            realityControlSession.open(messageChannel.port2, _this.sessionService.configuration);
+          };
+        }
+        RealityService.prototype.registerLoader = function(handler) {
+          this.sessionService.ensureIsManager();
+          this._loaders.push(handler);
+        };
+        RealityService.prototype.getCurrent = function() {
+          return this._current;
+        };
+        RealityService.prototype.isSupported = function(type) {
+          this.sessionService.ensureIsManager();
+          return !!this._getLoader(type);
+        };
+        RealityService.prototype.setDesired = function(reality) {
+          this.sessionService.ensureNotReality();
+          this._desired = reality;
+          if (this.sessionService.isManager) {
+            this._setNextReality(reality);
+          } else {
+            this.sessionService.manager.send('ar.reality.desired', {reality: reality});
+          }
+        };
+        RealityService.prototype.getDesired = function() {
+          return this._desired;
+        };
+        RealityService.prototype.setOptionalReferenceFrames = function(referenceFrames) {};
+        RealityService.prototype.setRequiredReferenceFrames = function(referenceFrames) {};
+        RealityService.prototype.setDefault = function(reality) {
+          this.sessionService.ensureIsManager();
+          this._default = reality;
+        };
+        RealityService.prototype.onSelectReality = function() {
+          this.sessionService.ensureIsManager();
+          var selectedReality = this.desiredRealityMap.get(this.sessionService.manager);
+          if (!selectedReality) {
+            selectedReality = this.desiredRealityMap.get(this.focusService.getSession());
+          }
+          if (!selectedReality) {
+            for (var _i = 0,
+                _a = this.sessionService.managedSessions; _i < _a.length; _i++) {
+              var session = _a[_i];
+              var desiredReality = this.desiredRealityMap.get(session);
+              if (desiredReality && this.isSupported(desiredReality.type)) {
+                selectedReality = desiredReality;
+                break;
+              }
+            }
+          }
+          return selectedReality;
+        };
+        RealityService.prototype._setNextReality = function(reality) {
+          var _this = this;
+          if (this._current && reality && this._current === reality)
+            return;
+          if (this._current && !reality && this._realitySession)
+            return;
+          if (!this._current && !reality) {
+            reality = this._default;
+            if (!reality)
+              return;
+          }
+          if (!this.isSupported(reality.type)) {
+            this.sessionService.errorEvent.raiseEvent(new Error('Reality of type "' + reality.type + '" is not available on this platform'));
+            return;
+          }
+          var realitySessionPromise = Promise.resolve(this._executeRealityLoader(reality));
+          this._realitySessionPromise = realitySessionPromise;
+          this._realitySessionPromise.then(function(realitySession) {
+            if (_this._realitySessionPromise !== realitySessionPromise)
+              return;
+            if (!realitySession.isConnected)
+              throw new Error('Expected a connected session');
+            if (realitySession.info.role !== common_1.Role.REALITY_VIEW) {
+              realitySession.sendError({message: "Expected a reality session"});
+              realitySession.close();
+              throw new Error('The application "' + realitySession.info.name + '" does not support being loaded as a reality');
+            }
+            var previousRealitySession = _this._realitySession;
+            var previousReality = _this._current;
+            if (previousRealitySession) {
+              previousRealitySession.close();
+            }
+            realitySession.on['ar.reality.frameState'] = function(state) {
+              _this.frameEvent.raiseEvent(state);
+            };
+            _this._realitySession = realitySession;
+            _this._setCurrent(reality);
+            if (realitySession.info['reality.supportsControlPort']) {
+              var ownerSession_1 = _this.desiredRealityMapInverse.get(reality) || _this.sessionService.manager;
+              var id = cesium_imports_1.createGuid();
+              var ROUTE_MESSAGE_KEY_1 = 'ar.reality.message.route.' + id;
+              var SEND_MESSAGE_KEY_1 = 'ar.reality.message.send.' + id;
+              var CLOSE_SESSION_KEY_1 = 'ar.reality.close.' + id;
+              realitySession.on[ROUTE_MESSAGE_KEY_1] = function(message) {
+                ownerSession_1.send(SEND_MESSAGE_KEY_1, message);
+              };
+              ownerSession_1.on[ROUTE_MESSAGE_KEY_1] = function(message) {
+                realitySession.send(SEND_MESSAGE_KEY_1, message);
+              };
+              realitySession.send('ar.reality.connect', {id: id});
+              ownerSession_1.send('ar.reality.connect', {id: id});
+              realitySession.closeEvent.addEventListener(function() {
+                ownerSession_1.send(CLOSE_SESSION_KEY_1);
+                _this._realitySession = undefined;
+                delete ownerSession_1.on[ROUTE_MESSAGE_KEY_1];
+                console.log('Reality session closed: ' + JSON.stringify(reality));
+                _this._setNextReality(_this.onSelectReality());
+              });
+              ownerSession_1.closeEvent.addEventListener(function() {
+                realitySession.send(CLOSE_SESSION_KEY_1);
+                realitySession.close();
+              });
+            }
+          }).catch(function(error) {
+            _this.sessionService.errorEvent.raiseEvent(error);
+          });
+        };
+        RealityService.prototype._getLoader = function(type) {
+          var found = undefined;
+          for (var _i = 0,
+              _a = this._loaders; _i < _a.length; _i++) {
+            var loader = _a[_i];
+            if (loader.type === type) {
+              found = loader;
+              break;
+            }
+          }
+          return found;
+        };
+        RealityService.prototype._setCurrent = function(reality) {
+          if (!this._current || this._current !== reality) {
+            var previous = this._current;
+            this._current = reality;
+            this.changeEvent.raiseEvent({
+              previous: previous,
+              current: reality
+            });
+            console.log('Reality changed to: ' + JSON.stringify(reality));
+          }
+        };
+        RealityService.prototype._executeRealityLoader = function(reality) {
+          this.sessionService.ensureIsManager();
+          var loader = this._getLoader(reality.type);
+          if (!loader)
+            throw new Error('Unable to setup unsupported reality type: ' + reality.type);
+          return loader.load(reality);
+        };
+        RealityService = __decorate([aurelia_dependency_injection_1.inject(session_1.SessionService, focus_1.FocusService)], RealityService);
+        return RealityService;
+      }());
+      exports_1("RealityService", RealityService);
+    }
+  };
+});
+
+$__System.register("6", ["8", "a", "5", "9", "d", "7"], function(exports_1, context_1) {
+  "use strict";
+  var __moduleName = context_1 && context_1.id;
+  var __decorate = (this && this.__decorate) || function(decorators, target, key, desc) {
+    var c = arguments.length,
+        r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc,
+        d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function")
+      r = Reflect.decorate(decorators, target, key, desc);
+    else
+      for (var i = decorators.length - 1; i >= 0; i--)
+        if (d = decorators[i])
+          r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+  };
+  var aurelia_dependency_injection_1,
+      cesium_imports_1,
+      session_1,
+      reality_1,
+      timer_1,
+      utils_1;
+  var PoseStatus,
+      scratchDate,
+      scratchCartesian3,
+      scratchQuaternion,
+      scratchOriginCartesian3,
+      negX90,
+      ContextService;
+  function _stringFromReferenceFrame(referenceFrame) {
+    var rf = referenceFrame;
+    return cesium_imports_1.defined(rf.id) ? rf.id : '' + rf;
+  }
+  return {
+    setters: [function(aurelia_dependency_injection_1_1) {
+      aurelia_dependency_injection_1 = aurelia_dependency_injection_1_1;
+    }, function(cesium_imports_1_1) {
+      cesium_imports_1 = cesium_imports_1_1;
+    }, function(session_1_1) {
+      session_1 = session_1_1;
+    }, function(reality_1_1) {
+      reality_1 = reality_1_1;
+    }, function(timer_1_1) {
+      timer_1 = timer_1_1;
+    }, function(utils_1_1) {
+      utils_1 = utils_1_1;
+    }],
+    execute: function() {
+      (function(PoseStatus) {
+        PoseStatus[PoseStatus["KNOWN"] = 1] = "KNOWN";
+        PoseStatus[PoseStatus["FOUND"] = 2] = "FOUND";
+        PoseStatus[PoseStatus["LOST"] = 4] = "LOST";
+      })(PoseStatus || (PoseStatus = {}));
+      exports_1("PoseStatus", PoseStatus);
+      scratchDate = new cesium_imports_1.JulianDate(0, 0);
+      scratchCartesian3 = new cesium_imports_1.Cartesian3(0, 0);
+      scratchQuaternion = new cesium_imports_1.Quaternion(0, 0);
+      scratchOriginCartesian3 = new cesium_imports_1.Cartesian3(0, 0);
+      negX90 = cesium_imports_1.Quaternion.fromAxisAngle(cesium_imports_1.Cartesian3.UNIT_X, -cesium_imports_1.CesiumMath.PI_OVER_TWO);
+      ContextService = (function() {
+        function ContextService(sessionService, realityService, timerService) {
+          var _this = this;
+          this.sessionService = sessionService;
+          this.realityService = realityService;
+          this.timerService = timerService;
+          this.updateEvent = new utils_1.Event();
+          this.renderEvent = new utils_1.Event();
+          this.wellKnownReferenceFrames = new cesium_imports_1.EntityCollection();
+          this.subscribedEntities = new cesium_imports_1.EntityCollection();
+          this.entities = new cesium_imports_1.CompositeEntityCollection();
+          this.localOriginChangeEvent = new utils_1.Event();
+          this.user = new cesium_imports_1.Entity({
+            id: 'ar.user',
+            name: 'user',
+            position: new cesium_imports_1.ConstantPositionProperty(cesium_imports_1.Cartesian3.ZERO, null),
+            orientation: new cesium_imports_1.ConstantProperty(cesium_imports_1.Quaternion.IDENTITY)
+          });
+          this.localOriginEastNorthUp = new cesium_imports_1.Entity({
+            id: 'ar.localENU',
+            name: 'localOriginENU',
+            position: new cesium_imports_1.ConstantPositionProperty(cesium_imports_1.Cartesian3.ZERO, null),
+            orientation: new cesium_imports_1.ConstantProperty(cesium_imports_1.Quaternion.IDENTITY)
+          });
+          this.localOriginEastUpSouth = new cesium_imports_1.Entity({
+            id: 'ar.localEUS',
+            name: 'localOriginEUS',
+            position: new cesium_imports_1.ConstantPositionProperty(cesium_imports_1.Cartesian3.ZERO, this.localOriginEastNorthUp),
+            orientation: new cesium_imports_1.ConstantProperty(cesium_imports_1.Quaternion.fromAxisAngle(cesium_imports_1.Cartesian3.UNIT_X, Math.PI / 2))
+          });
+          this._time = new cesium_imports_1.JulianDate(0, 0);
+          this._defaultReferenceFrame = this.localOriginEastNorthUp;
+          this._entityPoseCache = {};
+          this._entityPoseMap = new Map();
+          this._subscribedEntities = new WeakMap();
+          this._updatingEntities = new Set();
+          this._knownEntities = new Set();
+          this.entities.addCollection(this.wellKnownReferenceFrames);
+          this.entities.addCollection(this.subscribedEntities);
+          this.subscribedEntities.add(this.user);
+          if (this.sessionService.isManager) {
+            this.realityService.frameEvent.addEventListener(function(state) {
+              _this._update({
+                reality: _this.realityService.getCurrent(),
+                index: state.index,
+                time: state.time,
+                view: state.view,
+                entities: state.entities || {},
+                sendTime: cesium_imports_1.JulianDate.now()
+              });
+            });
+            this.sessionService.connectEvent.addEventListener(function(session) {
+              _this._subscribedEntities.set(session, new Set());
+              session.on['ar.context.subscribe'] = function(_a) {
+                var id = _a.id;
+                var subscriptions = _this._subscribedEntities.get(session);
+                subscriptions.add(id);
+              };
+            });
+          } else {
+            this.sessionService.manager.on['ar.context.update'] = function(state) {
+              _this._update(state);
+            };
+          }
+        }
+        Object.defineProperty(ContextService.prototype, "time", {
+          get: function() {
+            return this._time;
+          },
+          enumerable: true,
+          configurable: true
+        });
+        Object.defineProperty(ContextService.prototype, "state", {
+          get: function() {
+            return this._state;
+          },
+          enumerable: true,
+          configurable: true
+        });
+        ContextService.prototype.getTime = function() {
+          return this._time;
+        };
+        ContextService.prototype.setDefaultReferenceFrame = function(origin) {
+          this._defaultReferenceFrame = origin;
+        };
+        ContextService.prototype.getDefaultReferenceFrame = function() {
+          return this._defaultReferenceFrame;
+        };
+        ContextService.prototype.subscribeToEntityById = function(id) {
+          this.sessionService.manager.send('ar.context.subscribe', {id: id});
+          return this.subscribedEntities.getOrCreateEntity(id);
+        };
+        ContextService.prototype.getEntityPose = function(entity, referenceFrame) {
+          if (referenceFrame === void 0) {
+            referenceFrame = this._defaultReferenceFrame;
+          }
+          var time = this._time;
+          var key = entity.id + '@' + _stringFromReferenceFrame(referenceFrame);
+          var entityPose = this._entityPoseMap.get(key);
+          if (!cesium_imports_1.defined(entityPose)) {
+            entityPose = {
+              position: new cesium_imports_1.Cartesian3,
+              orientation: new cesium_imports_1.Quaternion,
+              time: cesium_imports_1.JulianDate.clone(time),
+              poseStatus: 0
+            };
+            this._entityPoseMap.set(key, entityPose);
+          } else {
+            cesium_imports_1.JulianDate.clone(time, entityPose.time);
+          }
+          var position = utils_1.getEntityPositionInReferenceFrame(entity, time, referenceFrame, entityPose.position);
+          var orientation = utils_1.getEntityOrientationInReferenceFrame(entity, time, referenceFrame, entityPose.orientation);
+          var hasPose = position && orientation;
+          var poseStatus = 0;
+          var previousStatus = entityPose.poseStatus;
+          if (hasPose) {
+            poseStatus |= PoseStatus.KNOWN;
+          }
+          if (hasPose && !(previousStatus & PoseStatus.KNOWN)) {
+            poseStatus |= PoseStatus.FOUND;
+          } else if (!hasPose && previousStatus & PoseStatus.KNOWN) {
+            poseStatus |= PoseStatus.LOST;
+          }
+          entityPose.poseStatus = poseStatus;
+          return entityPose;
+        };
+        ContextService.prototype.getCurrentEntityState = function(entity, referenceFrame) {
+          console.warn('getCurrentEntityState is deprecated. Use getEntityPose instead.');
+          return this.getEntityPose(entity, referenceFrame);
+        };
+        ContextService.prototype._update = function(state) {
+          var _this = this;
+          state.entities[this.user.id] = state.view.pose;
+          state.view.subviews.forEach(function(subview, index) {
+            state.entities['ar.view_' + index] = subview.pose || state.view.pose;
+          });
+          this._knownEntities.clear();
+          for (var id in state.entities) {
+            this._updateEntity(id, state);
+            this._updatingEntities.add(id);
+            this._knownEntities.add(id);
+          }
+          this._updatingEntities.forEach(function(id) {
+            if (!_this._knownEntities.has(id)) {
+              var entity = _this.subscribedEntities.getById(id);
+              entity.position = undefined;
+              entity.orientation = undefined;
+              _this._updatingEntities.delete(id);
+            }
+          });
+          this._updateLocalOrigin(state);
+          if (this.sessionService.isManager) {
+            this._entityPoseCache = {};
+            for (var _i = 0,
+                _a = this.sessionService.managedSessions; _i < _a.length; _i++) {
+              var session = _a[_i];
+              this._sendUpdateForSession(state, session);
+            }
+          }
+          this._state = state;
+          cesium_imports_1.JulianDate.clone(this._state.time, this._time);
+          this.updateEvent.raiseEvent(undefined);
+          this.renderEvent.raiseEvent(undefined);
+        };
+        ContextService.prototype._updateEntity = function(id, state) {
+          var entityPose = state.entities[id];
+          if (!entityPose) {
+            if (!this.wellKnownReferenceFrames.getById(id)) {
+              this.subscribedEntities.getOrCreateEntity(id);
+            }
+            return;
+          }
+          var referenceFrame;
+          if (cesium_imports_1.defined(entityPose.r)) {
+            if (typeof entityPose.r === 'number') {
+              referenceFrame = entityPose.r;
+            } else {
+              referenceFrame = this.entities.getById(entityPose.r);
+            }
+          } else {
+            referenceFrame = cesium_imports_1.ReferenceFrame.FIXED;
+          }
+          if (!cesium_imports_1.defined(referenceFrame)) {
+            this._updateEntity(entityPose.r, state);
+            referenceFrame = this.entities.getById(entityPose.r);
+          }
+          var positionValue = (entityPose.p === 0 ? cesium_imports_1.Cartesian3.ZERO : entityPose.p);
+          var orientationValue = entityPose.o === 0 ? cesium_imports_1.Quaternion.IDENTITY : entityPose.o;
+          var entity = this.subscribedEntities.getOrCreateEntity(id);
+          var entityPosition = entity.position;
+          var entityOrientation = entity.orientation;
+          if (!cesium_imports_1.defined(entityPosition) || entityPosition.referenceFrame !== referenceFrame) {
+            entityPosition = new cesium_imports_1.ConstantPositionProperty(positionValue, referenceFrame);
+            entity.position = entityPosition;
+          }
+          if (entityPosition instanceof cesium_imports_1.ConstantPositionProperty) {
+            entityPosition.setValue(positionValue, referenceFrame);
+          } else if (entityPosition instanceof cesium_imports_1.SampledPositionProperty) {
+            entityPosition.addSample(cesium_imports_1.JulianDate.clone(state.time), positionValue);
+          }
+          if (!cesium_imports_1.defined(entityOrientation)) {
+            entityOrientation = new cesium_imports_1.SampledProperty(cesium_imports_1.Quaternion);
+            entityOrientation.forwardExtrapolationType = cesium_imports_1.ExtrapolationType.HOLD;
+            entityOrientation.forwardExtrapolationDuration = 5 / 60;
+            entityOrientation['maxNumSamples'] = 10;
+            entity.orientation = entityOrientation;
+          }
+          if (entityOrientation instanceof cesium_imports_1.ConstantProperty) {
+            entityOrientation.setValue(orientationValue);
+          } else if (entityOrientation instanceof cesium_imports_1.SampledProperty) {
+            entityOrientation.addSample(cesium_imports_1.JulianDate.clone(state.time), orientationValue);
+          }
+          return entity;
+        };
+        ContextService.prototype._updateLocalOrigin = function(state) {
+          var userRootFrame = utils_1.getRootReferenceFrame(this.user);
+          var userPosition = this.user.position.getValueInReferenceFrame(state.time, userRootFrame, scratchCartesian3);
+          var localENUFrame = this.localOriginEastNorthUp.position.referenceFrame;
+          var localENUPosition = this.localOriginEastNorthUp.position.getValueInReferenceFrame(state.time, localENUFrame, scratchOriginCartesian3);
+          if (!localENUPosition || localENUFrame !== userRootFrame || cesium_imports_1.Cartesian3.magnitudeSquared(cesium_imports_1.Cartesian3.subtract(userPosition, localENUPosition, scratchOriginCartesian3)) > 25000000) {
+            var localENUPositionProperty = this.localOriginEastNorthUp.position;
+            var localENUOrientationProperty = this.localOriginEastNorthUp.orientation;
+            localENUPositionProperty.setValue(userPosition, userRootFrame);
+            if (userRootFrame === cesium_imports_1.ReferenceFrame.FIXED) {
+              var enuOrientation = cesium_imports_1.Transforms.headingPitchRollQuaternion(userPosition, 0, 0, 0, undefined, scratchQuaternion);
+              localENUOrientationProperty.setValue(enuOrientation);
+            } else {
+              localENUOrientationProperty.setValue(cesium_imports_1.Quaternion.IDENTITY);
+            }
+            this.localOriginChangeEvent.raiseEvent(undefined);
+          }
+        };
+        ContextService.prototype._sendUpdateForSession = function(parentState, session) {
+          var _this = this;
+          var sessionPoseMap = {};
+          for (var id in parentState.entities) {
+            sessionPoseMap[id] = parentState.entities[id];
+          }
+          this._subscribedEntities.get(session).forEach(function(id) {
+            _this._addEntityAndAncestorsToPoseMap(sessionPoseMap, id, parentState.time);
+          });
+          var sessionState = {
+            reality: parentState.reality,
+            index: parentState.index,
+            time: parentState.time,
+            view: parentState.view,
+            entities: sessionPoseMap,
+            sendTime: cesium_imports_1.JulianDate.now()
+          };
+          session.send('ar.context.update', sessionState);
+        };
+        ContextService.prototype._addEntityAndAncestorsToPoseMap = function(poseMap, id, time) {
+          if (!cesium_imports_1.defined(this._entityPoseCache[id])) {
+            var entity = this.subscribedEntities.getById(id);
+            if (!entity)
+              return;
+            this._entityPoseCache[id] = utils_1.getSerializedEntityPose(entity, time);
+            if (entity.position.referenceFrame instanceof cesium_imports_1.Entity) {
+              var refId = _stringFromReferenceFrame(entity.position.referenceFrame);
+              this._addEntityAndAncestorsToPoseMap(poseMap, refId, time);
+            }
+          }
+          poseMap[id] = this._entityPoseCache[id];
+        };
+        ContextService = __decorate([aurelia_dependency_injection_1.inject(session_1.SessionService, reality_1.RealityService, timer_1.TimerService)], ContextService);
+        return ContextService;
+      }());
+      exports_1("ContextService", ContextService);
+    }
+  };
+});
+
+$__System.registerDynamic("e", [], true, function($__require, exports, module) {
+  ;
+  var define,
+      global = this,
+      GLOBAL = this;
+  (function(define, undefined) {
+    define(function() {
+      'use strict';
+      var impl = {};
+      impl.mobileDetectRules = {
+        "phones": {
+          "iPhone": "\\biPhone\\b|\\biPod\\b",
+          "BlackBerry": "BlackBerry|\\bBB10\\b|rim[0-9]+",
+          "HTC": "HTC|HTC.*(Sensation|Evo|Vision|Explorer|6800|8100|8900|A7272|S510e|C110e|Legend|Desire|T8282)|APX515CKT|Qtek9090|APA9292KT|HD_mini|Sensation.*Z710e|PG86100|Z715e|Desire.*(A8181|HD)|ADR6200|ADR6400L|ADR6425|001HT|Inspire 4G|Android.*\\bEVO\\b|T-Mobile G1|Z520m",
+          "Nexus": "Nexus One|Nexus S|Galaxy.*Nexus|Android.*Nexus.*Mobile|Nexus 4|Nexus 5|Nexus 6",
+          "Dell": "Dell.*Streak|Dell.*Aero|Dell.*Venue|DELL.*Venue Pro|Dell Flash|Dell Smoke|Dell Mini 3iX|XCD28|XCD35|\\b001DL\\b|\\b101DL\\b|\\bGS01\\b",
+          "Motorola": "Motorola|DROIDX|DROID BIONIC|\\bDroid\\b.*Build|Android.*Xoom|HRI39|MOT-|A1260|A1680|A555|A853|A855|A953|A955|A956|Motorola.*ELECTRIFY|Motorola.*i1|i867|i940|MB200|MB300|MB501|MB502|MB508|MB511|MB520|MB525|MB526|MB611|MB612|MB632|MB810|MB855|MB860|MB861|MB865|MB870|ME501|ME502|ME511|ME525|ME600|ME632|ME722|ME811|ME860|ME863|ME865|MT620|MT710|MT716|MT720|MT810|MT870|MT917|Motorola.*TITANIUM|WX435|WX445|XT300|XT301|XT311|XT316|XT317|XT319|XT320|XT390|XT502|XT530|XT531|XT532|XT535|XT603|XT610|XT611|XT615|XT681|XT701|XT702|XT711|XT720|XT800|XT806|XT860|XT862|XT875|XT882|XT883|XT894|XT901|XT907|XT909|XT910|XT912|XT928|XT926|XT915|XT919|XT925|XT1021|\\bMoto E\\b",
+          "Samsung": "Samsung|SM-G9250|GT-19300|SGH-I337|BGT-S5230|GT-B2100|GT-B2700|GT-B2710|GT-B3210|GT-B3310|GT-B3410|GT-B3730|GT-B3740|GT-B5510|GT-B5512|GT-B5722|GT-B6520|GT-B7300|GT-B7320|GT-B7330|GT-B7350|GT-B7510|GT-B7722|GT-B7800|GT-C3010|GT-C3011|GT-C3060|GT-C3200|GT-C3212|GT-C3212I|GT-C3262|GT-C3222|GT-C3300|GT-C3300K|GT-C3303|GT-C3303K|GT-C3310|GT-C3322|GT-C3330|GT-C3350|GT-C3500|GT-C3510|GT-C3530|GT-C3630|GT-C3780|GT-C5010|GT-C5212|GT-C6620|GT-C6625|GT-C6712|GT-E1050|GT-E1070|GT-E1075|GT-E1080|GT-E1081|GT-E1085|GT-E1087|GT-E1100|GT-E1107|GT-E1110|GT-E1120|GT-E1125|GT-E1130|GT-E1160|GT-E1170|GT-E1175|GT-E1180|GT-E1182|GT-E1200|GT-E1210|GT-E1225|GT-E1230|GT-E1390|GT-E2100|GT-E2120|GT-E2121|GT-E2152|GT-E2220|GT-E2222|GT-E2230|GT-E2232|GT-E2250|GT-E2370|GT-E2550|GT-E2652|GT-E3210|GT-E3213|GT-I5500|GT-I5503|GT-I5700|GT-I5800|GT-I5801|GT-I6410|GT-I6420|GT-I7110|GT-I7410|GT-I7500|GT-I8000|GT-I8150|GT-I8160|GT-I8190|GT-I8320|GT-I8330|GT-I8350|GT-I8530|GT-I8700|GT-I8703|GT-I8910|GT-I9000|GT-I9001|GT-I9003|GT-I9010|GT-I9020|GT-I9023|GT-I9070|GT-I9082|GT-I9100|GT-I9103|GT-I9220|GT-I9250|GT-I9300|GT-I9305|GT-I9500|GT-I9505|GT-M3510|GT-M5650|GT-M7500|GT-M7600|GT-M7603|GT-M8800|GT-M8910|GT-N7000|GT-S3110|GT-S3310|GT-S3350|GT-S3353|GT-S3370|GT-S3650|GT-S3653|GT-S3770|GT-S3850|GT-S5210|GT-S5220|GT-S5229|GT-S5230|GT-S5233|GT-S5250|GT-S5253|GT-S5260|GT-S5263|GT-S5270|GT-S5300|GT-S5330|GT-S5350|GT-S5360|GT-S5363|GT-S5369|GT-S5380|GT-S5380D|GT-S5560|GT-S5570|GT-S5600|GT-S5603|GT-S5610|GT-S5620|GT-S5660|GT-S5670|GT-S5690|GT-S5750|GT-S5780|GT-S5830|GT-S5839|GT-S6102|GT-S6500|GT-S7070|GT-S7200|GT-S7220|GT-S7230|GT-S7233|GT-S7250|GT-S7500|GT-S7530|GT-S7550|GT-S7562|GT-S7710|GT-S8000|GT-S8003|GT-S8500|GT-S8530|GT-S8600|SCH-A310|SCH-A530|SCH-A570|SCH-A610|SCH-A630|SCH-A650|SCH-A790|SCH-A795|SCH-A850|SCH-A870|SCH-A890|SCH-A930|SCH-A950|SCH-A970|SCH-A990|SCH-I100|SCH-I110|SCH-I400|SCH-I405|SCH-I500|SCH-I510|SCH-I515|SCH-I600|SCH-I730|SCH-I760|SCH-I770|SCH-I830|SCH-I910|SCH-I920|SCH-I959|SCH-LC11|SCH-N150|SCH-N300|SCH-R100|SCH-R300|SCH-R351|SCH-R400|SCH-R410|SCH-T300|SCH-U310|SCH-U320|SCH-U350|SCH-U360|SCH-U365|SCH-U370|SCH-U380|SCH-U410|SCH-U430|SCH-U450|SCH-U460|SCH-U470|SCH-U490|SCH-U540|SCH-U550|SCH-U620|SCH-U640|SCH-U650|SCH-U660|SCH-U700|SCH-U740|SCH-U750|SCH-U810|SCH-U820|SCH-U900|SCH-U940|SCH-U960|SCS-26UC|SGH-A107|SGH-A117|SGH-A127|SGH-A137|SGH-A157|SGH-A167|SGH-A177|SGH-A187|SGH-A197|SGH-A227|SGH-A237|SGH-A257|SGH-A437|SGH-A517|SGH-A597|SGH-A637|SGH-A657|SGH-A667|SGH-A687|SGH-A697|SGH-A707|SGH-A717|SGH-A727|SGH-A737|SGH-A747|SGH-A767|SGH-A777|SGH-A797|SGH-A817|SGH-A827|SGH-A837|SGH-A847|SGH-A867|SGH-A877|SGH-A887|SGH-A897|SGH-A927|SGH-B100|SGH-B130|SGH-B200|SGH-B220|SGH-C100|SGH-C110|SGH-C120|SGH-C130|SGH-C140|SGH-C160|SGH-C170|SGH-C180|SGH-C200|SGH-C207|SGH-C210|SGH-C225|SGH-C230|SGH-C417|SGH-C450|SGH-D307|SGH-D347|SGH-D357|SGH-D407|SGH-D415|SGH-D780|SGH-D807|SGH-D980|SGH-E105|SGH-E200|SGH-E315|SGH-E316|SGH-E317|SGH-E335|SGH-E590|SGH-E635|SGH-E715|SGH-E890|SGH-F300|SGH-F480|SGH-I200|SGH-I300|SGH-I320|SGH-I550|SGH-I577|SGH-I600|SGH-I607|SGH-I617|SGH-I627|SGH-I637|SGH-I677|SGH-I700|SGH-I717|SGH-I727|SGH-i747M|SGH-I777|SGH-I780|SGH-I827|SGH-I847|SGH-I857|SGH-I896|SGH-I897|SGH-I900|SGH-I907|SGH-I917|SGH-I927|SGH-I937|SGH-I997|SGH-J150|SGH-J200|SGH-L170|SGH-L700|SGH-M110|SGH-M150|SGH-M200|SGH-N105|SGH-N500|SGH-N600|SGH-N620|SGH-N625|SGH-N700|SGH-N710|SGH-P107|SGH-P207|SGH-P300|SGH-P310|SGH-P520|SGH-P735|SGH-P777|SGH-Q105|SGH-R210|SGH-R220|SGH-R225|SGH-S105|SGH-S307|SGH-T109|SGH-T119|SGH-T139|SGH-T209|SGH-T219|SGH-T229|SGH-T239|SGH-T249|SGH-T259|SGH-T309|SGH-T319|SGH-T329|SGH-T339|SGH-T349|SGH-T359|SGH-T369|SGH-T379|SGH-T409|SGH-T429|SGH-T439|SGH-T459|SGH-T469|SGH-T479|SGH-T499|SGH-T509|SGH-T519|SGH-T539|SGH-T559|SGH-T589|SGH-T609|SGH-T619|SGH-T629|SGH-T639|SGH-T659|SGH-T669|SGH-T679|SGH-T709|SGH-T719|SGH-T729|SGH-T739|SGH-T746|SGH-T749|SGH-T759|SGH-T769|SGH-T809|SGH-T819|SGH-T839|SGH-T919|SGH-T929|SGH-T939|SGH-T959|SGH-T989|SGH-U100|SGH-U200|SGH-U800|SGH-V205|SGH-V206|SGH-X100|SGH-X105|SGH-X120|SGH-X140|SGH-X426|SGH-X427|SGH-X475|SGH-X495|SGH-X497|SGH-X507|SGH-X600|SGH-X610|SGH-X620|SGH-X630|SGH-X700|SGH-X820|SGH-X890|SGH-Z130|SGH-Z150|SGH-Z170|SGH-ZX10|SGH-ZX20|SHW-M110|SPH-A120|SPH-A400|SPH-A420|SPH-A460|SPH-A500|SPH-A560|SPH-A600|SPH-A620|SPH-A660|SPH-A700|SPH-A740|SPH-A760|SPH-A790|SPH-A800|SPH-A820|SPH-A840|SPH-A880|SPH-A900|SPH-A940|SPH-A960|SPH-D600|SPH-D700|SPH-D710|SPH-D720|SPH-I300|SPH-I325|SPH-I330|SPH-I350|SPH-I500|SPH-I600|SPH-I700|SPH-L700|SPH-M100|SPH-M220|SPH-M240|SPH-M300|SPH-M305|SPH-M320|SPH-M330|SPH-M350|SPH-M360|SPH-M370|SPH-M380|SPH-M510|SPH-M540|SPH-M550|SPH-M560|SPH-M570|SPH-M580|SPH-M610|SPH-M620|SPH-M630|SPH-M800|SPH-M810|SPH-M850|SPH-M900|SPH-M910|SPH-M920|SPH-M930|SPH-N100|SPH-N200|SPH-N240|SPH-N300|SPH-N400|SPH-Z400|SWC-E100|SCH-i909|GT-N7100|GT-N7105|SCH-I535|SM-N900A|SGH-I317|SGH-T999L|GT-S5360B|GT-I8262|GT-S6802|GT-S6312|GT-S6310|GT-S5312|GT-S5310|GT-I9105|GT-I8510|GT-S6790N|SM-G7105|SM-N9005|GT-S5301|GT-I9295|GT-I9195|SM-C101|GT-S7392|GT-S7560|GT-B7610|GT-I5510|GT-S7582|GT-S7530E|GT-I8750|SM-G9006V|SM-G9008V|SM-G9009D|SM-G900A|SM-G900D|SM-G900F|SM-G900H|SM-G900I|SM-G900J|SM-G900K|SM-G900L|SM-G900M|SM-G900P|SM-G900R4|SM-G900S|SM-G900T|SM-G900V|SM-G900W8|SHV-E160K|SCH-P709|SCH-P729|SM-T2558|GT-I9205|SM-G9350",
+          "LG": "\\bLG\\b;|LG[- ]?(C800|C900|E400|E610|E900|E-900|F160|F180K|F180L|F180S|730|855|L160|LS740|LS840|LS970|LU6200|MS690|MS695|MS770|MS840|MS870|MS910|P500|P700|P705|VM696|AS680|AS695|AX840|C729|E970|GS505|272|C395|E739BK|E960|L55C|L75C|LS696|LS860|P769BK|P350|P500|P509|P870|UN272|US730|VS840|VS950|LN272|LN510|LS670|LS855|LW690|MN270|MN510|P509|P769|P930|UN200|UN270|UN510|UN610|US670|US740|US760|UX265|UX840|VN271|VN530|VS660|VS700|VS740|VS750|VS910|VS920|VS930|VX9200|VX11000|AX840A|LW770|P506|P925|P999|E612|D955|D802|MS323)",
+          "Sony": "SonyST|SonyLT|SonyEricsson|SonyEricssonLT15iv|LT18i|E10i|LT28h|LT26w|SonyEricssonMT27i|C5303|C6902|C6903|C6906|C6943|D2533",
+          "Asus": "Asus.*Galaxy|PadFone.*Mobile",
+          "Micromax": "Micromax.*\\b(A210|A92|A88|A72|A111|A110Q|A115|A116|A110|A90S|A26|A51|A35|A54|A25|A27|A89|A68|A65|A57|A90)\\b",
+          "Palm": "PalmSource|Palm",
+          "Vertu": "Vertu|Vertu.*Ltd|Vertu.*Ascent|Vertu.*Ayxta|Vertu.*Constellation(F|Quest)?|Vertu.*Monika|Vertu.*Signature",
+          "Pantech": "PANTECH|IM-A850S|IM-A840S|IM-A830L|IM-A830K|IM-A830S|IM-A820L|IM-A810K|IM-A810S|IM-A800S|IM-T100K|IM-A725L|IM-A780L|IM-A775C|IM-A770K|IM-A760S|IM-A750K|IM-A740S|IM-A730S|IM-A720L|IM-A710K|IM-A690L|IM-A690S|IM-A650S|IM-A630K|IM-A600S|VEGA PTL21|PT003|P8010|ADR910L|P6030|P6020|P9070|P4100|P9060|P5000|CDM8992|TXT8045|ADR8995|IS11PT|P2030|P6010|P8000|PT002|IS06|CDM8999|P9050|PT001|TXT8040|P2020|P9020|P2000|P7040|P7000|C790",
+          "Fly": "IQ230|IQ444|IQ450|IQ440|IQ442|IQ441|IQ245|IQ256|IQ236|IQ255|IQ235|IQ245|IQ275|IQ240|IQ285|IQ280|IQ270|IQ260|IQ250",
+          "Wiko": "KITE 4G|HIGHWAY|GETAWAY|STAIRWAY|DARKSIDE|DARKFULL|DARKNIGHT|DARKMOON|SLIDE|WAX 4G|RAINBOW|BLOOM|SUNSET|GOA|LENNY|BARRY|IGGY|OZZY|CINK FIVE|CINK PEAX|CINK PEAX 2|CINK SLIM|CINK SLIM 2|CINK +|CINK KING|CINK PEAX|CINK SLIM|SUBLIM",
+          "iMobile": "i-mobile (IQ|i-STYLE|idea|ZAA|Hitz)",
+          "SimValley": "\\b(SP-80|XT-930|SX-340|XT-930|SX-310|SP-360|SP60|SPT-800|SP-120|SPT-800|SP-140|SPX-5|SPX-8|SP-100|SPX-8|SPX-12)\\b",
+          "Wolfgang": "AT-B24D|AT-AS50HD|AT-AS40W|AT-AS55HD|AT-AS45q2|AT-B26D|AT-AS50Q",
+          "Alcatel": "Alcatel",
+          "Nintendo": "Nintendo 3DS",
+          "Amoi": "Amoi",
+          "INQ": "INQ",
+          "GenericPhone": "Tapatalk|PDA;|SAGEM|\\bmmp\\b|pocket|\\bpsp\\b|symbian|Smartphone|smartfon|treo|up.browser|up.link|vodafone|\\bwap\\b|nokia|Series40|Series60|S60|SonyEricsson|N900|MAUI.*WAP.*Browser"
+        },
+        "tablets": {
+          "iPad": "iPad|iPad.*Mobile",
+          "NexusTablet": "Android.*Nexus[\\s]+(7|9|10)",
+          "SamsungTablet": "SAMSUNG.*Tablet|Galaxy.*Tab|SC-01C|GT-P1000|GT-P1003|GT-P1010|GT-P3105|GT-P6210|GT-P6800|GT-P6810|GT-P7100|GT-P7300|GT-P7310|GT-P7500|GT-P7510|SCH-I800|SCH-I815|SCH-I905|SGH-I957|SGH-I987|SGH-T849|SGH-T859|SGH-T869|SPH-P100|GT-P3100|GT-P3108|GT-P3110|GT-P5100|GT-P5110|GT-P6200|GT-P7320|GT-P7511|GT-N8000|GT-P8510|SGH-I497|SPH-P500|SGH-T779|SCH-I705|SCH-I915|GT-N8013|GT-P3113|GT-P5113|GT-P8110|GT-N8010|GT-N8005|GT-N8020|GT-P1013|GT-P6201|GT-P7501|GT-N5100|GT-N5105|GT-N5110|SHV-E140K|SHV-E140L|SHV-E140S|SHV-E150S|SHV-E230K|SHV-E230L|SHV-E230S|SHW-M180K|SHW-M180L|SHW-M180S|SHW-M180W|SHW-M300W|SHW-M305W|SHW-M380K|SHW-M380S|SHW-M380W|SHW-M430W|SHW-M480K|SHW-M480S|SHW-M480W|SHW-M485W|SHW-M486W|SHW-M500W|GT-I9228|SCH-P739|SCH-I925|GT-I9200|GT-P5200|GT-P5210|GT-P5210X|SM-T311|SM-T310|SM-T310X|SM-T210|SM-T210R|SM-T211|SM-P600|SM-P601|SM-P605|SM-P900|SM-P901|SM-T217|SM-T217A|SM-T217S|SM-P6000|SM-T3100|SGH-I467|XE500|SM-T110|GT-P5220|GT-I9200X|GT-N5110X|GT-N5120|SM-P905|SM-T111|SM-T2105|SM-T315|SM-T320|SM-T320X|SM-T321|SM-T520|SM-T525|SM-T530NU|SM-T230NU|SM-T330NU|SM-T900|XE500T1C|SM-P605V|SM-P905V|SM-T337V|SM-T537V|SM-T707V|SM-T807V|SM-P600X|SM-P900X|SM-T210X|SM-T230|SM-T230X|SM-T325|GT-P7503|SM-T531|SM-T330|SM-T530|SM-T705|SM-T705C|SM-T535|SM-T331|SM-T800|SM-T700|SM-T537|SM-T807|SM-P907A|SM-T337A|SM-T537A|SM-T707A|SM-T807A|SM-T237|SM-T807P|SM-P607T|SM-T217T|SM-T337T|SM-T807T|SM-T116NQ|SM-P550|SM-T350|SM-T550|SM-T9000|SM-P9000|SM-T705Y|SM-T805|GT-P3113|SM-T710|SM-T810|SM-T815|SM-T360|SM-T533|SM-T113|SM-T335|SM-T715|SM-T560|SM-T670|SM-T677|SM-T377|SM-T567|SM-T357T|SM-T555|SM-T561",
+          "Kindle": "Kindle|Silk.*Accelerated|Android.*\\b(KFOT|KFTT|KFJWI|KFJWA|KFOTE|KFSOWI|KFTHWI|KFTHWA|KFAPWI|KFAPWA|WFJWAE|KFSAWA|KFSAWI|KFASWI)\\b",
+          "SurfaceTablet": "Windows NT [0-9.]+; ARM;.*(Tablet|ARMBJS)",
+          "HPTablet": "HP Slate (7|8|10)|HP ElitePad 900|hp-tablet|EliteBook.*Touch|HP 8|Slate 21|HP SlateBook 10",
+          "AsusTablet": "^.*PadFone((?!Mobile).)*$|Transformer|TF101|TF101G|TF300T|TF300TG|TF300TL|TF700T|TF700KL|TF701T|TF810C|ME171|ME301T|ME302C|ME371MG|ME370T|ME372MG|ME172V|ME173X|ME400C|Slider SL101|\\bK00F\\b|\\bK00C\\b|\\bK00E\\b|\\bK00L\\b|TX201LA|ME176C|ME102A|\\bM80TA\\b|ME372CL|ME560CG|ME372CG|ME302KL| K010 | K017 |ME572C|ME103K|ME170C|ME171C|\\bME70C\\b|ME581C|ME581CL|ME8510C|ME181C",
+          "BlackBerryTablet": "PlayBook|RIM Tablet",
+          "HTCtablet": "HTC_Flyer_P512|HTC Flyer|HTC Jetstream|HTC-P715a|HTC EVO View 4G|PG41200|PG09410",
+          "MotorolaTablet": "xoom|sholest|MZ615|MZ605|MZ505|MZ601|MZ602|MZ603|MZ604|MZ606|MZ607|MZ608|MZ609|MZ615|MZ616|MZ617",
+          "NookTablet": "Android.*Nook|NookColor|nook browser|BNRV200|BNRV200A|BNTV250|BNTV250A|BNTV400|BNTV600|LogicPD Zoom2",
+          "AcerTablet": "Android.*; \\b(A100|A101|A110|A200|A210|A211|A500|A501|A510|A511|A700|A701|W500|W500P|W501|W501P|W510|W511|W700|G100|G100W|B1-A71|B1-710|B1-711|A1-810|A1-811|A1-830)\\b|W3-810|\\bA3-A10\\b|\\bA3-A11\\b",
+          "ToshibaTablet": "Android.*(AT100|AT105|AT200|AT205|AT270|AT275|AT300|AT305|AT1S5|AT500|AT570|AT700|AT830)|TOSHIBA.*FOLIO",
+          "LGTablet": "\\bL-06C|LG-V909|LG-V900|LG-V700|LG-V510|LG-V500|LG-V410|LG-V400|LG-VK810\\b",
+          "FujitsuTablet": "Android.*\\b(F-01D|F-02F|F-05E|F-10D|M532|Q572)\\b",
+          "PrestigioTablet": "PMP3170B|PMP3270B|PMP3470B|PMP7170B|PMP3370B|PMP3570C|PMP5870C|PMP3670B|PMP5570C|PMP5770D|PMP3970B|PMP3870C|PMP5580C|PMP5880D|PMP5780D|PMP5588C|PMP7280C|PMP7280C3G|PMP7280|PMP7880D|PMP5597D|PMP5597|PMP7100D|PER3464|PER3274|PER3574|PER3884|PER5274|PER5474|PMP5097CPRO|PMP5097|PMP7380D|PMP5297C|PMP5297C_QUAD|PMP812E|PMP812E3G|PMP812F|PMP810E|PMP880TD|PMT3017|PMT3037|PMT3047|PMT3057|PMT7008|PMT5887|PMT5001|PMT5002",
+          "LenovoTablet": "Lenovo TAB|Idea(Tab|Pad)( A1|A10| K1|)|ThinkPad([ ]+)?Tablet|Lenovo.*(S2109|S2110|S5000|S6000|K3011|A3000|A3500|A1000|A2107|A2109|A1107|A5500|A7600|B6000|B8000|B8080)(-|)(FL|F|HV|H|)",
+          "DellTablet": "Venue 11|Venue 8|Venue 7|Dell Streak 10|Dell Streak 7",
+          "YarvikTablet": "Android.*\\b(TAB210|TAB211|TAB224|TAB250|TAB260|TAB264|TAB310|TAB360|TAB364|TAB410|TAB411|TAB420|TAB424|TAB450|TAB460|TAB461|TAB464|TAB465|TAB467|TAB468|TAB07-100|TAB07-101|TAB07-150|TAB07-151|TAB07-152|TAB07-200|TAB07-201-3G|TAB07-210|TAB07-211|TAB07-212|TAB07-214|TAB07-220|TAB07-400|TAB07-485|TAB08-150|TAB08-200|TAB08-201-3G|TAB08-201-30|TAB09-100|TAB09-211|TAB09-410|TAB10-150|TAB10-201|TAB10-211|TAB10-400|TAB10-410|TAB13-201|TAB274EUK|TAB275EUK|TAB374EUK|TAB462EUK|TAB474EUK|TAB9-200)\\b",
+          "MedionTablet": "Android.*\\bOYO\\b|LIFE.*(P9212|P9514|P9516|S9512)|LIFETAB",
+          "ArnovaTablet": "AN10G2|AN7bG3|AN7fG3|AN8G3|AN8cG3|AN7G3|AN9G3|AN7dG3|AN7dG3ST|AN7dG3ChildPad|AN10bG3|AN10bG3DT|AN9G2",
+          "IntensoTablet": "INM8002KP|INM1010FP|INM805ND|Intenso Tab|TAB1004",
+          "IRUTablet": "M702pro",
+          "MegafonTablet": "MegaFon V9|\\bZTE V9\\b|Android.*\\bMT7A\\b",
+          "EbodaTablet": "E-Boda (Supreme|Impresspeed|Izzycomm|Essential)",
+          "AllViewTablet": "Allview.*(Viva|Alldro|City|Speed|All TV|Frenzy|Quasar|Shine|TX1|AX1|AX2)",
+          "ArchosTablet": "\\b(101G9|80G9|A101IT)\\b|Qilive 97R|Archos5|\\bARCHOS (70|79|80|90|97|101|FAMILYPAD|)(b|)(G10| Cobalt| TITANIUM(HD|)| Xenon| Neon|XSK| 2| XS 2| PLATINUM| CARBON|GAMEPAD)\\b",
+          "AinolTablet": "NOVO7|NOVO8|NOVO10|Novo7Aurora|Novo7Basic|NOVO7PALADIN|novo9-Spark",
+          "SonyTablet": "Sony.*Tablet|Xperia Tablet|Sony Tablet S|SO-03E|SGPT12|SGPT13|SGPT114|SGPT121|SGPT122|SGPT123|SGPT111|SGPT112|SGPT113|SGPT131|SGPT132|SGPT133|SGPT211|SGPT212|SGPT213|SGP311|SGP312|SGP321|EBRD1101|EBRD1102|EBRD1201|SGP351|SGP341|SGP511|SGP512|SGP521|SGP541|SGP551|SGP621|SGP612|SOT31",
+          "PhilipsTablet": "\\b(PI2010|PI3000|PI3100|PI3105|PI3110|PI3205|PI3210|PI3900|PI4010|PI7000|PI7100)\\b",
+          "CubeTablet": "Android.*(K8GT|U9GT|U10GT|U16GT|U17GT|U18GT|U19GT|U20GT|U23GT|U30GT)|CUBE U8GT",
+          "CobyTablet": "MID1042|MID1045|MID1125|MID1126|MID7012|MID7014|MID7015|MID7034|MID7035|MID7036|MID7042|MID7048|MID7127|MID8042|MID8048|MID8127|MID9042|MID9740|MID9742|MID7022|MID7010",
+          "MIDTablet": "M9701|M9000|M9100|M806|M1052|M806|T703|MID701|MID713|MID710|MID727|MID760|MID830|MID728|MID933|MID125|MID810|MID732|MID120|MID930|MID800|MID731|MID900|MID100|MID820|MID735|MID980|MID130|MID833|MID737|MID960|MID135|MID860|MID736|MID140|MID930|MID835|MID733|MID4X10",
+          "MSITablet": "MSI \\b(Primo 73K|Primo 73L|Primo 81L|Primo 77|Primo 93|Primo 75|Primo 76|Primo 73|Primo 81|Primo 91|Primo 90|Enjoy 71|Enjoy 7|Enjoy 10)\\b",
+          "SMiTTablet": "Android.*(\\bMID\\b|MID-560|MTV-T1200|MTV-PND531|MTV-P1101|MTV-PND530)",
+          "RockChipTablet": "Android.*(RK2818|RK2808A|RK2918|RK3066)|RK2738|RK2808A",
+          "FlyTablet": "IQ310|Fly Vision",
+          "bqTablet": "Android.*(bq)?.*(Elcano|Curie|Edison|Maxwell|Kepler|Pascal|Tesla|Hypatia|Platon|Newton|Livingstone|Cervantes|Avant|Aquaris E10)|Maxwell.*Lite|Maxwell.*Plus",
+          "HuaweiTablet": "MediaPad|MediaPad 7 Youth|IDEOS S7|S7-201c|S7-202u|S7-101|S7-103|S7-104|S7-105|S7-106|S7-201|S7-Slim",
+          "NecTablet": "\\bN-06D|\\bN-08D",
+          "PantechTablet": "Pantech.*P4100",
+          "BronchoTablet": "Broncho.*(N701|N708|N802|a710)",
+          "VersusTablet": "TOUCHPAD.*[78910]|\\bTOUCHTAB\\b",
+          "ZyncTablet": "z1000|Z99 2G|z99|z930|z999|z990|z909|Z919|z900",
+          "PositivoTablet": "TB07STA|TB10STA|TB07FTA|TB10FTA",
+          "NabiTablet": "Android.*\\bNabi",
+          "KoboTablet": "Kobo Touch|\\bK080\\b|\\bVox\\b Build|\\bArc\\b Build",
+          "DanewTablet": "DSlide.*\\b(700|701R|702|703R|704|802|970|971|972|973|974|1010|1012)\\b",
+          "TexetTablet": "NaviPad|TB-772A|TM-7045|TM-7055|TM-9750|TM-7016|TM-7024|TM-7026|TM-7041|TM-7043|TM-7047|TM-8041|TM-9741|TM-9747|TM-9748|TM-9751|TM-7022|TM-7021|TM-7020|TM-7011|TM-7010|TM-7023|TM-7025|TM-7037W|TM-7038W|TM-7027W|TM-9720|TM-9725|TM-9737W|TM-1020|TM-9738W|TM-9740|TM-9743W|TB-807A|TB-771A|TB-727A|TB-725A|TB-719A|TB-823A|TB-805A|TB-723A|TB-715A|TB-707A|TB-705A|TB-709A|TB-711A|TB-890HD|TB-880HD|TB-790HD|TB-780HD|TB-770HD|TB-721HD|TB-710HD|TB-434HD|TB-860HD|TB-840HD|TB-760HD|TB-750HD|TB-740HD|TB-730HD|TB-722HD|TB-720HD|TB-700HD|TB-500HD|TB-470HD|TB-431HD|TB-430HD|TB-506|TB-504|TB-446|TB-436|TB-416|TB-146SE|TB-126SE",
+          "PlaystationTablet": "Playstation.*(Portable|Vita)",
+          "TrekstorTablet": "ST10416-1|VT10416-1|ST70408-1|ST702xx-1|ST702xx-2|ST80208|ST97216|ST70104-2|VT10416-2|ST10216-2A|SurfTab",
+          "PyleAudioTablet": "\\b(PTBL10CEU|PTBL10C|PTBL72BC|PTBL72BCEU|PTBL7CEU|PTBL7C|PTBL92BC|PTBL92BCEU|PTBL9CEU|PTBL9CUK|PTBL9C)\\b",
+          "AdvanTablet": "Android.* \\b(E3A|T3X|T5C|T5B|T3E|T3C|T3B|T1J|T1F|T2A|T1H|T1i|E1C|T1-E|T5-A|T4|E1-B|T2Ci|T1-B|T1-D|O1-A|E1-A|T1-A|T3A|T4i)\\b ",
+          "DanyTechTablet": "Genius Tab G3|Genius Tab S2|Genius Tab Q3|Genius Tab G4|Genius Tab Q4|Genius Tab G-II|Genius TAB GII|Genius TAB GIII|Genius Tab S1",
+          "GalapadTablet": "Android.*\\bG1\\b",
+          "MicromaxTablet": "Funbook|Micromax.*\\b(P250|P560|P360|P362|P600|P300|P350|P500|P275)\\b",
+          "KarbonnTablet": "Android.*\\b(A39|A37|A34|ST8|ST10|ST7|Smart Tab3|Smart Tab2)\\b",
+          "AllFineTablet": "Fine7 Genius|Fine7 Shine|Fine7 Air|Fine8 Style|Fine9 More|Fine10 Joy|Fine11 Wide",
+          "PROSCANTablet": "\\b(PEM63|PLT1023G|PLT1041|PLT1044|PLT1044G|PLT1091|PLT4311|PLT4311PL|PLT4315|PLT7030|PLT7033|PLT7033D|PLT7035|PLT7035D|PLT7044K|PLT7045K|PLT7045KB|PLT7071KG|PLT7072|PLT7223G|PLT7225G|PLT7777G|PLT7810K|PLT7849G|PLT7851G|PLT7852G|PLT8015|PLT8031|PLT8034|PLT8036|PLT8080K|PLT8082|PLT8088|PLT8223G|PLT8234G|PLT8235G|PLT8816K|PLT9011|PLT9045K|PLT9233G|PLT9735|PLT9760G|PLT9770G)\\b",
+          "YONESTablet": "BQ1078|BC1003|BC1077|RK9702|BC9730|BC9001|IT9001|BC7008|BC7010|BC708|BC728|BC7012|BC7030|BC7027|BC7026",
+          "ChangJiaTablet": "TPC7102|TPC7103|TPC7105|TPC7106|TPC7107|TPC7201|TPC7203|TPC7205|TPC7210|TPC7708|TPC7709|TPC7712|TPC7110|TPC8101|TPC8103|TPC8105|TPC8106|TPC8203|TPC8205|TPC8503|TPC9106|TPC9701|TPC97101|TPC97103|TPC97105|TPC97106|TPC97111|TPC97113|TPC97203|TPC97603|TPC97809|TPC97205|TPC10101|TPC10103|TPC10106|TPC10111|TPC10203|TPC10205|TPC10503",
+          "GUTablet": "TX-A1301|TX-M9002|Q702|kf026",
+          "PointOfViewTablet": "TAB-P506|TAB-navi-7-3G-M|TAB-P517|TAB-P-527|TAB-P701|TAB-P703|TAB-P721|TAB-P731N|TAB-P741|TAB-P825|TAB-P905|TAB-P925|TAB-PR945|TAB-PL1015|TAB-P1025|TAB-PI1045|TAB-P1325|TAB-PROTAB[0-9]+|TAB-PROTAB25|TAB-PROTAB26|TAB-PROTAB27|TAB-PROTAB26XL|TAB-PROTAB2-IPS9|TAB-PROTAB30-IPS9|TAB-PROTAB25XXL|TAB-PROTAB26-IPS10|TAB-PROTAB30-IPS10",
+          "OvermaxTablet": "OV-(SteelCore|NewBase|Basecore|Baseone|Exellen|Quattor|EduTab|Solution|ACTION|BasicTab|TeddyTab|MagicTab|Stream|TB-08|TB-09)",
+          "HCLTablet": "HCL.*Tablet|Connect-3G-2.0|Connect-2G-2.0|ME Tablet U1|ME Tablet U2|ME Tablet G1|ME Tablet X1|ME Tablet Y2|ME Tablet Sync",
+          "DPSTablet": "DPS Dream 9|DPS Dual 7",
+          "VistureTablet": "V97 HD|i75 3G|Visture V4( HD)?|Visture V5( HD)?|Visture V10",
+          "CrestaTablet": "CTP(-)?810|CTP(-)?818|CTP(-)?828|CTP(-)?838|CTP(-)?888|CTP(-)?978|CTP(-)?980|CTP(-)?987|CTP(-)?988|CTP(-)?989",
+          "MediatekTablet": "\\bMT8125|MT8389|MT8135|MT8377\\b",
+          "ConcordeTablet": "Concorde([ ]+)?Tab|ConCorde ReadMan",
+          "GoCleverTablet": "GOCLEVER TAB|A7GOCLEVER|M1042|M7841|M742|R1042BK|R1041|TAB A975|TAB A7842|TAB A741|TAB A741L|TAB M723G|TAB M721|TAB A1021|TAB I921|TAB R721|TAB I720|TAB T76|TAB R70|TAB R76.2|TAB R106|TAB R83.2|TAB M813G|TAB I721|GCTA722|TAB I70|TAB I71|TAB S73|TAB R73|TAB R74|TAB R93|TAB R75|TAB R76.1|TAB A73|TAB A93|TAB A93.2|TAB T72|TAB R83|TAB R974|TAB R973|TAB A101|TAB A103|TAB A104|TAB A104.2|R105BK|M713G|A972BK|TAB A971|TAB R974.2|TAB R104|TAB R83.3|TAB A1042",
+          "ModecomTablet": "FreeTAB 9000|FreeTAB 7.4|FreeTAB 7004|FreeTAB 7800|FreeTAB 2096|FreeTAB 7.5|FreeTAB 1014|FreeTAB 1001 |FreeTAB 8001|FreeTAB 9706|FreeTAB 9702|FreeTAB 7003|FreeTAB 7002|FreeTAB 1002|FreeTAB 7801|FreeTAB 1331|FreeTAB 1004|FreeTAB 8002|FreeTAB 8014|FreeTAB 9704|FreeTAB 1003",
+          "VoninoTablet": "\\b(Argus[ _]?S|Diamond[ _]?79HD|Emerald[ _]?78E|Luna[ _]?70C|Onyx[ _]?S|Onyx[ _]?Z|Orin[ _]?HD|Orin[ _]?S|Otis[ _]?S|SpeedStar[ _]?S|Magnet[ _]?M9|Primus[ _]?94[ _]?3G|Primus[ _]?94HD|Primus[ _]?QS|Android.*\\bQ8\\b|Sirius[ _]?EVO[ _]?QS|Sirius[ _]?QS|Spirit[ _]?S)\\b",
+          "ECSTablet": "V07OT2|TM105A|S10OT1|TR10CS1",
+          "StorexTablet": "eZee[_']?(Tab|Go)[0-9]+|TabLC7|Looney Tunes Tab",
+          "VodafoneTablet": "SmartTab([ ]+)?[0-9]+|SmartTabII10|SmartTabII7",
+          "EssentielBTablet": "Smart[ ']?TAB[ ]+?[0-9]+|Family[ ']?TAB2",
+          "RossMoorTablet": "RM-790|RM-997|RMD-878G|RMD-974R|RMT-705A|RMT-701|RME-601|RMT-501|RMT-711",
+          "iMobileTablet": "i-mobile i-note",
+          "TolinoTablet": "tolino tab [0-9.]+|tolino shine",
+          "AudioSonicTablet": "\\bC-22Q|T7-QC|T-17B|T-17P\\b",
+          "AMPETablet": "Android.* A78 ",
+          "SkkTablet": "Android.* (SKYPAD|PHOENIX|CYCLOPS)",
+          "TecnoTablet": "TECNO P9",
+          "JXDTablet": "Android.* \\b(F3000|A3300|JXD5000|JXD3000|JXD2000|JXD300B|JXD300|S5800|S7800|S602b|S5110b|S7300|S5300|S602|S603|S5100|S5110|S601|S7100a|P3000F|P3000s|P101|P200s|P1000m|P200m|P9100|P1000s|S6600b|S908|P1000|P300|S18|S6600|S9100)\\b",
+          "iJoyTablet": "Tablet (Spirit 7|Essentia|Galatea|Fusion|Onix 7|Landa|Titan|Scooby|Deox|Stella|Themis|Argon|Unique 7|Sygnus|Hexen|Finity 7|Cream|Cream X2|Jade|Neon 7|Neron 7|Kandy|Scape|Saphyr 7|Rebel|Biox|Rebel|Rebel 8GB|Myst|Draco 7|Myst|Tab7-004|Myst|Tadeo Jones|Tablet Boing|Arrow|Draco Dual Cam|Aurix|Mint|Amity|Revolution|Finity 9|Neon 9|T9w|Amity 4GB Dual Cam|Stone 4GB|Stone 8GB|Andromeda|Silken|X2|Andromeda II|Halley|Flame|Saphyr 9,7|Touch 8|Planet|Triton|Unique 10|Hexen 10|Memphis 4GB|Memphis 8GB|Onix 10)",
+          "FX2Tablet": "FX2 PAD7|FX2 PAD10",
+          "XoroTablet": "KidsPAD 701|PAD[ ]?712|PAD[ ]?714|PAD[ ]?716|PAD[ ]?717|PAD[ ]?718|PAD[ ]?720|PAD[ ]?721|PAD[ ]?722|PAD[ ]?790|PAD[ ]?792|PAD[ ]?900|PAD[ ]?9715D|PAD[ ]?9716DR|PAD[ ]?9718DR|PAD[ ]?9719QR|PAD[ ]?9720QR|TelePAD1030|Telepad1032|TelePAD730|TelePAD731|TelePAD732|TelePAD735Q|TelePAD830|TelePAD9730|TelePAD795|MegaPAD 1331|MegaPAD 1851|MegaPAD 2151",
+          "ViewsonicTablet": "ViewPad 10pi|ViewPad 10e|ViewPad 10s|ViewPad E72|ViewPad7|ViewPad E100|ViewPad 7e|ViewSonic VB733|VB100a",
+          "OdysTablet": "LOOX|XENO10|ODYS[ -](Space|EVO|Xpress|NOON)|\\bXELIO\\b|Xelio10Pro|XELIO7PHONETAB|XELIO10EXTREME|XELIOPT2|NEO_QUAD10",
+          "CaptivaTablet": "CAPTIVA PAD",
+          "IconbitTablet": "NetTAB|NT-3702|NT-3702S|NT-3702S|NT-3603P|NT-3603P|NT-0704S|NT-0704S|NT-3805C|NT-3805C|NT-0806C|NT-0806C|NT-0909T|NT-0909T|NT-0907S|NT-0907S|NT-0902S|NT-0902S",
+          "TeclastTablet": "T98 4G|\\bP80\\b|\\bX90HD\\b|X98 Air|X98 Air 3G|\\bX89\\b|P80 3G|\\bX80h\\b|P98 Air|\\bX89HD\\b|P98 3G|\\bP90HD\\b|P89 3G|X98 3G|\\bP70h\\b|P79HD 3G|G18d 3G|\\bP79HD\\b|\\bP89s\\b|\\bA88\\b|\\bP10HD\\b|\\bP19HD\\b|G18 3G|\\bP78HD\\b|\\bA78\\b|\\bP75\\b|G17s 3G|G17h 3G|\\bP85t\\b|\\bP90\\b|\\bP11\\b|\\bP98t\\b|\\bP98HD\\b|\\bG18d\\b|\\bP85s\\b|\\bP11HD\\b|\\bP88s\\b|\\bA80HD\\b|\\bA80se\\b|\\bA10h\\b|\\bP89\\b|\\bP78s\\b|\\bG18\\b|\\bP85\\b|\\bA70h\\b|\\bA70\\b|\\bG17\\b|\\bP18\\b|\\bA80s\\b|\\bA11s\\b|\\bP88HD\\b|\\bA80h\\b|\\bP76s\\b|\\bP76h\\b|\\bP98\\b|\\bA10HD\\b|\\bP78\\b|\\bP88\\b|\\bA11\\b|\\bA10t\\b|\\bP76a\\b|\\bP76t\\b|\\bP76e\\b|\\bP85HD\\b|\\bP85a\\b|\\bP86\\b|\\bP75HD\\b|\\bP76v\\b|\\bA12\\b|\\bP75a\\b|\\bA15\\b|\\bP76Ti\\b|\\bP81HD\\b|\\bA10\\b|\\bT760VE\\b|\\bT720HD\\b|\\bP76\\b|\\bP73\\b|\\bP71\\b|\\bP72\\b|\\bT720SE\\b|\\bC520Ti\\b|\\bT760\\b|\\bT720VE\\b|T720-3GE|T720-WiFi",
+          "OndaTablet": "\\b(V975i|Vi30|VX530|V701|Vi60|V701s|Vi50|V801s|V719|Vx610w|VX610W|V819i|Vi10|VX580W|Vi10|V711s|V813|V811|V820w|V820|Vi20|V711|VI30W|V712|V891w|V972|V819w|V820w|Vi60|V820w|V711|V813s|V801|V819|V975s|V801|V819|V819|V818|V811|V712|V975m|V101w|V961w|V812|V818|V971|V971s|V919|V989|V116w|V102w|V973|Vi40)\\b[\\s]+",
+          "JaytechTablet": "TPC-PA762",
+          "BlaupunktTablet": "Endeavour 800NG|Endeavour 1010",
+          "DigmaTablet": "\\b(iDx10|iDx9|iDx8|iDx7|iDxD7|iDxD8|iDsQ8|iDsQ7|iDsQ8|iDsD10|iDnD7|3TS804H|iDsQ11|iDj7|iDs10)\\b",
+          "EvolioTablet": "ARIA_Mini_wifi|Aria[ _]Mini|Evolio X10|Evolio X7|Evolio X8|\\bEvotab\\b|\\bNeura\\b",
+          "LavaTablet": "QPAD E704|\\bIvoryS\\b|E-TAB IVORY|\\bE-TAB\\b",
+          "AocTablet": "MW0811|MW0812|MW0922|MTK8382",
+          "MpmanTablet": "MP11 OCTA|MP10 OCTA|MPQC1114|MPQC1004|MPQC994|MPQC974|MPQC973|MPQC804|MPQC784|MPQC780|\\bMPG7\\b|MPDCG75|MPDCG71|MPDC1006|MP101DC|MPDC9000|MPDC905|MPDC706HD|MPDC706|MPDC705|MPDC110|MPDC100|MPDC99|MPDC97|MPDC88|MPDC8|MPDC77|MP709|MID701|MID711|MID170|MPDC703|MPQC1010",
+          "CelkonTablet": "CT695|CT888|CT[\\s]?910|CT7 Tab|CT9 Tab|CT3 Tab|CT2 Tab|CT1 Tab|C820|C720|\\bCT-1\\b",
+          "WolderTablet": "miTab \\b(DIAMOND|SPACE|BROOKLYN|NEO|FLY|MANHATTAN|FUNK|EVOLUTION|SKY|GOCAR|IRON|GENIUS|POP|MINT|EPSILON|BROADWAY|JUMP|HOP|LEGEND|NEW AGE|LINE|ADVANCE|FEEL|FOLLOW|LIKE|LINK|LIVE|THINK|FREEDOM|CHICAGO|CLEVELAND|BALTIMORE-GH|IOWA|BOSTON|SEATTLE|PHOENIX|DALLAS|IN 101|MasterChef)\\b",
+          "MiTablet": "\\bMI PAD\\b|\\bHM NOTE 1W\\b",
+          "NibiruTablet": "Nibiru M1|Nibiru Jupiter One",
+          "NexoTablet": "NEXO NOVA|NEXO 10|NEXO AVIO|NEXO FREE|NEXO GO|NEXO EVO|NEXO 3G|NEXO SMART|NEXO KIDDO|NEXO MOBI",
+          "LeaderTablet": "TBLT10Q|TBLT10I|TBL-10WDKB|TBL-10WDKBO2013|TBL-W230V2|TBL-W450|TBL-W500|SV572|TBLT7I|TBA-AC7-8G|TBLT79|TBL-8W16|TBL-10W32|TBL-10WKB|TBL-W100",
+          "UbislateTablet": "UbiSlate[\\s]?7C",
+          "PocketBookTablet": "Pocketbook",
+          "Hudl": "Hudl HT7S3|Hudl 2",
+          "TelstraTablet": "T-Hub2",
+          "GenericTablet": "Android.*\\b97D\\b|Tablet(?!.*PC)|BNTV250A|MID-WCDMA|LogicPD Zoom2|\\bA7EB\\b|CatNova8|A1_07|CT704|CT1002|\\bM721\\b|rk30sdk|\\bEVOTAB\\b|M758A|ET904|ALUMIUM10|Smartfren Tab|Endeavour 1010|Tablet-PC-4|Tagi Tab|\\bM6pro\\b|CT1020W|arc 10HD|\\bJolla\\b|\\bTP750\\b"
+        },
+        "oss": {
+          "AndroidOS": "Android",
+          "BlackBerryOS": "blackberry|\\bBB10\\b|rim tablet os",
+          "PalmOS": "PalmOS|avantgo|blazer|elaine|hiptop|palm|plucker|xiino",
+          "SymbianOS": "Symbian|SymbOS|Series60|Series40|SYB-[0-9]+|\\bS60\\b",
+          "WindowsMobileOS": "Windows CE.*(PPC|Smartphone|Mobile|[0-9]{3}x[0-9]{3})|Window Mobile|Windows Phone [0-9.]+|WCE;",
+          "WindowsPhoneOS": "Windows Phone 10.0|Windows Phone 8.1|Windows Phone 8.0|Windows Phone OS|XBLWP7|ZuneWP7|Windows NT 6.[23]; ARM;",
+          "iOS": "\\biPhone.*Mobile|\\biPod|\\biPad",
+          "MeeGoOS": "MeeGo",
+          "MaemoOS": "Maemo",
+          "JavaOS": "J2ME\/|\\bMIDP\\b|\\bCLDC\\b",
+          "webOS": "webOS|hpwOS",
+          "badaOS": "\\bBada\\b",
+          "BREWOS": "BREW"
+        },
+        "uas": {
+          "Chrome": "\\bCrMo\\b|CriOS|Android.*Chrome\/[.0-9]* (Mobile)?",
+          "Dolfin": "\\bDolfin\\b",
+          "Opera": "Opera.*Mini|Opera.*Mobi|Android.*Opera|Mobile.*OPR\/[0-9.]+|Coast\/[0-9.]+",
+          "Skyfire": "Skyfire",
+          "IE": "IEMobile|MSIEMobile",
+          "Firefox": "fennec|firefox.*maemo|(Mobile|Tablet).*Firefox|Firefox.*Mobile",
+          "Bolt": "bolt",
+          "TeaShark": "teashark",
+          "Blazer": "Blazer",
+          "Safari": "Version.*Mobile.*Safari|Safari.*Mobile|MobileSafari",
+          "Tizen": "Tizen",
+          "UCBrowser": "UC.*Browser|UCWEB",
+          "baiduboxapp": "baiduboxapp",
+          "baidubrowser": "baidubrowser",
+          "DiigoBrowser": "DiigoBrowser",
+          "Puffin": "Puffin",
+          "Mercury": "\\bMercury\\b",
+          "ObigoBrowser": "Obigo",
+          "NetFront": "NF-Browser",
+          "GenericBrowser": "NokiaBrowser|OviBrowser|OneBrowser|TwonkyBeamBrowser|SEMC.*Browser|FlyFlow|Minimo|NetFront|Novarra-Vision|MQQBrowser|MicroMessenger"
+        },
+        "props": {
+          "Mobile": "Mobile\/[VER]",
+          "Build": "Build\/[VER]",
+          "Version": "Version\/[VER]",
+          "VendorID": "VendorID\/[VER]",
+          "iPad": "iPad.*CPU[a-z ]+[VER]",
+          "iPhone": "iPhone.*CPU[a-z ]+[VER]",
+          "iPod": "iPod.*CPU[a-z ]+[VER]",
+          "Kindle": "Kindle\/[VER]",
+          "Chrome": ["Chrome\/[VER]", "CriOS\/[VER]", "CrMo\/[VER]"],
+          "Coast": ["Coast\/[VER]"],
+          "Dolfin": "Dolfin\/[VER]",
+          "Firefox": "Firefox\/[VER]",
+          "Fennec": "Fennec\/[VER]",
+          "IE": ["IEMobile\/[VER];", "IEMobile [VER]", "MSIE [VER];", "Trident\/[0-9.]+;.*rv:[VER]"],
+          "NetFront": "NetFront\/[VER]",
+          "NokiaBrowser": "NokiaBrowser\/[VER]",
+          "Opera": [" OPR\/[VER]", "Opera Mini\/[VER]", "Version\/[VER]"],
+          "Opera Mini": "Opera Mini\/[VER]",
+          "Opera Mobi": "Version\/[VER]",
+          "UC Browser": "UC Browser[VER]",
+          "MQQBrowser": "MQQBrowser\/[VER]",
+          "MicroMessenger": "MicroMessenger\/[VER]",
+          "baiduboxapp": "baiduboxapp\/[VER]",
+          "baidubrowser": "baidubrowser\/[VER]",
+          "Iron": "Iron\/[VER]",
+          "Safari": ["Version\/[VER]", "Safari\/[VER]"],
+          "Skyfire": "Skyfire\/[VER]",
+          "Tizen": "Tizen\/[VER]",
+          "Webkit": "webkit[ \/][VER]",
+          "Gecko": "Gecko\/[VER]",
+          "Trident": "Trident\/[VER]",
+          "Presto": "Presto\/[VER]",
+          "iOS": " \\bi?OS\\b [VER][ ;]{1}",
+          "Android": "Android [VER]",
+          "BlackBerry": ["BlackBerry[\\w]+\/[VER]", "BlackBerry.*Version\/[VER]", "Version\/[VER]"],
+          "BREW": "BREW [VER]",
+          "Java": "Java\/[VER]",
+          "Windows Phone OS": ["Windows Phone OS [VER]", "Windows Phone [VER]"],
+          "Windows Phone": "Windows Phone [VER]",
+          "Windows CE": "Windows CE\/[VER]",
+          "Windows NT": "Windows NT [VER]",
+          "Symbian": ["SymbianOS\/[VER]", "Symbian\/[VER]"],
+          "webOS": ["webOS\/[VER]", "hpwOS\/[VER];"]
+        },
+        "utils": {
+          "Bot": "Googlebot|facebookexternalhit|AdsBot-Google|Google Keyword Suggestion|Facebot|YandexBot|bingbot|ia_archiver|AhrefsBot|Ezooms|GSLFbot|WBSearchBot|Twitterbot|TweetmemeBot|Twikle|PaperLiBot|Wotbox|UnwindFetchor|Exabot|MJ12bot|YandexImages|TurnitinBot|Pingdom",
+          "MobileBot": "Googlebot-Mobile|AdsBot-Google-Mobile|YahooSeeker\/M1A1-R2D2",
+          "DesktopMode": "WPDesktop",
+          "TV": "SonyDTV|HbbTV",
+          "WebKit": "(webkit)[ \/]([\\w.]+)",
+          "Console": "\\b(Nintendo|Nintendo WiiU|Nintendo 3DS|PLAYSTATION|Xbox)\\b",
+          "Watch": "SM-V700"
+        }
+      };
+      impl.detectMobileBrowsers = {
+        fullPattern: /(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino/i,
+        shortPattern: /1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i,
+        tabletPattern: /android|ipad|playbook|silk/i
+      };
+      var hasOwnProp = Object.prototype.hasOwnProperty,
+          isArray;
+      impl.FALLBACK_PHONE = 'UnknownPhone';
+      impl.FALLBACK_TABLET = 'UnknownTablet';
+      impl.FALLBACK_MOBILE = 'UnknownMobile';
+      isArray = ('isArray' in Array) ? Array.isArray : function(value) {
+        return Object.prototype.toString.call(value) === '[object Array]';
+      };
+      function equalIC(a, b) {
+        return a != null && b != null && a.toLowerCase() === b.toLowerCase();
+      }
+      function containsIC(array, value) {
+        var valueLC,
+            i,
+            len = array.length;
+        if (!len || !value) {
+          return false;
+        }
+        valueLC = value.toLowerCase();
+        for (i = 0; i < len; ++i) {
+          if (valueLC === array[i].toLowerCase()) {
+            return true;
+          }
+        }
+        return false;
+      }
+      function convertPropsToRegExp(object) {
+        for (var key in object) {
+          if (hasOwnProp.call(object, key)) {
+            object[key] = new RegExp(object[key], 'i');
+          }
+        }
+      }
+      (function init() {
+        var key,
+            values,
+            value,
+            i,
+            len,
+            verPos,
+            mobileDetectRules = impl.mobileDetectRules;
+        for (key in mobileDetectRules.props) {
+          if (hasOwnProp.call(mobileDetectRules.props, key)) {
+            values = mobileDetectRules.props[key];
+            if (!isArray(values)) {
+              values = [values];
+            }
+            len = values.length;
+            for (i = 0; i < len; ++i) {
+              value = values[i];
+              verPos = value.indexOf('[VER]');
+              if (verPos >= 0) {
+                value = value.substring(0, verPos) + '([\\w._\\+]+)' + value.substring(verPos + 5);
+              }
+              values[i] = new RegExp(value, 'i');
+            }
+            mobileDetectRules.props[key] = values;
+          }
+        }
+        convertPropsToRegExp(mobileDetectRules.oss);
+        convertPropsToRegExp(mobileDetectRules.phones);
+        convertPropsToRegExp(mobileDetectRules.tablets);
+        convertPropsToRegExp(mobileDetectRules.uas);
+        convertPropsToRegExp(mobileDetectRules.utils);
+        mobileDetectRules.oss0 = {
+          WindowsPhoneOS: mobileDetectRules.oss.WindowsPhoneOS,
+          WindowsMobileOS: mobileDetectRules.oss.WindowsMobileOS
+        };
+      }());
+      impl.findMatch = function(rules, userAgent) {
+        for (var key in rules) {
+          if (hasOwnProp.call(rules, key)) {
+            if (rules[key].test(userAgent)) {
+              return key;
+            }
+          }
+        }
+        return null;
+      };
+      impl.findMatches = function(rules, userAgent) {
+        var result = [];
+        for (var key in rules) {
+          if (hasOwnProp.call(rules, key)) {
+            if (rules[key].test(userAgent)) {
+              result.push(key);
+            }
+          }
+        }
+        return result;
+      };
+      impl.getVersionStr = function(propertyName, userAgent) {
+        var props = impl.mobileDetectRules.props,
+            patterns,
+            i,
+            len,
+            match;
+        if (hasOwnProp.call(props, propertyName)) {
+          patterns = props[propertyName];
+          len = patterns.length;
+          for (i = 0; i < len; ++i) {
+            match = patterns[i].exec(userAgent);
+            if (match !== null) {
+              return match[1];
+            }
+          }
+        }
+        return null;
+      };
+      impl.getVersion = function(propertyName, userAgent) {
+        var version = impl.getVersionStr(propertyName, userAgent);
+        return version ? impl.prepareVersionNo(version) : NaN;
+      };
+      impl.prepareVersionNo = function(version) {
+        var numbers;
+        numbers = version.split(/[a-z._ \/\-]/i);
+        if (numbers.length === 1) {
+          version = numbers[0];
+        }
+        if (numbers.length > 1) {
+          version = numbers[0] + '.';
+          numbers.shift();
+          version += numbers.join('');
+        }
+        return Number(version);
+      };
+      impl.isMobileFallback = function(userAgent) {
+        return impl.detectMobileBrowsers.fullPattern.test(userAgent) || impl.detectMobileBrowsers.shortPattern.test(userAgent.substr(0, 4));
+      };
+      impl.isTabletFallback = function(userAgent) {
+        return impl.detectMobileBrowsers.tabletPattern.test(userAgent);
+      };
+      impl.prepareDetectionCache = function(cache, userAgent, maxPhoneWidth) {
+        if (cache.mobile !== undefined) {
+          return;
+        }
+        var phone,
+            tablet,
+            phoneSized;
+        tablet = impl.findMatch(impl.mobileDetectRules.tablets, userAgent);
+        if (tablet) {
+          cache.mobile = cache.tablet = tablet;
+          cache.phone = null;
+          return;
+        }
+        phone = impl.findMatch(impl.mobileDetectRules.phones, userAgent);
+        if (phone) {
+          cache.mobile = cache.phone = phone;
+          cache.tablet = null;
+          return;
+        }
+        if (impl.isMobileFallback(userAgent)) {
+          phoneSized = MobileDetect.isPhoneSized(maxPhoneWidth);
+          if (phoneSized === undefined) {
+            cache.mobile = impl.FALLBACK_MOBILE;
+            cache.tablet = cache.phone = null;
+          } else if (phoneSized) {
+            cache.mobile = cache.phone = impl.FALLBACK_PHONE;
+            cache.tablet = null;
+          } else {
+            cache.mobile = cache.tablet = impl.FALLBACK_TABLET;
+            cache.phone = null;
+          }
+        } else if (impl.isTabletFallback(userAgent)) {
+          cache.mobile = cache.tablet = impl.FALLBACK_TABLET;
+          cache.phone = null;
+        } else {
+          cache.mobile = cache.tablet = cache.phone = null;
+        }
+      };
+      impl.mobileGrade = function(t) {
+        var $isMobile = t.mobile() !== null;
+        if (t.os('iOS') && t.version('iPad') >= 4.3 || t.os('iOS') && t.version('iPhone') >= 3.1 || t.os('iOS') && t.version('iPod') >= 3.1 || (t.version('Android') > 2.1 && t.is('Webkit')) || t.version('Windows Phone OS') >= 7.0 || t.is('BlackBerry') && t.version('BlackBerry') >= 6.0 || t.match('Playbook.*Tablet') || (t.version('webOS') >= 1.4 && t.match('Palm|Pre|Pixi')) || t.match('hp.*TouchPad') || (t.is('Firefox') && t.version('Firefox') >= 12) || (t.is('Chrome') && t.is('AndroidOS') && t.version('Android') >= 4.0) || (t.is('Skyfire') && t.version('Skyfire') >= 4.1 && t.is('AndroidOS') && t.version('Android') >= 2.3) || (t.is('Opera') && t.version('Opera Mobi') > 11 && t.is('AndroidOS')) || t.is('MeeGoOS') || t.is('Tizen') || t.is('Dolfin') && t.version('Bada') >= 2.0 || ((t.is('UC Browser') || t.is('Dolfin')) && t.version('Android') >= 2.3) || (t.match('Kindle Fire') || t.is('Kindle') && t.version('Kindle') >= 3.0) || t.is('AndroidOS') && t.is('NookTablet') || t.version('Chrome') >= 11 && !$isMobile || t.version('Safari') >= 5.0 && !$isMobile || t.version('Firefox') >= 4.0 && !$isMobile || t.version('MSIE') >= 7.0 && !$isMobile || t.version('Opera') >= 10 && !$isMobile) {
+          return 'A';
+        }
+        if (t.os('iOS') && t.version('iPad') < 4.3 || t.os('iOS') && t.version('iPhone') < 3.1 || t.os('iOS') && t.version('iPod') < 3.1 || t.is('Blackberry') && t.version('BlackBerry') >= 5 && t.version('BlackBerry') < 6 || (t.version('Opera Mini') >= 5.0 && t.version('Opera Mini') <= 6.5 && (t.version('Android') >= 2.3 || t.is('iOS'))) || t.match('NokiaN8|NokiaC7|N97.*Series60|Symbian/3') || t.version('Opera Mobi') >= 11 && t.is('SymbianOS')) {
+          return 'B';
+        }
+        if (t.version('BlackBerry') < 5.0 || t.match('MSIEMobile|Windows CE.*Mobile') || t.version('Windows Mobile') <= 5.2) {
+          return 'C';
+        }
+        return 'C';
+      };
+      impl.detectOS = function(ua) {
+        return impl.findMatch(impl.mobileDetectRules.oss0, ua) || impl.findMatch(impl.mobileDetectRules.oss, ua);
+      };
+      impl.getDeviceSmallerSide = function() {
+        return window.screen.width < window.screen.height ? window.screen.width : window.screen.height;
+      };
+      function MobileDetect(userAgent, maxPhoneWidth) {
+        this.ua = userAgent || '';
+        this._cache = {};
+        this.maxPhoneWidth = maxPhoneWidth || 600;
+      }
+      MobileDetect.prototype = {
+        constructor: MobileDetect,
+        mobile: function() {
+          impl.prepareDetectionCache(this._cache, this.ua, this.maxPhoneWidth);
+          return this._cache.mobile;
+        },
+        phone: function() {
+          impl.prepareDetectionCache(this._cache, this.ua, this.maxPhoneWidth);
+          return this._cache.phone;
+        },
+        tablet: function() {
+          impl.prepareDetectionCache(this._cache, this.ua, this.maxPhoneWidth);
+          return this._cache.tablet;
+        },
+        userAgent: function() {
+          if (this._cache.userAgent === undefined) {
+            this._cache.userAgent = impl.findMatch(impl.mobileDetectRules.uas, this.ua);
+          }
+          return this._cache.userAgent;
+        },
+        userAgents: function() {
+          if (this._cache.userAgents === undefined) {
+            this._cache.userAgents = impl.findMatches(impl.mobileDetectRules.uas, this.ua);
+          }
+          return this._cache.userAgents;
+        },
+        os: function() {
+          if (this._cache.os === undefined) {
+            this._cache.os = impl.detectOS(this.ua);
+          }
+          return this._cache.os;
+        },
+        version: function(key) {
+          return impl.getVersion(key, this.ua);
+        },
+        versionStr: function(key) {
+          return impl.getVersionStr(key, this.ua);
+        },
+        is: function(key) {
+          return containsIC(this.userAgents(), key) || equalIC(key, this.os()) || equalIC(key, this.phone()) || equalIC(key, this.tablet()) || containsIC(impl.findMatches(impl.mobileDetectRules.utils, this.ua), key);
+        },
+        match: function(pattern) {
+          if (!(pattern instanceof RegExp)) {
+            pattern = new RegExp(pattern, 'i');
+          }
+          return pattern.test(this.ua);
+        },
+        isPhoneSized: function(maxPhoneWidth) {
+          return MobileDetect.isPhoneSized(maxPhoneWidth || this.maxPhoneWidth);
+        },
+        mobileGrade: function() {
+          if (this._cache.grade === undefined) {
+            this._cache.grade = impl.mobileGrade(this);
+          }
+          return this._cache.grade;
+        }
+      };
+      if (typeof window !== 'undefined' && window.screen) {
+        MobileDetect.isPhoneSized = function(maxPhoneWidth) {
+          return maxPhoneWidth < 0 ? undefined : impl.getDeviceSmallerSide() <= maxPhoneWidth;
+        };
+      } else {
+        MobileDetect.isPhoneSized = function() {};
+      }
+      MobileDetect._impl = impl;
+      return MobileDetect;
+    });
+  })((function(undefined) {
+    if (typeof module !== 'undefined' && module.exports) {
+      return function(factory) {
+        module.exports = factory();
+      };
+    } else if (typeof define === 'function' && define.amd) {
+      return define;
+    } else if (typeof window !== 'undefined') {
+      return function(factory) {
+        window.MobileDetect = factory();
+      };
+    } else {
+      throw new Error('unknown environment');
+    }
+  })());
+  return module.exports;
+});
+
+$__System.register("f", ["8", "a", "6", "e"], function(exports_1, context_1) {
+  "use strict";
+  var __moduleName = context_1 && context_1.id;
+  var __decorate = (this && this.__decorate) || function(decorators, target, key, desc) {
+    var c = arguments.length,
+        r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc,
+        d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function")
+      r = Reflect.decorate(decorators, target, key, desc);
+    else
+      for (var i = decorators.length - 1; i >= 0; i--)
+        if (d = decorators[i])
+          r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+  };
+  var aurelia_dependency_injection_1,
+      cesium_imports_1,
+      context_2,
+      mobile_detect_1;
+  var DeviceService,
+      rotationAxis,
+      projection,
+      swing,
+      twist;
+  function swingTwistDecomposition(q, direction) {
+    cesium_imports_1.Cartesian3.clone(q, rotationAxis);
+    cesium_imports_1.Cartesian3.multiplyByScalar(direction, cesium_imports_1.Cartesian3.dot(rotationAxis, direction), projection);
+    twist.x = projection.x;
+    twist.y = projection.y;
+    twist.z = projection.z;
+    twist.w = q.w;
+    cesium_imports_1.Quaternion.normalize(twist, twist);
+    cesium_imports_1.Quaternion.conjugate(twist, swing);
+    cesium_imports_1.Quaternion.multiply(q, swing, swing);
+    return {
+      swing: swing,
+      twist: twist
+    };
+  }
+  return {
+    setters: [function(aurelia_dependency_injection_1_1) {
+      aurelia_dependency_injection_1 = aurelia_dependency_injection_1_1;
+    }, function(cesium_imports_1_1) {
+      cesium_imports_1 = cesium_imports_1_1;
+    }, function(context_2_1) {
+      context_2 = context_2_1;
+    }, function(mobile_detect_1_1) {
+      mobile_detect_1 = mobile_detect_1_1;
+    }],
+    execute: function() {
+      DeviceService = (function() {
+        function DeviceService(context) {
+          this.context = context;
+          this.locationUpdatesEnabled = true;
+          this.orientationUpdatesEnabled = true;
+          this.locationEntity = new cesium_imports_1.Entity({
+            id: 'ar.device.location',
+            name: 'Device Location'
+          });
+          this.orientationEntity = new cesium_imports_1.Entity({
+            id: 'ar.device.orientation',
+            name: 'Device Orientation'
+          });
+          this.interfaceEntity = new cesium_imports_1.Entity({
+            id: 'ar.device.interface',
+            name: 'Device Interface'
+          });
+          this._scratchCartesian = new cesium_imports_1.Cartesian3;
+          this._scratchQuaternion1 = new cesium_imports_1.Quaternion;
+          this._scratchQuaternion2 = new cesium_imports_1.Quaternion;
+          this._scratchMatrix3 = new cesium_imports_1.Matrix3;
+          this._x90Rot = cesium_imports_1.Quaternion.fromAxisAngle(cesium_imports_1.Cartesian3.UNIT_X, cesium_imports_1.CesiumMath.PI_OVER_TWO);
+          this._headingDrift = 0;
+          this.locationEntity.position = new cesium_imports_1.ConstantPositionProperty(cesium_imports_1.Cartesian3.ZERO, null);
+          this.locationEntity.orientation = new cesium_imports_1.ConstantProperty(cesium_imports_1.Quaternion.IDENTITY);
+          this.orientationEntity.position = new cesium_imports_1.ConstantPositionProperty(cesium_imports_1.Cartesian3.ZERO, this.locationEntity);
+          this.orientationEntity.orientation = new cesium_imports_1.ConstantProperty(cesium_imports_1.Quaternion.IDENTITY);
+          this.interfaceEntity.position = new cesium_imports_1.ConstantPositionProperty(cesium_imports_1.Cartesian3.ZERO, this.orientationEntity);
+          this.interfaceEntity.orientation = new cesium_imports_1.ConstantProperty(cesium_imports_1.Quaternion.fromAxisAngle(cesium_imports_1.Cartesian3.UNIT_X, -cesium_imports_1.CesiumMath.PI_OVER_TWO));
+          context.wellKnownReferenceFrames.add(this.locationEntity);
+          context.wellKnownReferenceFrames.add(this.orientationEntity);
+          context.wellKnownReferenceFrames.add(this.interfaceEntity);
+          if (typeof window !== 'undefined' && window.navigator) {
+            this._mobileDetect = new mobile_detect_1.default(window.navigator.userAgent);
+          }
+        }
+        DeviceService.prototype.onIdle = function() {
+          if (cesium_imports_1.defined(this._geolocationWatchId)) {
+            navigator.geolocation.clearWatch(this._geolocationWatchId);
+            this._geolocationWatchId = undefined;
+          }
+          if (cesium_imports_1.defined(this._deviceorientationListener)) {
+            window.removeEventListener('deviceorientation', this._deviceorientationListener);
+            this._deviceorientationListener = undefined;
+            this._alphaOffset = undefined;
+          }
+        };
+        DeviceService.prototype.onUpdate = function() {
+          var _this = this;
+          if (typeof window !== 'undefined') {
+            var interfaceOrientationProperty = this.interfaceEntity.orientation;
+            var interfaceOrientation = cesium_imports_1.Quaternion.fromAxisAngle(cesium_imports_1.Cartesian3.UNIT_Z, (-window.orientation || 0) * cesium_imports_1.CesiumMath.RADIANS_PER_DEGREE, this._scratchQuaternion1);
+            if (this._mobileDetect && !this._mobileDetect.mobile()) {
+              interfaceOrientation = cesium_imports_1.Quaternion.multiply(this._x90Rot, interfaceOrientation, interfaceOrientation);
+            }
+            interfaceOrientationProperty.setValue(interfaceOrientation);
+            if (!cesium_imports_1.defined(this._geolocationWatchId) && this.locationUpdatesEnabled) {
+              this._geolocationWatchId = navigator.geolocation.watchPosition(function(pos) {
+                if (_this.locationEntity.position instanceof cesium_imports_1.SampledPositionProperty === false) {
+                  var sampledPostionProperty = new cesium_imports_1.SampledPositionProperty(cesium_imports_1.ReferenceFrame.FIXED);
+                  sampledPostionProperty.forwardExtrapolationType = cesium_imports_1.ExtrapolationType.HOLD;
+                  sampledPostionProperty.backwardExtrapolationType = cesium_imports_1.ExtrapolationType.HOLD;
+                  sampledPostionProperty['maxNumSamples'] = 10;
+                  _this.locationEntity.position = sampledPostionProperty;
+                }
+                var positionTime = cesium_imports_1.JulianDate.fromDate(new Date(pos.timestamp));
+                var positionECEF = cesium_imports_1.Cartesian3.fromDegrees(pos.coords.longitude, pos.coords.latitude, pos.coords.altitude || 0, undefined, _this._scratchCartesian);
+                _this.locationEntity.position.addSample(positionTime, positionECEF);
+                var enuOrientation = cesium_imports_1.Transforms.headingPitchRollQuaternion(positionECEF, 0, 0, 0, undefined, _this._scratchQuaternion1);
+                _this.locationEntity.orientation.setValue(enuOrientation);
+              }, function(error) {
+                console.error(error);
+              }, {enableHighAccuracy: true});
+            } else if (cesium_imports_1.defined(this._geolocationWatchId) && !this.locationUpdatesEnabled) {
+              navigator.geolocation.clearWatch(this._geolocationWatchId);
+              this._geolocationWatchId = undefined;
+            }
+            if (!cesium_imports_1.defined(this._deviceorientationListener) && this.orientationUpdatesEnabled) {
+              this._deviceorientationListener = function(e) {
+                var alphaDegrees = e.alpha;
+                if (!cesium_imports_1.defined(alphaDegrees)) {
+                  return;
+                }
+                if (e.absolute) {
+                  _this._alphaOffset = 0;
+                }
+                var webkitCompassHeading = e['webkitCompassHeading'];
+                var webkitCompassAccuracy = +e['webkitCompassAccuracy'];
+                if ((!cesium_imports_1.defined(_this._alphaOffset) || Math.abs(_this._headingDrift) > 5) && cesium_imports_1.defined(webkitCompassHeading) && webkitCompassAccuracy >= 0 && webkitCompassAccuracy < 50 && webkitCompassHeading >= 0) {
+                  if (!cesium_imports_1.defined(_this._alphaOffset)) {
+                    _this._alphaOffset = -webkitCompassHeading;
+                  } else {
+                    _this._alphaOffset -= _this._headingDrift;
+                  }
+                }
+                if (!cesium_imports_1.defined(_this._alphaOffset)) {
+                  return;
+                }
+                var alpha = cesium_imports_1.CesiumMath.RADIANS_PER_DEGREE * (e.alpha + (_this._alphaOffset || 0));
+                var beta = cesium_imports_1.CesiumMath.RADIANS_PER_DEGREE * e.beta;
+                var gamma = cesium_imports_1.CesiumMath.RADIANS_PER_DEGREE * e.gamma;
+                var alphaQuat = cesium_imports_1.Quaternion.fromAxisAngle(cesium_imports_1.Cartesian3.UNIT_Z, alpha, _this._scratchQuaternion1);
+                var betaQuat = cesium_imports_1.Quaternion.fromAxisAngle(cesium_imports_1.Cartesian3.UNIT_X, beta, _this._scratchQuaternion2);
+                var alphaBetaQuat = cesium_imports_1.Quaternion.multiply(alphaQuat, betaQuat, _this._scratchQuaternion1);
+                var gammaQuat = cesium_imports_1.Quaternion.fromAxisAngle(cesium_imports_1.Cartesian3.UNIT_Y, gamma, _this._scratchQuaternion2);
+                var alphaBetaGammaQuat = cesium_imports_1.Quaternion.multiply(alphaBetaQuat, gammaQuat, alphaBetaQuat);
+                _this.orientationEntity.orientation.setValue(alphaBetaGammaQuat);
+              };
+              window.addEventListener('deviceorientation', this._deviceorientationListener);
+            } else if (cesium_imports_1.defined(this._deviceorientationListener) && !this.orientationUpdatesEnabled) {
+              window.removeEventListener('deviceorientation', this._deviceorientationListener);
+              this._deviceorientationListener = undefined;
+            }
+          }
+        };
+        DeviceService.prototype.update = function() {
+          var _this = this;
+          if (cesium_imports_1.defined(this._idleTimeoutId))
+            clearTimeout(this._idleTimeoutId);
+          this._idleTimeoutId = setTimeout(function() {
+            _this.onIdle();
+          }, 2000);
+          this.onUpdate();
+        };
+        DeviceService = __decorate([aurelia_dependency_injection_1.inject(context_2.ContextService)], DeviceService);
+        return DeviceService;
+      }());
+      exports_1("DeviceService", DeviceService);
+      rotationAxis = new cesium_imports_1.Cartesian3;
+      projection = new cesium_imports_1.Cartesian3;
+      swing = new cesium_imports_1.Quaternion;
+      twist = new cesium_imports_1.Quaternion;
+    }
+  };
+});
+
+$__System.register("d", ["a"], function(exports_1, context_1) {
   "use strict";
   var __moduleName = context_1 && context_1.id;
   var cesium_imports_1;
@@ -879,7 +1877,108 @@ $__System.register("9", ["5"], function(exports_1, context_1) {
   };
 });
 
-$__System.register("d", ["b", "7", "a"], function(exports_1, context_1) {
+$__System.register("10", ["8", "a", "b", "5", "f", "d", "7"], function(exports_1, context_1) {
+  "use strict";
+  var __moduleName = context_1 && context_1.id;
+  var __decorate = (this && this.__decorate) || function(decorators, target, key, desc) {
+    var c = arguments.length,
+        r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc,
+        d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function")
+      r = Reflect.decorate(decorators, target, key, desc);
+    else
+      for (var i = decorators.length - 1; i >= 0; i--)
+        if (d = decorators[i])
+          r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+  };
+  var aurelia_dependency_injection_1,
+      cesium_imports_1,
+      common_1,
+      session_1,
+      device_1,
+      timer_1,
+      utils_1;
+  var EmptyRealityLoader;
+  return {
+    setters: [function(aurelia_dependency_injection_1_1) {
+      aurelia_dependency_injection_1 = aurelia_dependency_injection_1_1;
+    }, function(cesium_imports_1_1) {
+      cesium_imports_1 = cesium_imports_1_1;
+    }, function(common_1_1) {
+      common_1 = common_1_1;
+    }, function(session_1_1) {
+      session_1 = session_1_1;
+    }, function(device_1_1) {
+      device_1 = device_1_1;
+    }, function(timer_1_1) {
+      timer_1 = timer_1_1;
+    }, function(utils_1_1) {
+      utils_1 = utils_1_1;
+    }],
+    execute: function() {
+      EmptyRealityLoader = (function() {
+        function EmptyRealityLoader(sessionService, deviceService, timer) {
+          this.sessionService = sessionService;
+          this.deviceService = deviceService;
+          this.timer = timer;
+          this.type = 'empty';
+        }
+        EmptyRealityLoader.prototype.load = function(reality) {
+          var _this = this;
+          var realitySession = this.sessionService.addManagedSessionPort();
+          var remoteRealitySession = this.sessionService.createSessionPort();
+          var doUpdate = true;
+          remoteRealitySession.on['ar.context.update'] = function() {};
+          remoteRealitySession.connectEvent.addEventListener(function() {
+            var update = function(time, index) {
+              if (doUpdate) {
+                _this.deviceService.update();
+                var w = document.documentElement.clientWidth;
+                var h = document.documentElement.clientHeight;
+                var frameState = {
+                  time: time,
+                  index: index,
+                  view: {
+                    viewport: {
+                      x: 0,
+                      y: 0,
+                      width: w,
+                      height: h
+                    },
+                    pose: utils_1.getSerializedEntityPose(_this.deviceService.interfaceEntity, time),
+                    subviews: [{
+                      type: common_1.SubviewType.SINGULAR,
+                      projectionMatrix: cesium_imports_1.Matrix4.computePerspectiveFieldOfView(Math.PI / 3, w / h, 0.2, 10000000000, [])
+                    }]
+                  }
+                };
+                remoteRealitySession.send('ar.reality.frameState', frameState);
+                _this.timer.requestFrame(update);
+              }
+            };
+            _this.timer.requestFrame(update);
+          });
+          remoteRealitySession.closeEvent.addEventListener(function() {
+            doUpdate = false;
+          });
+          var messageChannel = this.sessionService.createSynchronousMessageChannel();
+          realitySession.open(messageChannel.port1, this.sessionService.configuration);
+          remoteRealitySession.open(messageChannel.port2, {
+            role: common_1.Role.REALITY_VIEW,
+            name: 'empty'
+          });
+          return realitySession;
+        };
+        EmptyRealityLoader = __decorate([aurelia_dependency_injection_1.inject(session_1.SessionService, device_1.DeviceService, timer_1.TimerService)], EmptyRealityLoader);
+        return EmptyRealityLoader;
+      }());
+      exports_1("EmptyRealityLoader", EmptyRealityLoader);
+    }
+  };
+});
+
+$__System.register("c", ["8", "5", "7"], function(exports_1, context_1) {
   "use strict";
   var __moduleName = context_1 && context_1.id;
   var __decorate = (this && this.__decorate) || function(decorators, target, key, desc) {
@@ -990,366 +2089,9 @@ $__System.register("d", ["b", "7", "a"], function(exports_1, context_1) {
   };
 });
 
-$__System.register("e", ["5"], function(exports_1, context_1) {
-  "use strict";
-  var __moduleName = context_1 && context_1.id;
-  var cesium_imports_1;
-  var DeviceService;
-  return {
-    setters: [function(cesium_imports_1_1) {
-      cesium_imports_1 = cesium_imports_1_1;
-    }],
-    execute: function() {
-      DeviceService = (function() {
-        function DeviceService() {
-          this.entity = new cesium_imports_1.Entity({
-            id: 'ar.device',
-            name: 'device'
-          });
-          this.interfaceEntity = new cesium_imports_1.Entity({
-            id: 'ar.device.interface',
-            name: 'device_interface'
-          });
-          this.entity.position = new cesium_imports_1.ConstantPositionProperty(cesium_imports_1.Cartesian3.ZERO, null);
-          this.entity.orientation = new cesium_imports_1.ConstantProperty(cesium_imports_1.Quaternion.IDENTITY);
-          this.interfaceEntity.position = new cesium_imports_1.ConstantPositionProperty(cesium_imports_1.Cartesian3.ZERO, this.entity);
-          this.interfaceEntity.orientation = new cesium_imports_1.ConstantProperty(cesium_imports_1.Quaternion.IDENTITY);
-        }
-        DeviceService.prototype.update = function() {
-          if (typeof window !== 'undefined') {
-            var interfaceRotation = -window.orientation || 0;
-            var interfaceOrientation = this.interfaceEntity.orientation;
-            interfaceOrientation.setValue(cesium_imports_1.Quaternion.fromAxisAngle(cesium_imports_1.Cartesian3.UNIT_Z, interfaceRotation));
-          }
-        };
-        return DeviceService;
-      }());
-      exports_1("DeviceService", DeviceService);
-    }
-  };
-});
-
-$__System.register("8", ["b", "5", "9", "6", "d", "7", "e", "a"], function(exports_1, context_1) {
-  "use strict";
-  var __moduleName = context_1 && context_1.id;
-  var __decorate = (this && this.__decorate) || function(decorators, target, key, desc) {
-    var c = arguments.length,
-        r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc,
-        d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function")
-      r = Reflect.decorate(decorators, target, key, desc);
-    else
-      for (var i = decorators.length - 1; i >= 0; i--)
-        if (d = decorators[i])
-          r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-  };
-  var aurelia_dependency_injection_1,
-      cesium_imports_1,
-      timer_1,
-      common_1,
-      focus_1,
-      session_1,
-      device_1,
-      utils_1;
-  var RealityLoader,
-      RealityService,
-      EmptyRealityLoader;
-  return {
-    setters: [function(aurelia_dependency_injection_1_1) {
-      aurelia_dependency_injection_1 = aurelia_dependency_injection_1_1;
-    }, function(cesium_imports_1_1) {
-      cesium_imports_1 = cesium_imports_1_1;
-    }, function(timer_1_1) {
-      timer_1 = timer_1_1;
-    }, function(common_1_1) {
-      common_1 = common_1_1;
-    }, function(focus_1_1) {
-      focus_1 = focus_1_1;
-    }, function(session_1_1) {
-      session_1 = session_1_1;
-    }, function(device_1_1) {
-      device_1 = device_1_1;
-    }, function(utils_1_1) {
-      utils_1 = utils_1_1;
-    }],
-    execute: function() {
-      RealityLoader = (function() {
-        function RealityLoader() {}
-        return RealityLoader;
-      }());
-      exports_1("RealityLoader", RealityLoader);
-      RealityService = (function() {
-        function RealityService(sessionService, focusService) {
-          var _this = this;
-          this.sessionService = sessionService;
-          this.focusService = focusService;
-          this.connectEvent = new utils_1.Event();
-          this.changeEvent = new utils_1.Event();
-          this.frameEvent = new utils_1.Event();
-          this.desiredRealityMap = new WeakMap();
-          this.desiredRealityMapInverse = new WeakMap();
-          this.sessionDesiredRealityChangeEvent = new utils_1.Event();
-          this._default = null;
-          this._current = null;
-          this._desired = null;
-          this._loaders = [];
-          if (sessionService.isManager) {
-            sessionService.manager.connectEvent.addEventListener(function() {
-              setTimeout(function() {
-                if (!_this._desired)
-                  _this._setNextReality(_this.onSelectReality());
-              });
-            });
-          } else if (sessionService.isRealityView) {
-            this.frameEvent.addEventListener(function(frameState) {
-              _this.sessionService.manager.send('ar.reality.frameState', frameState);
-            });
-          }
-          sessionService.connectEvent.addEventListener(function(session) {
-            if (session.info.role !== common_1.Role.REALITY_VIEW) {
-              session.on['ar.reality.desired'] = function(message, event) {
-                var reality = message.reality;
-                var previous = _this.desiredRealityMap.get(session);
-                console.log('Session set desired reality: ' + JSON.stringify(reality));
-                if (reality) {
-                  if (_this.isSupported(reality.type)) {
-                    _this.desiredRealityMap.set(session, reality);
-                    _this.desiredRealityMapInverse.set(reality, session);
-                  } else {
-                    session.sendError({message: 'Reality of type "' + reality.type + '" is not available on this platform'});
-                    return;
-                  }
-                } else {
-                  _this.desiredRealityMap.delete(session);
-                }
-                _this._setNextReality(_this.onSelectReality());
-                _this.sessionDesiredRealityChangeEvent.raiseEvent({
-                  session: session,
-                  previous: previous,
-                  current: reality
-                });
-              };
-            }
-          });
-          sessionService.manager.on['ar.reality.connect'] = function(_a) {
-            var id = _a.id;
-            var realityControlSession = _this.sessionService.createSessionPort();
-            var messageChannel = _this.sessionService.createMessageChannel();
-            var MESSAGE_KEY = 'ar.reality.message.' + id;
-            messageChannel.port1.onmessage = function(msg) {
-              _this.sessionService.manager.send(MESSAGE_KEY, msg);
-            };
-            _this.sessionService.manager.on[MESSAGE_KEY] = function(message) {
-              messageChannel.port1.postMessage(message);
-            };
-            realityControlSession.connectEvent.addEventListener(function() {
-              _this.connectEvent.raiseEvent(realityControlSession);
-            });
-            _this.sessionService.manager.closeEvent.addEventListener(function() {
-              realityControlSession.close();
-              delete _this.sessionService.manager.on[MESSAGE_KEY];
-            });
-            realityControlSession.open(messageChannel.port2, _this.sessionService.configuration);
-          };
-        }
-        RealityService.prototype.registerLoader = function(handler) {
-          this.sessionService.ensureIsManager();
-          this._loaders.push(handler);
-        };
-        RealityService.prototype.getCurrent = function() {
-          return this._current;
-        };
-        RealityService.prototype.isSupported = function(type) {
-          this.sessionService.ensureIsManager();
-          return !!this._getLoader(type);
-        };
-        RealityService.prototype.setDesired = function(reality) {
-          this.sessionService.ensureNotReality();
-          this._desired = reality;
-          this.sessionService.manager.send('ar.reality.desired', {reality: reality});
-        };
-        RealityService.prototype.getDesired = function() {
-          return this._desired;
-        };
-        RealityService.prototype.setOptionalReferenceFrames = function(referenceFrames) {};
-        RealityService.prototype.setRequiredReferenceFrames = function(referenceFrames) {};
-        RealityService.prototype.setDefault = function(reality) {
-          this.sessionService.ensureIsManager();
-          this._default = reality;
-        };
-        RealityService.prototype.onSelectReality = function() {
-          this.sessionService.ensureIsManager();
-          var selectedReality = this.desiredRealityMap.get(this.sessionService.manager);
-          if (!selectedReality) {
-            selectedReality = this.desiredRealityMap.get(this.focusService.getSession());
-          }
-          if (!selectedReality) {
-            for (var _i = 0,
-                _a = this.sessionService.managedSessions; _i < _a.length; _i++) {
-              var session = _a[_i];
-              var desiredReality = this.desiredRealityMap.get(session);
-              if (desiredReality && this.isSupported(desiredReality.type)) {
-                selectedReality = desiredReality;
-                break;
-              }
-            }
-          }
-          return selectedReality;
-        };
-        RealityService.prototype._setNextReality = function(reality) {
-          var _this = this;
-          console.log('Setting reality: ' + JSON.stringify(reality));
-          if (this._current && reality && this._current === reality)
-            return;
-          if (this._current && !reality)
-            return;
-          if (!this._current && !reality) {
-            reality = this._default;
-            if (!reality)
-              return;
-          }
-          var realitySessionPromise = Promise.resolve(this._executeRealityLoader(reality));
-          this._realitySessionPromise = realitySessionPromise;
-          this._realitySessionPromise.then(function(realitySession) {
-            if (_this._realitySessionPromise !== realitySessionPromise)
-              return;
-            if (!realitySession.isConnected())
-              throw new Error('Expected a connected session');
-            if (realitySession.info.role !== common_1.Role.REALITY_VIEW) {
-              realitySession.sendError({message: "Expected a reality session"});
-              realitySession.close();
-              throw new Error('The application "' + realitySession.info.name + '" cannot be loaded as a reality');
-            }
-            var previousRealitySession = _this._realitySession;
-            var previousReality = _this._current;
-            _this._realitySession = realitySession;
-            _this._setCurrent(reality);
-            if (previousRealitySession) {
-              previousRealitySession.close();
-            }
-            realitySession.on['ar.reality.frameState'] = function(state) {
-              _this.frameEvent.raiseEvent(state);
-            };
-            if (realitySession.info.realityViewSupportsControlPort) {
-              var ownerSession_1 = _this.desiredRealityMapInverse.get(reality) || _this.sessionService.manager;
-              var id = cesium_imports_1.createGuid();
-              var MESSAGE_KEY_1 = 'ar.reality.message.' + id;
-              realitySession.on[MESSAGE_KEY_1] = function(message) {
-                ownerSession_1.send(MESSAGE_KEY_1, message);
-              };
-              ownerSession_1.on[MESSAGE_KEY_1] = function(message) {
-                realitySession.send(MESSAGE_KEY_1, message);
-              };
-              realitySession.send('ar.reality.connect', {id: id});
-              ownerSession_1.send('ar.reality.connect', {id: id});
-              realitySession.closeEvent.addEventListener(function() {
-                delete ownerSession_1.on[MESSAGE_KEY_1];
-                console.log('Reality session closed: ' + JSON.stringify(reality));
-                _this._setNextReality(_this.onSelectReality());
-              });
-            }
-          }).catch(function(error) {
-            _this.sessionService.errorEvent.raiseEvent(error);
-          });
-        };
-        RealityService.prototype._getLoader = function(type) {
-          var found = undefined;
-          for (var _i = 0,
-              _a = this._loaders; _i < _a.length; _i++) {
-            var loader = _a[_i];
-            if (loader.type === type) {
-              found = loader;
-              break;
-            }
-          }
-          return found;
-        };
-        RealityService.prototype._setCurrent = function(reality) {
-          if (!this._current || this._current !== reality) {
-            var previous = this._current;
-            this._current = reality;
-            this.changeEvent.raiseEvent({
-              previous: previous,
-              current: reality
-            });
-            console.log('Reality changed to: ' + JSON.stringify(reality));
-          }
-        };
-        RealityService.prototype._executeRealityLoader = function(reality) {
-          this.sessionService.ensureIsManager();
-          var loader = this._getLoader(reality.type);
-          if (!loader)
-            throw new Error('Unable to setup unsupported reality type: ' + reality.type);
-          return loader.load(reality);
-        };
-        RealityService = __decorate([aurelia_dependency_injection_1.inject(session_1.SessionService, focus_1.FocusService)], RealityService);
-        return RealityService;
-      }());
-      exports_1("RealityService", RealityService);
-      EmptyRealityLoader = (function() {
-        function EmptyRealityLoader(sessionService, deviceService, timer) {
-          this.sessionService = sessionService;
-          this.deviceService = deviceService;
-          this.timer = timer;
-          this.type = 'empty';
-        }
-        EmptyRealityLoader.prototype.load = function(reality) {
-          var _this = this;
-          var realitySession = this.sessionService.addManagedSessionPort();
-          var remoteRealitySession = this.sessionService.createSessionPort();
-          var doUpdate = true;
-          remoteRealitySession.connectEvent.addEventListener(function() {
-            var update = function(time, index) {
-              if (doUpdate) {
-                _this.deviceService.update();
-                var w = document.documentElement.clientWidth;
-                var h = document.documentElement.clientHeight;
-                var frameState = {
-                  time: time,
-                  index: index,
-                  view: {
-                    viewport: {
-                      x: 0,
-                      y: 0,
-                      width: w,
-                      height: h
-                    },
-                    pose: utils_1.getSerializedEntityPose(_this.deviceService.interfaceEntity, time),
-                    subviews: [{
-                      type: common_1.SubviewType.SINGULAR,
-                      projectionMatrix: cesium_imports_1.Matrix4.computePerspectiveFieldOfView(Math.PI / 3, w / h, 0.2, 10000000000, [])
-                    }]
-                  }
-                };
-                remoteRealitySession.send('ar.reality.frameState', frameState);
-                _this.timer.requestFrame(update);
-              }
-            };
-            _this.timer.requestFrame(update);
-          });
-          remoteRealitySession.closeEvent.addEventListener(function() {
-            doUpdate = false;
-          });
-          var messageChannel = this.sessionService.createSynchronousMessageChannel();
-          realitySession.open(messageChannel.port1, this.sessionService.configuration);
-          remoteRealitySession.open(messageChannel.port2, {
-            role: common_1.Role.REALITY_VIEW,
-            name: 'empty'
-          });
-          return realitySession;
-        };
-        EmptyRealityLoader = __decorate([aurelia_dependency_injection_1.inject(session_1.SessionService, device_1.DeviceService, timer_1.TimerService)], EmptyRealityLoader);
-        return EmptyRealityLoader;
-      }());
-      exports_1("EmptyRealityLoader", EmptyRealityLoader);
-    }
-  };
-});
-
 (function() {
 var define = $__System.amdDefine;
-define("f", ["exports", "3"], function(exports, _aureliaPal) {
+define("11", ["exports", "3"], function(exports, _aureliaPal) {
   'use strict';
   exports.__esModule = true;
   var _extends = Object.assign || function(target) {
@@ -1645,7 +2387,7 @@ define("3", ["exports"], function(exports) {
 })();
 (function() {
 var define = $__System.amdDefine;
-define("b", ["exports", "f", "3"], function(exports, _aureliaMetadata, _aureliaPal) {
+define("8", ["exports", "11", "3"], function(exports, _aureliaMetadata, _aureliaPal) {
   'use strict';
   exports.__esModule = true;
   var _classInvokers;
@@ -2137,7 +2879,7 @@ define("b", ["exports", "f", "3"], function(exports, _aureliaMetadata, _aureliaP
 });
 
 })();
-$__System.register("6", [], function(exports_1, context_1) {
+$__System.register("b", [], function(exports_1, context_1) {
   "use strict";
   var __moduleName = context_1 && context_1.id;
   var Role,
@@ -2162,7 +2904,7 @@ $__System.register("6", [], function(exports_1, context_1) {
   };
 });
 
-$__System.register("7", ["5", "b", "6", "a"], function(exports_1, context_1) {
+$__System.register("5", ["a", "8", "b", "7"], function(exports_1, context_1) {
   "use strict";
   var __moduleName = context_1 && context_1.id;
   var __extends = (this && this.__extends) || function(d, b) {
@@ -2222,16 +2964,25 @@ $__System.register("7", ["5", "b", "6", "a"], function(exports_1, context_1) {
           this._isClosed = false;
           this.on[SessionPort.OPEN] = function(info) {
             if (!info)
-              throw new Error('Session did not provide configuration info');
+              throw new Error('Session did not provide a configuration');
+            if (_this._isConnected)
+              throw new Error('Session has already connected!');
             _this.info = info;
-            _this.connectEvent.raiseEvent(null);
             _this._isConnected = true;
+            _this._connectEvent.raiseEvent(null);
           };
           this.on[SessionPort.CLOSE] = function(message) {
-            _this.close();
+            _this._isClosed = true;
+            _this._isConnected = false;
+            if (_this.messagePort && _this.messagePort.close)
+              _this.messagePort.close();
+            _this.closeEvent.raiseEvent(null);
           };
           this.on[SessionPort.ERROR] = function(error) {
-            _this.errorEvent.raiseEvent(new Error(error.message));
+            var e = new Error("Session Error: " + error.message);
+            if (error.stack)
+              e['stack'] = error.stack;
+            _this.errorEvent.raiseEvent(e);
           };
           this.errorEvent.addEventListener(function(error) {
             if (_this.errorEvent.numberOfListeners === 1)
@@ -2241,27 +2992,54 @@ $__System.register("7", ["5", "b", "6", "a"], function(exports_1, context_1) {
         Object.defineProperty(SessionPort.prototype, "connectEvent", {
           get: function() {
             if (this._isConnected)
-              console.warn("Probable developer error. \n                The connectEvent only fires once and the \n                session is already connected.");
+              throw new Error('The connectEvent only fires once and the session is already connected.');
             return this._connectEvent;
           },
           enumerable: true,
           configurable: true
         });
         ;
-        SessionPort.prototype.isConnected = function() {
-          return this._isConnected;
+        SessionPort.prototype.supportsProtocol = function(name, versions) {
+          if (!this._isConnected)
+            throw new Error('Session has not yet connected');
+          var protocols = this.info.protocols;
+          if (!protocols)
+            return false;
+          var supported = false;
+          var foundVersions = new Set();
+          protocols.forEach(function(p) {
+            if (p.indexOf(name) !== -1) {
+              var v = (+p.split('@v')[1]) || 0;
+              foundVersions.add(v);
+            }
+          });
+          if (versions) {
+            if (Array.isArray(versions)) {
+              versions.forEach(function(v) {
+                if (foundVersions.has(v)) {
+                  supported = true;
+                }
+              });
+            } else {
+              if (foundVersions.has(versions)) {
+                supported = true;
+              }
+            }
+          } else if (!versions) {
+            supported = true;
+          }
+          return supported;
         };
         SessionPort.prototype.open = function(messagePort, options) {
           var _this = this;
           if (this._isOpened)
-            throw new Error('Session.open: Session can only be opened once');
+            throw new Error('Session can only be opened once');
           if (this._isClosed)
-            throw new Error('Session.open: Session has already been closed');
+            throw new Error('Session has already been closed');
           if (!options)
-            throw new Error('Session.open: Session options must be provided');
+            throw new Error('Session options must be provided');
           this.messagePort = messagePort;
           this._isOpened = true;
-          this.send(SessionPort.OPEN, options);
           this.messagePort.onmessage = function(evt) {
             if (_this._isClosed)
               return;
@@ -2271,9 +3049,14 @@ $__System.register("7", ["5", "b", "6", "a"], function(exports_1, context_1) {
             var expectsResponse = evt.data[3];
             var handler = _this.on[topic];
             if (handler && !expectsResponse) {
-              var response = handler(message, evt);
-              if (response)
-                console.warn("Handler for " + topic + " returned an unexpected response");
+              try {
+                var response = handler(message, evt);
+                if (response)
+                  console.warn("Handler for " + topic + " returned an unexpected response");
+              } catch (e) {
+                _this.sendError(e);
+                _this.errorEvent.raiseEvent(e);
+              }
             } else if (handler) {
               var response = handler(message, evt);
               if (typeof response === 'undefined') {
@@ -2299,34 +3082,40 @@ $__System.register("7", ["5", "b", "6", "a"], function(exports_1, context_1) {
               if (expectsResponse) {
                 _this.send(topic + ':reject:' + id, {reason: errorMessage});
               } else {
-                _this.send(SessionPort.ERROR, {message: errorMessage});
+                _this.sendError({message: errorMessage});
               }
-              throw new Error('No handlers are available for topic ' + topic);
+              _this.errorEvent.raiseEvent(new Error('No handlers are available for topic ' + topic));
             }
           };
+          this.send(SessionPort.OPEN, options);
         };
         SessionPort.prototype.send = function(topic, message) {
           if (!this._isOpened)
-            throw new Error('Session.send: Session must be open to send messages');
+            throw new Error('Session must be open to send messages');
           if (this._isClosed)
             return false;
           var id = cesium_imports_1.createGuid();
           this.messagePort.postMessage([id, topic, message]);
           return true;
         };
-        SessionPort.prototype.sendError = function(errorMessage) {
-          console.log('Sending error to session "' + this.info.name + "' : " + JSON.stringify(errorMessage));
+        SessionPort.prototype.sendError = function(e) {
+          var errorMessage = e;
+          if (errorMessage instanceof Error) {
+            errorMessage = {
+              message: errorMessage.message,
+              stack: errorMessage['stack']
+            };
+          }
           return this.send(SessionPort.ERROR, errorMessage);
         };
         SessionPort.prototype.request = function(topic, message) {
           var _this = this;
           if (!this._isOpened || this._isClosed)
-            throw new Error('Session.request: Session must be open to make requests');
+            throw new Error('Session must be open to make requests');
           var id = cesium_imports_1.createGuid();
           var resolveTopic = topic + ':resolve:' + id;
           var rejectTopic = topic + ':reject:' + id;
-          this.messagePort.postMessage([id, topic, message || {}, true]);
-          return new Promise(function(resolve, reject) {
+          var result = new Promise(function(resolve, reject) {
             _this.on[resolveTopic] = function(message) {
               delete _this.on[resolveTopic];
               delete _this.on[rejectTopic];
@@ -2339,19 +3128,42 @@ $__System.register("7", ["5", "b", "6", "a"], function(exports_1, context_1) {
               reject(new Error(message.reason));
             };
           });
+          this.messagePort.postMessage([id, topic, message || {}, true]);
+          return result;
         };
         SessionPort.prototype.close = function() {
           if (this._isClosed)
             return;
-          this._isClosed = true;
-          this._isConnected = false;
           if (this._isOpened) {
             this.send(SessionPort.CLOSE);
           }
+          this._isClosed = true;
+          this._isConnected = false;
           if (this.messagePort && this.messagePort.close)
             this.messagePort.close();
           this.closeEvent.raiseEvent(null);
         };
+        Object.defineProperty(SessionPort.prototype, "isOpened", {
+          get: function() {
+            return this._isOpened;
+          },
+          enumerable: true,
+          configurable: true
+        });
+        Object.defineProperty(SessionPort.prototype, "isConnected", {
+          get: function() {
+            return this._isConnected;
+          },
+          enumerable: true,
+          configurable: true
+        });
+        Object.defineProperty(SessionPort.prototype, "isClosed", {
+          get: function() {
+            return this._isClosed;
+          },
+          enumerable: true,
+          configurable: true
+        });
         SessionPort.OPEN = 'ar.session.open';
         SessionPort.CLOSE = 'ar.session.close';
         SessionPort.ERROR = 'ar.session.error';
@@ -2408,7 +3220,11 @@ $__System.register("7", ["5", "b", "6", "a"], function(exports_1, context_1) {
           configurable: true
         });
         SessionService.prototype.connect = function() {
-          this.connectService.connect(this);
+          if (this.connectService && this.connectService.connect) {
+            this.connectService.connect(this);
+          } else {
+            console.warn('Argon: Unable to connect to a manager session; a connect service is not available');
+          }
         };
         SessionService.prototype.addManagedSessionPort = function() {
           var _this = this;
@@ -2424,7 +3240,7 @@ $__System.register("7", ["5", "b", "6", "a"], function(exports_1, context_1) {
           session.closeEvent.addEventListener(function() {
             var index = _this.managedSessions.indexOf(session);
             if (index > -1)
-              _this.managedSessions.splice(index);
+              _this.managedSessions.splice(index, 1);
           });
           return session;
         };
@@ -2480,7 +3296,7 @@ $__System.register("7", ["5", "b", "6", "a"], function(exports_1, context_1) {
           _super.apply(this, arguments);
         }
         LoopbackConnectService.prototype.connect = function(sessionService) {
-          var messageChannel = sessionService.createMessageChannel();
+          var messageChannel = sessionService.createSynchronousMessageChannel();
           var messagePort = messageChannel.port1;
           messageChannel.port2.onmessage = function(evt) {
             messageChannel.port2.postMessage(evt.data);
@@ -2557,7 +3373,7 @@ $__System.register("7", ["5", "b", "6", "a"], function(exports_1, context_1) {
   };
 });
 
-$__System.register("10", ["b", "6", "d", "8", "7", "a"], function(exports_1, context_1) {
+$__System.register("12", ["8", "c", "5", "7"], function(exports_1, context_1) {
   "use strict";
   var __moduleName = context_1 && context_1.id;
   var __extends = (this && this.__extends) || function(d, b) {
@@ -2582,16 +3398,13 @@ $__System.register("10", ["b", "6", "d", "8", "7", "a"], function(exports_1, con
     return c > 3 && r && Object.defineProperty(target, key, r), r;
   };
   var aurelia_dependency_injection_1,
-      common_1,
       focus_1,
-      reality_1,
       session_1,
       utils_1;
   var VuforiaInitResult,
       VuforiaHint,
       VuforiaServiceDelegateBase,
       VuforiaServiceDelegate,
-      LiveVideoRealityLoader,
       VuforiaService,
       VuforiaAPI,
       VuforiaTracker,
@@ -2600,12 +3413,8 @@ $__System.register("10", ["b", "6", "d", "8", "7", "a"], function(exports_1, con
   return {
     setters: [function(aurelia_dependency_injection_1_1) {
       aurelia_dependency_injection_1 = aurelia_dependency_injection_1_1;
-    }, function(common_1_1) {
-      common_1 = common_1_1;
     }, function(focus_1_1) {
       focus_1 = focus_1_1;
-    }, function(reality_1_1) {
-      reality_1 = reality_1_1;
     }, function(session_1_1) {
       session_1 = session_1_1;
     }, function(utils_1_1) {
@@ -2633,7 +3442,9 @@ $__System.register("10", ["b", "6", "d", "8", "7", "a"], function(exports_1, con
       })(VuforiaHint || (VuforiaHint = {}));
       exports_1("VuforiaHint", VuforiaHint);
       VuforiaServiceDelegateBase = (function() {
-        function VuforiaServiceDelegateBase() {}
+        function VuforiaServiceDelegateBase() {
+          this.stateUpdateEvent = new utils_1.Event();
+        }
         return VuforiaServiceDelegateBase;
       }());
       exports_1("VuforiaServiceDelegateBase", VuforiaServiceDelegateBase);
@@ -2641,7 +3452,6 @@ $__System.register("10", ["b", "6", "d", "8", "7", "a"], function(exports_1, con
         __extends(VuforiaServiceDelegate, _super);
         function VuforiaServiceDelegate() {
           _super.apply(this, arguments);
-          this.stateUpdateEvent = new utils_1.Event();
         }
         VuforiaServiceDelegate.prototype.isAvailable = function() {
           return false;
@@ -2656,19 +3466,10 @@ $__System.register("10", ["b", "6", "d", "8", "7", "a"], function(exports_1, con
         VuforiaServiceDelegate.prototype.cameraDeviceInitAndStart = function() {
           return true;
         };
-        VuforiaServiceDelegate.prototype.cameraDeviceInit = function() {
-          return true;
-        };
         VuforiaServiceDelegate.prototype.cameraDeviceSetFlashTorchMode = function(on) {
           return true;
         };
         VuforiaServiceDelegate.prototype.objectTrackerInit = function() {
-          return true;
-        };
-        VuforiaServiceDelegate.prototype.objectTrackerStart = function() {
-          return true;
-        };
-        VuforiaServiceDelegate.prototype.objectTrackerStop = function() {
           return true;
         };
         VuforiaServiceDelegate.prototype.objectTrackerCreateDataSet = function(url) {
@@ -2692,36 +3493,11 @@ $__System.register("10", ["b", "6", "d", "8", "7", "a"], function(exports_1, con
         return VuforiaServiceDelegate;
       }(VuforiaServiceDelegateBase));
       exports_1("VuforiaServiceDelegate", VuforiaServiceDelegate);
-      LiveVideoRealityLoader = (function() {
-        function LiveVideoRealityLoader(sessionService, delegate) {
-          this.sessionService = sessionService;
-          this.delegate = delegate;
-          this.type = 'live-video';
-        }
-        LiveVideoRealityLoader.prototype.load = function(reality) {
-          var realitySession = this.sessionService.addManagedSessionPort();
-          var remoteRealitySession = this.sessionService.createSessionPort();
-          var remove = this.delegate.stateUpdateEvent.addEventListener(function(frameState) {
-            remoteRealitySession.send('ar.reality.frameState', frameState);
-          });
-          remoteRealitySession.closeEvent.addEventListener(function() {
-            remove();
-          });
-          var messageChannel = this.sessionService.createSynchronousMessageChannel();
-          realitySession.open(messageChannel.port1, this.sessionService.configuration);
-          remoteRealitySession.open(messageChannel.port2, {role: common_1.Role.REALITY_VIEW});
-          return realitySession;
-        };
-        LiveVideoRealityLoader = __decorate([aurelia_dependency_injection_1.inject(session_1.SessionService, VuforiaServiceDelegate)], LiveVideoRealityLoader);
-        return LiveVideoRealityLoader;
-      }());
-      exports_1("LiveVideoRealityLoader", LiveVideoRealityLoader);
       VuforiaService = (function() {
-        function VuforiaService(sessionService, focusService, realityService, delegate) {
+        function VuforiaService(sessionService, focusService, delegate) {
           var _this = this;
           this.sessionService = sessionService;
           this.focusService = focusService;
-          this.realityService = realityService;
           this.delegate = delegate;
           this._controllingSession = null;
           this._sessionSwitcherCommandQueue = new utils_1.CommandQueue();
@@ -2753,9 +3529,9 @@ $__System.register("10", ["b", "6", "d", "8", "7", "a"], function(exports_1, con
               };
               session.on['ar.vuforia.init'] = function(options, event) {
                 if (!delegate.isAvailable())
-                  return Promise.reject("Vuforia is not supported");
+                  throw new Error("Vuforia is not supported");
                 if (_this._sessionIsInitialized.get(session))
-                  return Promise.reject("Vuforia has already been initialized");
+                  throw new Error("Vuforia has already been initialized");
                 _this._sessionInitOptions.set(session, options);
                 var result = commandQueue.push(function() {
                   return _this._init(session).then(function() {
@@ -2776,7 +3552,7 @@ $__System.register("10", ["b", "6", "d", "8", "7", "a"], function(exports_1, con
                     createdDataSets.add(id);
                     return Promise.resolve({id: id});
                   }
-                  return Promise.reject('Unable to create DataSet');
+                  throw new Error('Unable to create DataSet');
                 }, _this._controllingSession === session);
               };
               session.on['ar.vuforia.objectTrackerActivateDataSet'] = function(_a, event) {
@@ -2787,7 +3563,7 @@ $__System.register("10", ["b", "6", "d", "8", "7", "a"], function(exports_1, con
                     session.send('ar.vuforia.objectTrackerActivateDataSetEvent', {id: id});
                     return;
                   }
-                  return Promise.reject("Unable to activate DataSet (" + id + ")");
+                  throw new Error("Unable to activate DataSet (" + id + ")");
                 }, _this._controllingSession === session);
               };
               session.on['ar.vuforia.objectTrackerDeactivateDataSet'] = function(_a, event) {
@@ -2798,7 +3574,7 @@ $__System.register("10", ["b", "6", "d", "8", "7", "a"], function(exports_1, con
                     session.send('ar.vuforia.objectTrackerDeactivateDataSetEvent', {id: id});
                     return;
                   }
-                  return Promise.reject("Unable to deactivate DataSet (" + id + ")");
+                  throw new Error("Unable to deactivate DataSet (" + id + ")");
                 }, _this._controllingSession === session);
               };
               session.on['ar.vuforia.dataSetFetch'] = function(_a, event) {
@@ -2849,7 +3625,7 @@ $__System.register("10", ["b", "6", "d", "8", "7", "a"], function(exports_1, con
         };
         VuforiaService.prototype._ensureActiveSession = function() {
           console.log("VuforiaService: Ensuring an active session is in control.");
-          if (this._controllingSession && this._controllingSession.isConnected())
+          if (this._controllingSession && this._controllingSession.isConnected)
             return;
           this._selectControllingSession();
         };
@@ -2919,6 +3695,8 @@ $__System.register("10", ["b", "6", "d", "8", "7", "a"], function(exports_1, con
         };
         VuforiaService.prototype._cleanupSession = function(session) {
           var _this = this;
+          if (!this._sessionInitOptions.has(session))
+            return;
           this._sessionInitOptions.delete(session);
           var createdDataSets = this._sessionCreatedDataSets.get(session);
           console.log('VuforiaService: Deactivating datasets for session ' + session.info.name);
@@ -2937,10 +3715,10 @@ $__System.register("10", ["b", "6", "d", "8", "7", "a"], function(exports_1, con
           var options = this._sessionInitOptions.get(session);
           return this.delegate.init(options).then(function(initResult) {
             if (initResult !== VuforiaInitResult.SUCCESS) {
-              return Promise.reject("Vuforia init failed: " + VuforiaInitResult[initResult]);
+              throw new Error("Vuforia init failed: " + VuforiaInitResult[initResult]);
             }
             if (!_this.delegate.objectTrackerInit()) {
-              return Promise.reject("Vuforia init failed: Unable to initialize ObjectTracker");
+              throw new Error("Vuforia init failed: Unable to initialize ObjectTracker");
             }
             var success = true;
             _this._sessionActivatedDataSets.get(session).forEach(function(id) {
@@ -2950,20 +3728,17 @@ $__System.register("10", ["b", "6", "d", "8", "7", "a"], function(exports_1, con
               }
             });
             if (!success) {
-              return Promise.reject("Vuforia init failed: Unable to restore active datasets");
+              throw new Error("Vuforia init failed: Unable to restore active datasets");
             }
             if (!_this.delegate.cameraDeviceInitAndStart()) {
-              return Promise.reject("Vuforia init failed: Unable to complete initialization");
-            }
-            if (!_this.delegate.objectTrackerStart()) {
-              return Promise.reject("Vuforia init failed: Unable to start ObjectTracker");
+              throw new Error("Vuforia init failed: Unable to complete initialization");
             }
           }).catch(function(err) {
             _this._sessionInitOptions.set(session, null);
             _this._sessionIsInitialized.set(session, false);
             _this._deinit(session);
             _this._ensureActiveSession();
-            return Promise.reject(err);
+            throw err;
           });
         };
         VuforiaService.prototype._deinit = function(session) {
@@ -2977,7 +3752,7 @@ $__System.register("10", ["b", "6", "d", "8", "7", "a"], function(exports_1, con
           }
           this.delegate.deinit();
         };
-        VuforiaService = __decorate([aurelia_dependency_injection_1.inject(session_1.SessionService, focus_1.FocusService, reality_1.RealityService, VuforiaServiceDelegate)], VuforiaService);
+        VuforiaService = __decorate([aurelia_dependency_injection_1.inject(session_1.SessionService, focus_1.FocusService, VuforiaServiceDelegate)], VuforiaService);
         return VuforiaService;
       }());
       exports_1("VuforiaService", VuforiaService);
@@ -3072,9 +3847,79 @@ $__System.register("10", ["b", "6", "d", "8", "7", "a"], function(exports_1, con
   };
 });
 
+$__System.register("13", ["8", "b", "5", "12"], function(exports_1, context_1) {
+  "use strict";
+  var __moduleName = context_1 && context_1.id;
+  var __decorate = (this && this.__decorate) || function(decorators, target, key, desc) {
+    var c = arguments.length,
+        r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc,
+        d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function")
+      r = Reflect.decorate(decorators, target, key, desc);
+    else
+      for (var i = decorators.length - 1; i >= 0; i--)
+        if (d = decorators[i])
+          r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+  };
+  var aurelia_dependency_injection_1,
+      common_1,
+      session_1,
+      vuforia_1;
+  var LiveVideoRealityLoader;
+  return {
+    setters: [function(aurelia_dependency_injection_1_1) {
+      aurelia_dependency_injection_1 = aurelia_dependency_injection_1_1;
+    }, function(common_1_1) {
+      common_1 = common_1_1;
+    }, function(session_1_1) {
+      session_1 = session_1_1;
+    }, function(vuforia_1_1) {
+      vuforia_1 = vuforia_1_1;
+    }],
+    execute: function() {
+      LiveVideoRealityLoader = (function() {
+        function LiveVideoRealityLoader(sessionService, vuforiaDelegate) {
+          this.sessionService = sessionService;
+          this.vuforiaDelegate = vuforiaDelegate;
+          this.type = 'live-video';
+        }
+        LiveVideoRealityLoader.prototype.load = function(reality) {
+          var _this = this;
+          var realitySession = this.sessionService.addManagedSessionPort();
+          var remoteRealitySession = this.sessionService.createSessionPort();
+          remoteRealitySession.on['ar.context.update'] = function() {};
+          remoteRealitySession.connectEvent.addEventListener(function() {
+            var remove = _this.vuforiaDelegate.stateUpdateEvent.addEventListener(function(frameState) {
+              remoteRealitySession.send('ar.reality.frameState', frameState);
+            });
+            _this.vuforiaDelegate.videoEnabled = true;
+            _this.vuforiaDelegate.trackingEnabled = true;
+            remoteRealitySession.closeEvent.addEventListener(function() {
+              remove();
+              _this.vuforiaDelegate.videoEnabled = false;
+              _this.vuforiaDelegate.trackingEnabled = false;
+            });
+          });
+          var messageChannel = this.sessionService.createSynchronousMessageChannel();
+          realitySession.open(messageChannel.port1, this.sessionService.configuration);
+          remoteRealitySession.open(messageChannel.port2, {
+            role: common_1.Role.REALITY_VIEW,
+            name: 'live_video'
+          });
+          return realitySession;
+        };
+        LiveVideoRealityLoader = __decorate([aurelia_dependency_injection_1.inject(session_1.SessionService, vuforia_1.VuforiaServiceDelegate)], LiveVideoRealityLoader);
+        return LiveVideoRealityLoader;
+      }());
+      exports_1("LiveVideoRealityLoader", LiveVideoRealityLoader);
+    }
+  };
+});
+
 (function() {
 var define = $__System.amdDefine;
-define("11", ["12", "13", "14", "15"], function(defined, defineProperties, DeveloperError, Event) {
+define("14", ["15", "16", "17", "18"], function(defined, defineProperties, DeveloperError, Event) {
   "use strict";
   function CallbackProperty(callback, isConstant) {
     this._callback = undefined;
@@ -3116,7 +3961,7 @@ define("11", ["12", "13", "14", "15"], function(defined, defineProperties, Devel
 })();
 (function() {
 var define = $__System.amdDefine;
-define("16", ["17"], function(freezeObject) {
+define("19", ["1a"], function(freezeObject) {
   "use strict";
   var ClockRange = {
     UNBOUNDED: 0,
@@ -3129,7 +3974,7 @@ define("16", ["17"], function(freezeObject) {
 })();
 (function() {
 var define = $__System.amdDefine;
-define("18", ["12"], function(defined) {
+define("1b", ["15"], function(defined) {
   "use strict";
   var getTimestamp;
   if (typeof performance !== 'undefined' && defined(performance.now)) {
@@ -3147,7 +3992,7 @@ define("18", ["12"], function(defined) {
 })();
 (function() {
 var define = $__System.amdDefine;
-define("19", ["16", "1a", "1b", "12", "14", "15", "18", "1c"], function(ClockRange, ClockStep, defaultValue, defined, DeveloperError, Event, getTimestamp, JulianDate) {
+define("1c", ["19", "1d", "1e", "15", "17", "18", "1b", "1f"], function(ClockRange, ClockStep, defaultValue, defined, DeveloperError, Event, getTimestamp, JulianDate) {
   "use strict";
   function Clock(options) {
     options = defaultValue(options, defaultValue.EMPTY_OBJECT);
@@ -3234,7 +4079,7 @@ define("19", ["16", "1a", "1b", "12", "14", "15", "18", "1c"], function(ClockRan
 })();
 (function() {
 var define = $__System.amdDefine;
-define("1a", ["17"], function(freezeObject) {
+define("1d", ["1a"], function(freezeObject) {
   "use strict";
   var ClockStep = {
     TICK_DEPENDENT: 0,
@@ -3247,7 +4092,7 @@ define("1a", ["17"], function(freezeObject) {
 })();
 (function() {
 var define = $__System.amdDefine;
-define("1d", ["1e", "12", "13", "14", "1f", "20", "21"], function(createGuid, defined, defineProperties, DeveloperError, CesiumMath, Entity, EntityCollection) {
+define("20", ["21", "15", "16", "17", "22", "23", "24"], function(createGuid, defined, defineProperties, DeveloperError, CesiumMath, Entity, EntityCollection) {
   "use strict";
   var entityOptionsScratch = {id: undefined};
   var entityIdScratch = new Array(2);
@@ -3564,7 +4409,7 @@ define("1d", ["1e", "12", "13", "14", "1f", "20", "21"], function(createGuid, de
 })();
 (function() {
 var define = $__System.amdDefine;
-define("22", ["12", "13", "14"], function(defined, defineProperties, DeveloperError) {
+define("25", ["15", "16", "17"], function(defined, defineProperties, DeveloperError) {
   "use strict";
   function AssociativeArray() {
     this._array = [];
@@ -3627,7 +4472,7 @@ define("22", ["12", "13", "14"], function(defined, defineProperties, DeveloperEr
 })();
 (function() {
 var define = $__System.amdDefine;
-define("1e", [], function() {
+define("21", [], function() {
   "use strict";
   function createGuid() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -3642,7 +4487,7 @@ define("1e", [], function() {
 })();
 (function() {
 var define = $__System.amdDefine;
-define("23", ["1b", "12", "13", "14", "15", "24"], function(defaultValue, defined, defineProperties, DeveloperError, Event, createPropertyDescriptor) {
+define("26", ["1e", "15", "16", "17", "18", "27"], function(defaultValue, defined, defineProperties, DeveloperError, Event, createPropertyDescriptor) {
   "use strict";
   function BillboardGraphics(options) {
     this._image = undefined;
@@ -3755,7 +4600,7 @@ define("23", ["1b", "12", "13", "14", "15", "24"], function(defaultValue, define
 })();
 (function() {
 var define = $__System.amdDefine;
-define("25", ["26", "1b", "12", "13", "14", "15", "27", "28"], function(Cartesian3, defaultValue, defined, defineProperties, DeveloperError, Event, ReferenceFrame, PositionProperty) {
+define("28", ["29", "1e", "15", "16", "17", "18", "2a", "2b"], function(Cartesian3, defaultValue, defined, defineProperties, DeveloperError, Event, ReferenceFrame, PositionProperty) {
   "use strict";
   function ConstantPositionProperty(value, referenceFrame) {
     this._definitionChanged = new Event();
@@ -3808,7 +4653,7 @@ define("25", ["26", "1b", "12", "13", "14", "15", "27", "28"], function(Cartesia
 })();
 (function() {
 var define = $__System.amdDefine;
-define("29", ["1b", "12", "13", "14", "15"], function(defaultValue, defined, defineProperties, DeveloperError, Event) {
+define("2c", ["1e", "15", "16", "17", "18"], function(defaultValue, defined, defineProperties, DeveloperError, Event) {
   "use strict";
   function ConstantProperty(value) {
     this._value = undefined;
@@ -3850,7 +4695,7 @@ define("29", ["1b", "12", "13", "14", "15"], function(defaultValue, defined, def
 })();
 (function() {
 var define = $__System.amdDefine;
-define("24", ["1b", "12", "29"], function(defaultValue, defined, ConstantProperty) {
+define("27", ["1e", "15", "2c"], function(defaultValue, defined, ConstantProperty) {
   "use strict";
   function createProperty(name, privateName, subscriptionName, configurable, createPropertyCallback) {
     return {
@@ -3893,7 +4738,7 @@ define("24", ["1b", "12", "29"], function(defaultValue, defined, ConstantPropert
 })();
 (function() {
 var define = $__System.amdDefine;
-define("2a", ["24"], function(createPropertyDescriptor) {
+define("2d", ["27"], function(createPropertyDescriptor) {
   "use strict";
   function createRawProperty(value) {
     return value;
@@ -3907,7 +4752,7 @@ define("2a", ["24"], function(createPropertyDescriptor) {
 })();
 (function() {
 var define = $__System.amdDefine;
-define("20", ["26", "1e", "1b", "12", "13", "14", "15", "2b", "2c", "2d", "2e", "23", "@empty", "25", "@empty", "24", "2a", "@empty", "@empty", "@empty", "@empty", "@empty", "@empty", "@empty", "@empty", "@empty", "@empty", "2f", "@empty", "@empty"], function(Cartesian3, createGuid, defaultValue, defined, defineProperties, DeveloperError, Event, Matrix3, Matrix4, Quaternion, Transforms, BillboardGraphics, BoxGraphics, ConstantPositionProperty, CorridorGraphics, createPropertyDescriptor, createRawPropertyDescriptor, CylinderGraphics, EllipseGraphics, EllipsoidGraphics, LabelGraphics, ModelGraphics, PathGraphics, PointGraphics, PolygonGraphics, PolylineGraphics, PolylineVolumeGraphics, Property, RectangleGraphics, WallGraphics) {
+define("23", ["29", "21", "1e", "15", "16", "17", "18", "2e", "2f", "30", "31", "26", "@empty", "28", "@empty", "27", "2d", "@empty", "@empty", "@empty", "@empty", "@empty", "@empty", "@empty", "@empty", "@empty", "@empty", "32", "@empty", "@empty"], function(Cartesian3, createGuid, defaultValue, defined, defineProperties, DeveloperError, Event, Matrix3, Matrix4, Quaternion, Transforms, BillboardGraphics, BoxGraphics, ConstantPositionProperty, CorridorGraphics, createPropertyDescriptor, createRawPropertyDescriptor, CylinderGraphics, EllipseGraphics, EllipsoidGraphics, LabelGraphics, ModelGraphics, PathGraphics, PointGraphics, PolygonGraphics, PolylineGraphics, PolylineVolumeGraphics, Property, RectangleGraphics, WallGraphics) {
   "use strict";
   function createConstantPositionProperty(value) {
     return new ConstantPositionProperty(value);
@@ -4159,7 +5004,7 @@ define("20", ["26", "1e", "1b", "12", "13", "14", "15", "2b", "2c", "2d", "2e", 
 })();
 (function() {
 var define = $__System.amdDefine;
-define("21", ["22", "1e", "12", "13", "14", "15", "30", "1c", "31", "32", "20"], function(AssociativeArray, createGuid, defined, defineProperties, DeveloperError, Event, Iso8601, JulianDate, RuntimeError, TimeInterval, Entity) {
+define("24", ["25", "21", "15", "16", "17", "18", "33", "1f", "34", "35", "23"], function(AssociativeArray, createGuid, defined, defineProperties, DeveloperError, Event, Iso8601, JulianDate, RuntimeError, TimeInterval, Entity) {
   "use strict";
   var entityOptionsScratch = {id: undefined};
   function fireChangedEvent(collection) {
@@ -4342,7 +5187,7 @@ define("21", ["22", "1e", "12", "13", "14", "15", "30", "1c", "31", "32", "20"],
 })();
 (function() {
 var define = $__System.amdDefine;
-define("33", ["26", "34", "1b", "12", "13", "14", "35"], function(Cartesian3, Cartographic, defaultValue, defined, defineProperties, DeveloperError, Ellipsoid) {
+define("36", ["29", "37", "1e", "15", "16", "17", "38"], function(Cartesian3, Cartographic, defaultValue, defined, defineProperties, DeveloperError, Ellipsoid) {
   "use strict";
   function GeographicProjection(ellipsoid) {
     this._ellipsoid = defaultValue(ellipsoid, Ellipsoid.WGS84);
@@ -4387,7 +5232,7 @@ define("33", ["26", "34", "1b", "12", "13", "14", "35"], function(Cartesian3, Ca
 })();
 (function() {
 var define = $__System.amdDefine;
-define("36", ["1b", "12", "14", "1f"], function(defaultValue, defined, DeveloperError, CesiumMath) {
+define("39", ["1e", "15", "17", "22"], function(defaultValue, defined, DeveloperError, CesiumMath) {
   "use strict";
   var factorial = CesiumMath.factorial;
   function calculateCoefficientTerm(x, zIndices, xTable, derivOrder, termOrder, reservedIndices) {
@@ -4587,7 +5432,7 @@ define("36", ["1b", "12", "14", "1f"], function(defaultValue, defined, Developer
 })();
 (function() {
 var define = $__System.amdDefine;
-define("37", ["12", "13", "14", "2b", "2d", "27", "2e"], function(defined, defineProperties, DeveloperError, Matrix3, Quaternion, ReferenceFrame, Transforms) {
+define("3a", ["15", "16", "17", "2e", "30", "2a", "31"], function(defined, defineProperties, DeveloperError, Matrix3, Quaternion, ReferenceFrame, Transforms) {
   "use strict";
   var OrientationProperty = function() {
     DeveloperError.throwInstantiationError();
@@ -4716,7 +5561,7 @@ define("37", ["12", "13", "14", "2b", "2d", "27", "2e"], function(defined, defin
 })();
 (function() {
 var define = $__System.amdDefine;
-define("38", ["17"], function(freezeObject) {
+define("3b", ["1a"], function(freezeObject) {
   "use strict";
   var Intersect = {
     OUTSIDE: -1,
@@ -4729,7 +5574,7 @@ define("38", ["17"], function(freezeObject) {
 })();
 (function() {
 var define = $__System.amdDefine;
-define("39", ["26", "1b", "12", "14", "38", "3a"], function(Cartesian3, defaultValue, defined, DeveloperError, Intersect, Plane) {
+define("3c", ["29", "1e", "15", "17", "3b", "3d"], function(Cartesian3, defaultValue, defined, DeveloperError, Intersect, Plane) {
   "use strict";
   function CullingVolume(planes) {
     this.planes = defaultValue(planes, []);
@@ -4788,7 +5633,7 @@ define("39", ["26", "1b", "12", "14", "38", "3a"], function(Cartesian3, defaultV
 })();
 (function() {
 var define = $__System.amdDefine;
-define("3b", ["3c", "26", "3d", "1b", "12", "13", "14", "2c", "39"], function(Cartesian2, Cartesian3, Cartesian4, defaultValue, defined, defineProperties, DeveloperError, Matrix4, CullingVolume) {
+define("3e", ["3f", "29", "40", "1e", "15", "16", "17", "2f", "3c"], function(Cartesian2, Cartesian3, Cartesian4, defaultValue, defined, defineProperties, DeveloperError, Matrix4, CullingVolume) {
   "use strict";
   function PerspectiveOffCenterFrustum() {
     this.left = undefined;
@@ -4994,7 +5839,7 @@ define("3b", ["3c", "26", "3d", "1b", "12", "13", "14", "2c", "39"], function(Ca
 })();
 (function() {
 var define = $__System.amdDefine;
-define("3e", ["12", "13", "14", "3b"], function(defined, defineProperties, DeveloperError, PerspectiveOffCenterFrustum) {
+define("41", ["15", "16", "17", "3e"], function(defined, defineProperties, DeveloperError, PerspectiveOffCenterFrustum) {
   "use strict";
   function PerspectiveFrustum() {
     this._offCenterFrustum = new PerspectiveOffCenterFrustum();
@@ -5093,7 +5938,7 @@ define("3e", ["12", "13", "14", "3b"], function(defined, defineProperties, Devel
 })();
 (function() {
 var define = $__System.amdDefine;
-define("3f", ["12", "13", "14", "15", "2f"], function(defined, defineProperties, DeveloperError, Event, Property) {
+define("42", ["15", "16", "17", "18", "32"], function(defined, defineProperties, DeveloperError, Event, Property) {
   "use strict";
   function resolve(that) {
     var targetEntity = that._targetEntity;
@@ -5164,7 +6009,7 @@ define("3f", ["12", "13", "14", "15", "2f"], function(defined, defineProperties,
 })();
 (function() {
 var define = $__System.amdDefine;
-define("40", ["12", "13", "14", "15", "31", "2f"], function(defined, defineProperties, DeveloperError, Event, RuntimeError, Property) {
+define("43", ["15", "16", "17", "18", "34", "32"], function(defined, defineProperties, DeveloperError, Event, RuntimeError, Property) {
   "use strict";
   function resolveEntity(that) {
     var entityIsResolved = true;
@@ -5338,7 +6183,7 @@ define("40", ["12", "13", "14", "15", "31", "2f"], function(defined, definePrope
 })();
 (function() {
 var define = $__System.amdDefine;
-define("27", ["17"], function(freezeObject) {
+define("2a", ["1a"], function(freezeObject) {
   "use strict";
   var ReferenceFrame = {
     FIXED: 0,
@@ -5350,7 +6195,7 @@ define("27", ["17"], function(freezeObject) {
 })();
 (function() {
 var define = $__System.amdDefine;
-define("28", ["26", "12", "13", "14", "2b", "2c", "2d", "27", "2e"], function(Cartesian3, defined, defineProperties, DeveloperError, Matrix3, Matrix4, Quaternion, ReferenceFrame, Transforms) {
+define("2b", ["29", "15", "16", "17", "2e", "2f", "30", "2a", "31"], function(Cartesian3, defined, defineProperties, DeveloperError, Matrix3, Matrix4, Quaternion, ReferenceFrame, Transforms) {
   "use strict";
   function PositionProperty() {
     DeveloperError.throwInstantiationError();
@@ -5503,7 +6348,7 @@ define("28", ["26", "12", "13", "14", "2b", "2c", "2d", "27", "2e"], function(Ca
 })();
 (function() {
 var define = $__System.amdDefine;
-define("32", ["1b", "12", "13", "14", "17", "1c"], function(defaultValue, defined, defineProperties, DeveloperError, freezeObject, JulianDate) {
+define("35", ["1e", "15", "16", "17", "1a", "1f"], function(defaultValue, defined, defineProperties, DeveloperError, freezeObject, JulianDate) {
   "use strict";
   function TimeInterval(options) {
     options = defaultValue(options, defaultValue.EMPTY_OBJECT);
@@ -5656,7 +6501,7 @@ define("32", ["1b", "12", "13", "14", "17", "1c"], function(defaultValue, define
 })();
 (function() {
 var define = $__System.amdDefine;
-define("30", ["17", "1c", "32"], function(freezeObject, JulianDate, TimeInterval) {
+define("33", ["1a", "1f", "35"], function(freezeObject, JulianDate, TimeInterval) {
   "use strict";
   var MINIMUM_VALUE = freezeObject(JulianDate.fromIso8601('0000-01-01T00:00:00Z'));
   var MAXIMUM_VALUE = freezeObject(JulianDate.fromIso8601('9999-12-31T24:00:00Z'));
@@ -5675,7 +6520,7 @@ define("30", ["17", "1c", "32"], function(freezeObject, JulianDate, TimeInterval
 })();
 (function() {
 var define = $__System.amdDefine;
-define("2f", ["1b", "12", "13", "14", "30"], function(defaultValue, defined, defineProperties, DeveloperError, Iso8601) {
+define("32", ["1e", "15", "16", "17", "33"], function(defaultValue, defined, defineProperties, DeveloperError, Iso8601) {
   "use strict";
   function Property() {
     DeveloperError.throwInstantiationError();
@@ -5729,7 +6574,7 @@ define("2f", ["1b", "12", "13", "14", "30"], function(defaultValue, defined, def
 })();
 (function() {
 var define = $__System.amdDefine;
-define("41", ["26", "1b", "12", "13", "14", "15", "27", "28", "2f", "42"], function(Cartesian3, defaultValue, defined, defineProperties, DeveloperError, Event, ReferenceFrame, PositionProperty, Property, SampledProperty) {
+define("44", ["29", "1e", "15", "16", "17", "18", "2a", "2b", "32", "45"], function(Cartesian3, defaultValue, defined, defineProperties, DeveloperError, Event, ReferenceFrame, PositionProperty, Property, SampledProperty) {
   "use strict";
   function SampledPositionProperty(referenceFrame, numberOfDerivatives) {
     numberOfDerivatives = defaultValue(numberOfDerivatives, 0);
@@ -5841,7 +6686,7 @@ define("41", ["26", "1b", "12", "13", "14", "15", "27", "28", "2f", "42"], funct
 })();
 (function() {
 var define = $__System.amdDefine;
-define("15", ["12", "13", "14"], function(defined, defineProperties, DeveloperError) {
+define("18", ["15", "16", "17"], function(defined, defineProperties, DeveloperError) {
   "use strict";
   function Event() {
     this._listeners = [];
@@ -5917,7 +6762,7 @@ define("15", ["12", "13", "14"], function(defined, defineProperties, DeveloperEr
 })();
 (function() {
 var define = $__System.amdDefine;
-define("43", ["17"], function(freezeObject) {
+define("46", ["1a"], function(freezeObject) {
   "use strict";
   var ExtrapolationType = {
     NONE: 0,
@@ -5930,7 +6775,7 @@ define("43", ["17"], function(freezeObject) {
 })();
 (function() {
 var define = $__System.amdDefine;
-define("44", ["12", "14"], function(defined, DeveloperError) {
+define("47", ["15", "17"], function(defined, DeveloperError) {
   "use strict";
   var LinearApproximation = {type: 'Linear'};
   LinearApproximation.getRequiredDataPoints = function(degree) {
@@ -5966,7 +6811,7 @@ define("44", ["12", "14"], function(defined, DeveloperError) {
 })();
 (function() {
 var define = $__System.amdDefine;
-define("42", ["45", "1b", "12", "13", "14", "15", "43", "1c", "44"], function(binarySearch, defaultValue, defined, defineProperties, DeveloperError, Event, ExtrapolationType, JulianDate, LinearApproximation) {
+define("45", ["48", "1e", "15", "16", "17", "18", "46", "1f", "47"], function(binarySearch, defaultValue, defined, defineProperties, DeveloperError, Event, ExtrapolationType, JulianDate, LinearApproximation) {
   "use strict";
   var PackableNumber = {
     packedLength: 1,
@@ -6415,7 +7260,3560 @@ define("42", ["45", "1b", "12", "13", "14", "15", "43", "1c", "44"], function(bi
 })();
 (function() {
 var define = $__System.amdDefine;
-define("46", ["26", "12", "14", "1c", "1f", "2b", "47", "48"], function(Cartesian3, defined, DeveloperError, JulianDate, CesiumMath, Matrix3, TimeConstants, TimeStandard) {
+define("3f", ["1e", "15", "17", "1a", "22"], function(defaultValue, defined, DeveloperError, freezeObject, CesiumMath) {
+  "use strict";
+  function Cartesian2(x, y) {
+    this.x = defaultValue(x, 0.0);
+    this.y = defaultValue(y, 0.0);
+  }
+  Cartesian2.fromElements = function(x, y, result) {
+    if (!defined(result)) {
+      return new Cartesian2(x, y);
+    }
+    result.x = x;
+    result.y = y;
+    return result;
+  };
+  Cartesian2.clone = function(cartesian, result) {
+    if (!defined(cartesian)) {
+      return undefined;
+    }
+    if (!defined(result)) {
+      return new Cartesian2(cartesian.x, cartesian.y);
+    }
+    result.x = cartesian.x;
+    result.y = cartesian.y;
+    return result;
+  };
+  Cartesian2.fromCartesian3 = Cartesian2.clone;
+  Cartesian2.fromCartesian4 = Cartesian2.clone;
+  Cartesian2.packedLength = 2;
+  Cartesian2.pack = function(value, array, startingIndex) {
+    if (!defined(value)) {
+      throw new DeveloperError('value is required');
+    }
+    if (!defined(array)) {
+      throw new DeveloperError('array is required');
+    }
+    startingIndex = defaultValue(startingIndex, 0);
+    array[startingIndex++] = value.x;
+    array[startingIndex] = value.y;
+  };
+  Cartesian2.unpack = function(array, startingIndex, result) {
+    if (!defined(array)) {
+      throw new DeveloperError('array is required');
+    }
+    startingIndex = defaultValue(startingIndex, 0);
+    if (!defined(result)) {
+      result = new Cartesian2();
+    }
+    result.x = array[startingIndex++];
+    result.y = array[startingIndex];
+    return result;
+  };
+  Cartesian2.fromArray = Cartesian2.unpack;
+  Cartesian2.maximumComponent = function(cartesian) {
+    if (!defined(cartesian)) {
+      throw new DeveloperError('cartesian is required');
+    }
+    return Math.max(cartesian.x, cartesian.y);
+  };
+  Cartesian2.minimumComponent = function(cartesian) {
+    if (!defined(cartesian)) {
+      throw new DeveloperError('cartesian is required');
+    }
+    return Math.min(cartesian.x, cartesian.y);
+  };
+  Cartesian2.minimumByComponent = function(first, second, result) {
+    if (!defined(first)) {
+      throw new DeveloperError('first is required.');
+    }
+    if (!defined(second)) {
+      throw new DeveloperError('second is required.');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required.');
+    }
+    result.x = Math.min(first.x, second.x);
+    result.y = Math.min(first.y, second.y);
+    return result;
+  };
+  Cartesian2.maximumByComponent = function(first, second, result) {
+    if (!defined(first)) {
+      throw new DeveloperError('first is required.');
+    }
+    if (!defined(second)) {
+      throw new DeveloperError('second is required.');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required.');
+    }
+    result.x = Math.max(first.x, second.x);
+    result.y = Math.max(first.y, second.y);
+    return result;
+  };
+  Cartesian2.magnitudeSquared = function(cartesian) {
+    if (!defined(cartesian)) {
+      throw new DeveloperError('cartesian is required');
+    }
+    return cartesian.x * cartesian.x + cartesian.y * cartesian.y;
+  };
+  Cartesian2.magnitude = function(cartesian) {
+    return Math.sqrt(Cartesian2.magnitudeSquared(cartesian));
+  };
+  var distanceScratch = new Cartesian2();
+  Cartesian2.distance = function(left, right) {
+    if (!defined(left) || !defined(right)) {
+      throw new DeveloperError('left and right are required.');
+    }
+    Cartesian2.subtract(left, right, distanceScratch);
+    return Cartesian2.magnitude(distanceScratch);
+  };
+  Cartesian2.distanceSquared = function(left, right) {
+    if (!defined(left) || !defined(right)) {
+      throw new DeveloperError('left and right are required.');
+    }
+    Cartesian2.subtract(left, right, distanceScratch);
+    return Cartesian2.magnitudeSquared(distanceScratch);
+  };
+  Cartesian2.normalize = function(cartesian, result) {
+    if (!defined(cartesian)) {
+      throw new DeveloperError('cartesian is required');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    var magnitude = Cartesian2.magnitude(cartesian);
+    result.x = cartesian.x / magnitude;
+    result.y = cartesian.y / magnitude;
+    return result;
+  };
+  Cartesian2.dot = function(left, right) {
+    if (!defined(left)) {
+      throw new DeveloperError('left is required');
+    }
+    if (!defined(right)) {
+      throw new DeveloperError('right is required');
+    }
+    return left.x * right.x + left.y * right.y;
+  };
+  Cartesian2.multiplyComponents = function(left, right, result) {
+    if (!defined(left)) {
+      throw new DeveloperError('left is required');
+    }
+    if (!defined(right)) {
+      throw new DeveloperError('right is required');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    result.x = left.x * right.x;
+    result.y = left.y * right.y;
+    return result;
+  };
+  Cartesian2.add = function(left, right, result) {
+    if (!defined(left)) {
+      throw new DeveloperError('left is required');
+    }
+    if (!defined(right)) {
+      throw new DeveloperError('right is required');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    result.x = left.x + right.x;
+    result.y = left.y + right.y;
+    return result;
+  };
+  Cartesian2.subtract = function(left, right, result) {
+    if (!defined(left)) {
+      throw new DeveloperError('left is required');
+    }
+    if (!defined(right)) {
+      throw new DeveloperError('right is required');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    result.x = left.x - right.x;
+    result.y = left.y - right.y;
+    return result;
+  };
+  Cartesian2.multiplyByScalar = function(cartesian, scalar, result) {
+    if (!defined(cartesian)) {
+      throw new DeveloperError('cartesian is required');
+    }
+    if (typeof scalar !== 'number') {
+      throw new DeveloperError('scalar is required and must be a number.');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    result.x = cartesian.x * scalar;
+    result.y = cartesian.y * scalar;
+    return result;
+  };
+  Cartesian2.divideByScalar = function(cartesian, scalar, result) {
+    if (!defined(cartesian)) {
+      throw new DeveloperError('cartesian is required');
+    }
+    if (typeof scalar !== 'number') {
+      throw new DeveloperError('scalar is required and must be a number.');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    result.x = cartesian.x / scalar;
+    result.y = cartesian.y / scalar;
+    return result;
+  };
+  Cartesian2.negate = function(cartesian, result) {
+    if (!defined(cartesian)) {
+      throw new DeveloperError('cartesian is required');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    result.x = -cartesian.x;
+    result.y = -cartesian.y;
+    return result;
+  };
+  Cartesian2.abs = function(cartesian, result) {
+    if (!defined(cartesian)) {
+      throw new DeveloperError('cartesian is required');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    result.x = Math.abs(cartesian.x);
+    result.y = Math.abs(cartesian.y);
+    return result;
+  };
+  var lerpScratch = new Cartesian2();
+  Cartesian2.lerp = function(start, end, t, result) {
+    if (!defined(start)) {
+      throw new DeveloperError('start is required.');
+    }
+    if (!defined(end)) {
+      throw new DeveloperError('end is required.');
+    }
+    if (typeof t !== 'number') {
+      throw new DeveloperError('t is required and must be a number.');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required.');
+    }
+    Cartesian2.multiplyByScalar(end, t, lerpScratch);
+    result = Cartesian2.multiplyByScalar(start, 1.0 - t, result);
+    return Cartesian2.add(lerpScratch, result, result);
+  };
+  var angleBetweenScratch = new Cartesian2();
+  var angleBetweenScratch2 = new Cartesian2();
+  Cartesian2.angleBetween = function(left, right) {
+    if (!defined(left)) {
+      throw new DeveloperError('left is required');
+    }
+    if (!defined(right)) {
+      throw new DeveloperError('right is required');
+    }
+    Cartesian2.normalize(left, angleBetweenScratch);
+    Cartesian2.normalize(right, angleBetweenScratch2);
+    return CesiumMath.acosClamped(Cartesian2.dot(angleBetweenScratch, angleBetweenScratch2));
+  };
+  var mostOrthogonalAxisScratch = new Cartesian2();
+  Cartesian2.mostOrthogonalAxis = function(cartesian, result) {
+    if (!defined(cartesian)) {
+      throw new DeveloperError('cartesian is required.');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required.');
+    }
+    var f = Cartesian2.normalize(cartesian, mostOrthogonalAxisScratch);
+    Cartesian2.abs(f, f);
+    if (f.x <= f.y) {
+      result = Cartesian2.clone(Cartesian2.UNIT_X, result);
+    } else {
+      result = Cartesian2.clone(Cartesian2.UNIT_Y, result);
+    }
+    return result;
+  };
+  Cartesian2.equals = function(left, right) {
+    return (left === right) || ((defined(left)) && (defined(right)) && (left.x === right.x) && (left.y === right.y));
+  };
+  Cartesian2.equalsArray = function(cartesian, array, offset) {
+    return cartesian.x === array[offset] && cartesian.y === array[offset + 1];
+  };
+  Cartesian2.equalsEpsilon = function(left, right, relativeEpsilon, absoluteEpsilon) {
+    return (left === right) || (defined(left) && defined(right) && CesiumMath.equalsEpsilon(left.x, right.x, relativeEpsilon, absoluteEpsilon) && CesiumMath.equalsEpsilon(left.y, right.y, relativeEpsilon, absoluteEpsilon));
+  };
+  Cartesian2.ZERO = freezeObject(new Cartesian2(0.0, 0.0));
+  Cartesian2.UNIT_X = freezeObject(new Cartesian2(1.0, 0.0));
+  Cartesian2.UNIT_Y = freezeObject(new Cartesian2(0.0, 1.0));
+  Cartesian2.prototype.clone = function(result) {
+    return Cartesian2.clone(this, result);
+  };
+  Cartesian2.prototype.equals = function(right) {
+    return Cartesian2.equals(this, right);
+  };
+  Cartesian2.prototype.equalsEpsilon = function(right, relativeEpsilon, absoluteEpsilon) {
+    return Cartesian2.equalsEpsilon(this, right, relativeEpsilon, absoluteEpsilon);
+  };
+  Cartesian2.prototype.toString = function() {
+    return '(' + this.x + ', ' + this.y + ')';
+  };
+  return Cartesian2;
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("49", ["4a", "48", "1e", "15", "4b", "1a", "1f", "4c", "4d", "34", "4e", "4f"], function(when, binarySearch, defaultValue, defined, EarthOrientationParametersSample, freezeObject, JulianDate, LeapSecond, loadJson, RuntimeError, TimeConstants, TimeStandard) {
+  "use strict";
+  function EarthOrientationParameters(options) {
+    options = defaultValue(options, defaultValue.EMPTY_OBJECT);
+    this._dates = undefined;
+    this._samples = undefined;
+    this._dateColumn = -1;
+    this._xPoleWanderRadiansColumn = -1;
+    this._yPoleWanderRadiansColumn = -1;
+    this._ut1MinusUtcSecondsColumn = -1;
+    this._xCelestialPoleOffsetRadiansColumn = -1;
+    this._yCelestialPoleOffsetRadiansColumn = -1;
+    this._taiMinusUtcSecondsColumn = -1;
+    this._columnCount = 0;
+    this._lastIndex = -1;
+    this._downloadPromise = undefined;
+    this._dataError = undefined;
+    this._addNewLeapSeconds = defaultValue(options.addNewLeapSeconds, true);
+    if (defined(options.data)) {
+      onDataReady(this, options.data);
+    } else if (defined(options.url)) {
+      var that = this;
+      this._downloadPromise = when(loadJson(options.url), function(eopData) {
+        onDataReady(that, eopData);
+      }, function() {
+        that._dataError = 'An error occurred while retrieving the EOP data from the URL ' + options.url + '.';
+      });
+    } else {
+      onDataReady(this, {
+        'columnNames': ['dateIso8601', 'modifiedJulianDateUtc', 'xPoleWanderRadians', 'yPoleWanderRadians', 'ut1MinusUtcSeconds', 'lengthOfDayCorrectionSeconds', 'xCelestialPoleOffsetRadians', 'yCelestialPoleOffsetRadians', 'taiMinusUtcSeconds'],
+        'samples': []
+      });
+    }
+  }
+  EarthOrientationParameters.NONE = freezeObject({
+    getPromiseToLoad: function() {
+      return when();
+    },
+    compute: function(date, result) {
+      if (!defined(result)) {
+        result = new EarthOrientationParametersSample(0.0, 0.0, 0.0, 0.0, 0.0);
+      } else {
+        result.xPoleWander = 0.0;
+        result.yPoleWander = 0.0;
+        result.xPoleOffset = 0.0;
+        result.yPoleOffset = 0.0;
+        result.ut1MinusUtc = 0.0;
+      }
+      return result;
+    }
+  });
+  EarthOrientationParameters.prototype.getPromiseToLoad = function() {
+    return when(this._downloadPromise);
+  };
+  EarthOrientationParameters.prototype.compute = function(date, result) {
+    if (!defined(this._samples)) {
+      if (defined(this._dataError)) {
+        throw new RuntimeError(this._dataError);
+      }
+      return undefined;
+    }
+    if (!defined(result)) {
+      result = new EarthOrientationParametersSample(0.0, 0.0, 0.0, 0.0, 0.0);
+    }
+    if (this._samples.length === 0) {
+      result.xPoleWander = 0.0;
+      result.yPoleWander = 0.0;
+      result.xPoleOffset = 0.0;
+      result.yPoleOffset = 0.0;
+      result.ut1MinusUtc = 0.0;
+      return result;
+    }
+    var dates = this._dates;
+    var lastIndex = this._lastIndex;
+    var before = 0;
+    var after = 0;
+    if (defined(lastIndex)) {
+      var previousIndexDate = dates[lastIndex];
+      var nextIndexDate = dates[lastIndex + 1];
+      var isAfterPrevious = JulianDate.lessThanOrEquals(previousIndexDate, date);
+      var isAfterLastSample = !defined(nextIndexDate);
+      var isBeforeNext = isAfterLastSample || JulianDate.greaterThanOrEquals(nextIndexDate, date);
+      if (isAfterPrevious && isBeforeNext) {
+        before = lastIndex;
+        if (!isAfterLastSample && nextIndexDate.equals(date)) {
+          ++before;
+        }
+        after = before + 1;
+        interpolate(this, dates, this._samples, date, before, after, result);
+        return result;
+      }
+    }
+    var index = binarySearch(dates, date, JulianDate.compare, this._dateColumn);
+    if (index >= 0) {
+      if (index < dates.length - 1 && dates[index + 1].equals(date)) {
+        ++index;
+      }
+      before = index;
+      after = index;
+    } else {
+      after = ~index;
+      before = after - 1;
+      if (before < 0) {
+        before = 0;
+      }
+    }
+    this._lastIndex = before;
+    interpolate(this, dates, this._samples, date, before, after, result);
+    return result;
+  };
+  function compareLeapSecondDates(leapSecond, dateToFind) {
+    return JulianDate.compare(leapSecond.julianDate, dateToFind);
+  }
+  function onDataReady(eop, eopData) {
+    if (!defined(eopData.columnNames)) {
+      eop._dataError = 'Error in loaded EOP data: The columnNames property is required.';
+      return;
+    }
+    if (!defined(eopData.samples)) {
+      eop._dataError = 'Error in loaded EOP data: The samples property is required.';
+      return;
+    }
+    var dateColumn = eopData.columnNames.indexOf('modifiedJulianDateUtc');
+    var xPoleWanderRadiansColumn = eopData.columnNames.indexOf('xPoleWanderRadians');
+    var yPoleWanderRadiansColumn = eopData.columnNames.indexOf('yPoleWanderRadians');
+    var ut1MinusUtcSecondsColumn = eopData.columnNames.indexOf('ut1MinusUtcSeconds');
+    var xCelestialPoleOffsetRadiansColumn = eopData.columnNames.indexOf('xCelestialPoleOffsetRadians');
+    var yCelestialPoleOffsetRadiansColumn = eopData.columnNames.indexOf('yCelestialPoleOffsetRadians');
+    var taiMinusUtcSecondsColumn = eopData.columnNames.indexOf('taiMinusUtcSeconds');
+    if (dateColumn < 0 || xPoleWanderRadiansColumn < 0 || yPoleWanderRadiansColumn < 0 || ut1MinusUtcSecondsColumn < 0 || xCelestialPoleOffsetRadiansColumn < 0 || yCelestialPoleOffsetRadiansColumn < 0 || taiMinusUtcSecondsColumn < 0) {
+      eop._dataError = 'Error in loaded EOP data: The columnNames property must include modifiedJulianDateUtc, xPoleWanderRadians, yPoleWanderRadians, ut1MinusUtcSeconds, xCelestialPoleOffsetRadians, yCelestialPoleOffsetRadians, and taiMinusUtcSeconds columns';
+      return;
+    }
+    var samples = eop._samples = eopData.samples;
+    var dates = eop._dates = [];
+    eop._dateColumn = dateColumn;
+    eop._xPoleWanderRadiansColumn = xPoleWanderRadiansColumn;
+    eop._yPoleWanderRadiansColumn = yPoleWanderRadiansColumn;
+    eop._ut1MinusUtcSecondsColumn = ut1MinusUtcSecondsColumn;
+    eop._xCelestialPoleOffsetRadiansColumn = xCelestialPoleOffsetRadiansColumn;
+    eop._yCelestialPoleOffsetRadiansColumn = yCelestialPoleOffsetRadiansColumn;
+    eop._taiMinusUtcSecondsColumn = taiMinusUtcSecondsColumn;
+    eop._columnCount = eopData.columnNames.length;
+    eop._lastIndex = undefined;
+    var lastTaiMinusUtc;
+    var addNewLeapSeconds = eop._addNewLeapSeconds;
+    for (var i = 0,
+        len = samples.length; i < len; i += eop._columnCount) {
+      var mjd = samples[i + dateColumn];
+      var taiMinusUtc = samples[i + taiMinusUtcSecondsColumn];
+      var day = mjd + TimeConstants.MODIFIED_JULIAN_DATE_DIFFERENCE;
+      var date = new JulianDate(day, taiMinusUtc, TimeStandard.TAI);
+      dates.push(date);
+      if (addNewLeapSeconds) {
+        if (taiMinusUtc !== lastTaiMinusUtc && defined(lastTaiMinusUtc)) {
+          var leapSeconds = JulianDate.leapSeconds;
+          var leapSecondIndex = binarySearch(leapSeconds, date, compareLeapSecondDates);
+          if (leapSecondIndex < 0) {
+            var leapSecond = new LeapSecond(date, taiMinusUtc);
+            leapSeconds.splice(~leapSecondIndex, 0, leapSecond);
+          }
+        }
+        lastTaiMinusUtc = taiMinusUtc;
+      }
+    }
+  }
+  function fillResultFromIndex(eop, samples, index, columnCount, result) {
+    var start = index * columnCount;
+    result.xPoleWander = samples[start + eop._xPoleWanderRadiansColumn];
+    result.yPoleWander = samples[start + eop._yPoleWanderRadiansColumn];
+    result.xPoleOffset = samples[start + eop._xCelestialPoleOffsetRadiansColumn];
+    result.yPoleOffset = samples[start + eop._yCelestialPoleOffsetRadiansColumn];
+    result.ut1MinusUtc = samples[start + eop._ut1MinusUtcSecondsColumn];
+  }
+  function linearInterp(dx, y1, y2) {
+    return y1 + dx * (y2 - y1);
+  }
+  function interpolate(eop, dates, samples, date, before, after, result) {
+    var columnCount = eop._columnCount;
+    if (after > dates.length - 1) {
+      result.xPoleWander = 0;
+      result.yPoleWander = 0;
+      result.xPoleOffset = 0;
+      result.yPoleOffset = 0;
+      result.ut1MinusUtc = 0;
+      return result;
+    }
+    var beforeDate = dates[before];
+    var afterDate = dates[after];
+    if (beforeDate.equals(afterDate) || date.equals(beforeDate)) {
+      fillResultFromIndex(eop, samples, before, columnCount, result);
+      return result;
+    } else if (date.equals(afterDate)) {
+      fillResultFromIndex(eop, samples, after, columnCount, result);
+      return result;
+    }
+    var factor = JulianDate.secondsDifference(date, beforeDate) / JulianDate.secondsDifference(afterDate, beforeDate);
+    var startBefore = before * columnCount;
+    var startAfter = after * columnCount;
+    var beforeUt1MinusUtc = samples[startBefore + eop._ut1MinusUtcSecondsColumn];
+    var afterUt1MinusUtc = samples[startAfter + eop._ut1MinusUtcSecondsColumn];
+    var offsetDifference = afterUt1MinusUtc - beforeUt1MinusUtc;
+    if (offsetDifference > 0.5 || offsetDifference < -0.5) {
+      var beforeTaiMinusUtc = samples[startBefore + eop._taiMinusUtcSecondsColumn];
+      var afterTaiMinusUtc = samples[startAfter + eop._taiMinusUtcSecondsColumn];
+      if (beforeTaiMinusUtc !== afterTaiMinusUtc) {
+        if (afterDate.equals(date)) {
+          beforeUt1MinusUtc = afterUt1MinusUtc;
+        } else {
+          afterUt1MinusUtc -= afterTaiMinusUtc - beforeTaiMinusUtc;
+        }
+      }
+    }
+    result.xPoleWander = linearInterp(factor, samples[startBefore + eop._xPoleWanderRadiansColumn], samples[startAfter + eop._xPoleWanderRadiansColumn]);
+    result.yPoleWander = linearInterp(factor, samples[startBefore + eop._yPoleWanderRadiansColumn], samples[startAfter + eop._yPoleWanderRadiansColumn]);
+    result.xPoleOffset = linearInterp(factor, samples[startBefore + eop._xCelestialPoleOffsetRadiansColumn], samples[startAfter + eop._xCelestialPoleOffsetRadiansColumn]);
+    result.yPoleOffset = linearInterp(factor, samples[startBefore + eop._yCelestialPoleOffsetRadiansColumn], samples[startAfter + eop._yCelestialPoleOffsetRadiansColumn]);
+    result.ut1MinusUtc = linearInterp(factor, beforeUt1MinusUtc, afterUt1MinusUtc);
+    return result;
+  }
+  return EarthOrientationParameters;
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("4b", [], function() {
+  "use strict";
+  function EarthOrientationParametersSample(xPoleWander, yPoleWander, xPoleOffset, yPoleOffset, ut1MinusUtc) {
+    this.xPoleWander = xPoleWander;
+    this.yPoleWander = yPoleWander;
+    this.xPoleOffset = xPoleOffset;
+    this.yPoleOffset = yPoleOffset;
+    this.ut1MinusUtc = ut1MinusUtc;
+  }
+  return EarthOrientationParametersSample;
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("50", [], function() {
+  function URI(uri) {
+    if (uri instanceof URI) {
+      this.scheme = uri.scheme;
+      this.authority = uri.authority;
+      this.path = uri.path;
+      this.query = uri.query;
+      this.fragment = uri.fragment;
+    } else if (uri) {
+      var c = parseRegex.exec(uri);
+      this.scheme = c[1];
+      this.authority = c[2];
+      this.path = c[3];
+      this.query = c[4];
+      this.fragment = c[5];
+    }
+  }
+  URI.prototype.scheme = null;
+  URI.prototype.authority = null;
+  URI.prototype.path = '';
+  URI.prototype.query = null;
+  URI.prototype.fragment = null;
+  var parseRegex = new RegExp('^(?:([^:/?#]+):)?(?://([^/?#]*))?([^?#]*)(?:\\?([^#]*))?(?:#(.*))?$');
+  URI.prototype.getScheme = function() {
+    return this.scheme;
+  };
+  URI.prototype.getAuthority = function() {
+    return this.authority;
+  };
+  URI.prototype.getPath = function() {
+    return this.path;
+  };
+  URI.prototype.getQuery = function() {
+    return this.query;
+  };
+  URI.prototype.getFragment = function() {
+    return this.fragment;
+  };
+  URI.prototype.isAbsolute = function() {
+    return !!this.scheme && !this.fragment;
+  };
+  URI.prototype.isSameDocumentAs = function(uri) {
+    return uri.scheme == this.scheme && uri.authority == this.authority && uri.path == this.path && uri.query == this.query;
+  };
+  URI.prototype.equals = function(uri) {
+    return this.isSameDocumentAs(uri) && uri.fragment == this.fragment;
+  };
+  URI.prototype.normalize = function() {
+    this.removeDotSegments();
+    if (this.scheme)
+      this.scheme = this.scheme.toLowerCase();
+    if (this.authority)
+      this.authority = this.authority.replace(authorityRegex, replaceAuthority).replace(caseRegex, replaceCase);
+    if (this.path)
+      this.path = this.path.replace(caseRegex, replaceCase);
+    if (this.query)
+      this.query = this.query.replace(caseRegex, replaceCase);
+    if (this.fragment)
+      this.fragment = this.fragment.replace(caseRegex, replaceCase);
+  };
+  var caseRegex = /%[0-9a-z]{2}/gi;
+  var percentRegex = /[a-zA-Z0-9\-\._~]/;
+  var authorityRegex = /(.*@)?([^@:]*)(:.*)?/;
+  function replaceCase(str) {
+    var dec = unescape(str);
+    return percentRegex.test(dec) ? dec : str.toUpperCase();
+  }
+  function replaceAuthority(str, p1, p2, p3) {
+    return (p1 || '') + p2.toLowerCase() + (p3 || '');
+  }
+  URI.prototype.resolve = function(baseURI) {
+    var uri = new URI();
+    if (this.scheme) {
+      uri.scheme = this.scheme;
+      uri.authority = this.authority;
+      uri.path = this.path;
+      uri.query = this.query;
+    } else {
+      uri.scheme = baseURI.scheme;
+      if (this.authority) {
+        uri.authority = this.authority;
+        uri.path = this.path;
+        uri.query = this.query;
+      } else {
+        uri.authority = baseURI.authority;
+        if (this.path == '') {
+          uri.path = baseURI.path;
+          uri.query = this.query || baseURI.query;
+        } else {
+          if (this.path.charAt(0) == '/') {
+            uri.path = this.path;
+            uri.removeDotSegments();
+          } else {
+            if (baseURI.authority && baseURI.path == '') {
+              uri.path = '/' + this.path;
+            } else {
+              uri.path = baseURI.path.substring(0, baseURI.path.lastIndexOf('/') + 1) + this.path;
+            }
+            uri.removeDotSegments();
+          }
+          uri.query = this.query;
+        }
+      }
+    }
+    uri.fragment = this.fragment;
+    return uri;
+  };
+  URI.prototype.removeDotSegments = function() {
+    var input = this.path.split('/'),
+        output = [],
+        segment,
+        absPath = input[0] == '';
+    if (absPath)
+      input.shift();
+    var sFirst = input[0] == '' ? input.shift() : null;
+    while (input.length) {
+      segment = input.shift();
+      if (segment == '..') {
+        output.pop();
+      } else if (segment != '.') {
+        output.push(segment);
+      }
+    }
+    if (segment == '.' || segment == '..')
+      output.push('');
+    if (absPath)
+      output.unshift('');
+    this.path = output.join('/');
+  };
+  URI.prototype.toString = function() {
+    var result = '';
+    if (this.scheme)
+      result += this.scheme + ':';
+    if (this.authority)
+      result += '//' + this.authority;
+    result += this.path;
+    if (this.query)
+      result += '?' + this.query;
+    if (this.fragment)
+      result += '#' + this.fragment;
+    return result;
+  };
+  return URI;
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("51", ["50", "15", "17", "require"], function(Uri, defined, DeveloperError, require) {
+  "use strict";
+  var cesiumScriptRegex = /((?:.*\/)|^)cesium[\w-]*\.js(?:\W|$)/i;
+  function getBaseUrlFromCesiumScript() {
+    var scripts = document.getElementsByTagName('script');
+    for (var i = 0,
+        len = scripts.length; i < len; ++i) {
+      var src = scripts[i].getAttribute('src');
+      var result = cesiumScriptRegex.exec(src);
+      if (result !== null) {
+        return result[1];
+      }
+    }
+    return undefined;
+  }
+  var baseUrl;
+  function getCesiumBaseUrl() {
+    if (defined(baseUrl)) {
+      return baseUrl;
+    }
+    var baseUrlString;
+    if (typeof CESIUM_BASE_URL !== 'undefined') {
+      baseUrlString = CESIUM_BASE_URL;
+    } else {
+      baseUrlString = getBaseUrlFromCesiumScript();
+    }
+    if (!defined(baseUrlString)) {
+      throw new DeveloperError('Unable to determine Cesium base URL automatically, try defining a global variable called CESIUM_BASE_URL.');
+    }
+    baseUrl = new Uri(baseUrlString).resolve(new Uri(document.location.href));
+    return baseUrl;
+  }
+  function buildModuleUrlFromRequireToUrl(moduleID) {
+    return require.toUrl('../' + moduleID);
+  }
+  function buildModuleUrlFromBaseUrl(moduleID) {
+    return new Uri(moduleID).resolve(getCesiumBaseUrl()).toString();
+  }
+  var implementation;
+  var a;
+  function buildModuleUrl(moduleID) {
+    if (!defined(implementation)) {
+      if (defined(require.toUrl)) {
+        implementation = buildModuleUrlFromRequireToUrl;
+      } else {
+        implementation = buildModuleUrlFromBaseUrl;
+      }
+    }
+    if (!defined(a)) {
+      a = document.createElement('a');
+    }
+    var url = implementation(moduleID);
+    a.href = url;
+    a.href = a.href;
+    return a.href;
+  }
+  buildModuleUrl._cesiumScriptRegex = cesiumScriptRegex;
+  buildModuleUrl.setBaseUrl = function(value) {
+    baseUrl = new Uri(value).resolve(new Uri(document.location.href));
+  };
+  return buildModuleUrl;
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("52", ["1e"], function(defaultValue) {
+  "use strict";
+  function clone(object, deep) {
+    if (object === null || typeof object !== 'object') {
+      return object;
+    }
+    deep = defaultValue(deep, false);
+    var result = new object.constructor();
+    for (var propertyName in object) {
+      if (object.hasOwnProperty(propertyName)) {
+        var value = object[propertyName];
+        if (deep) {
+          value = clone(value, deep);
+        }
+        result[propertyName] = value;
+      }
+    }
+    return result;
+  }
+  return clone;
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+(function(define) {
+  'use strict';
+  define("4a", [], function() {
+    var reduceArray,
+        slice,
+        undef;
+    when.defer = defer;
+    when.resolve = resolve;
+    when.reject = reject;
+    when.join = join;
+    when.all = all;
+    when.map = map;
+    when.reduce = reduce;
+    when.any = any;
+    when.some = some;
+    when.chain = chain;
+    when.isPromise = isPromise;
+    function when(promiseOrValue, onFulfilled, onRejected, onProgress) {
+      return resolve(promiseOrValue).then(onFulfilled, onRejected, onProgress);
+    }
+    function resolve(promiseOrValue) {
+      var promise,
+          deferred;
+      if (promiseOrValue instanceof Promise) {
+        promise = promiseOrValue;
+      } else {
+        if (isPromise(promiseOrValue)) {
+          deferred = defer();
+          promiseOrValue.then(function(value) {
+            deferred.resolve(value);
+          }, function(reason) {
+            deferred.reject(reason);
+          }, function(update) {
+            deferred.progress(update);
+          });
+          promise = deferred.promise;
+        } else {
+          promise = fulfilled(promiseOrValue);
+        }
+      }
+      return promise;
+    }
+    function reject(promiseOrValue) {
+      return when(promiseOrValue, rejected);
+    }
+    function Promise(then) {
+      this.then = then;
+    }
+    Promise.prototype = {
+      always: function(onFulfilledOrRejected, onProgress) {
+        return this.then(onFulfilledOrRejected, onFulfilledOrRejected, onProgress);
+      },
+      otherwise: function(onRejected) {
+        return this.then(undef, onRejected);
+      },
+      yield: function(value) {
+        return this.then(function() {
+          return value;
+        });
+      },
+      spread: function(onFulfilled) {
+        return this.then(function(array) {
+          return all(array, function(array) {
+            return onFulfilled.apply(undef, array);
+          });
+        });
+      }
+    };
+    function fulfilled(value) {
+      var p = new Promise(function(onFulfilled) {
+        try {
+          return resolve(onFulfilled ? onFulfilled(value) : value);
+        } catch (e) {
+          return rejected(e);
+        }
+      });
+      return p;
+    }
+    function rejected(reason) {
+      var p = new Promise(function(_, onRejected) {
+        try {
+          return onRejected ? resolve(onRejected(reason)) : rejected(reason);
+        } catch (e) {
+          return rejected(e);
+        }
+      });
+      return p;
+    }
+    function defer() {
+      var deferred,
+          promise,
+          handlers,
+          progressHandlers,
+          _then,
+          _progress,
+          _resolve;
+      promise = new Promise(then);
+      deferred = {
+        then: then,
+        resolve: promiseResolve,
+        reject: promiseReject,
+        progress: promiseProgress,
+        promise: promise,
+        resolver: {
+          resolve: promiseResolve,
+          reject: promiseReject,
+          progress: promiseProgress
+        }
+      };
+      handlers = [];
+      progressHandlers = [];
+      _then = function(onFulfilled, onRejected, onProgress) {
+        var deferred,
+            progressHandler;
+        deferred = defer();
+        progressHandler = typeof onProgress === 'function' ? function(update) {
+          try {
+            deferred.progress(onProgress(update));
+          } catch (e) {
+            deferred.progress(e);
+          }
+        } : function(update) {
+          deferred.progress(update);
+        };
+        handlers.push(function(promise) {
+          promise.then(onFulfilled, onRejected).then(deferred.resolve, deferred.reject, progressHandler);
+        });
+        progressHandlers.push(progressHandler);
+        return deferred.promise;
+      };
+      _progress = function(update) {
+        processQueue(progressHandlers, update);
+        return update;
+      };
+      _resolve = function(value) {
+        value = resolve(value);
+        _then = value.then;
+        _resolve = resolve;
+        _progress = noop;
+        processQueue(handlers, value);
+        progressHandlers = handlers = undef;
+        return value;
+      };
+      return deferred;
+      function then(onFulfilled, onRejected, onProgress) {
+        return _then(onFulfilled, onRejected, onProgress);
+      }
+      function promiseResolve(val) {
+        return _resolve(val);
+      }
+      function promiseReject(err) {
+        return _resolve(rejected(err));
+      }
+      function promiseProgress(update) {
+        return _progress(update);
+      }
+    }
+    function isPromise(promiseOrValue) {
+      return promiseOrValue && typeof promiseOrValue.then === 'function';
+    }
+    function some(promisesOrValues, howMany, onFulfilled, onRejected, onProgress) {
+      checkCallbacks(2, arguments);
+      return when(promisesOrValues, function(promisesOrValues) {
+        var toResolve,
+            toReject,
+            values,
+            reasons,
+            deferred,
+            fulfillOne,
+            rejectOne,
+            progress,
+            len,
+            i;
+        len = promisesOrValues.length >>> 0;
+        toResolve = Math.max(0, Math.min(howMany, len));
+        values = [];
+        toReject = (len - toResolve) + 1;
+        reasons = [];
+        deferred = defer();
+        if (!toResolve) {
+          deferred.resolve(values);
+        } else {
+          progress = deferred.progress;
+          rejectOne = function(reason) {
+            reasons.push(reason);
+            if (!--toReject) {
+              fulfillOne = rejectOne = noop;
+              deferred.reject(reasons);
+            }
+          };
+          fulfillOne = function(val) {
+            values.push(val);
+            if (!--toResolve) {
+              fulfillOne = rejectOne = noop;
+              deferred.resolve(values);
+            }
+          };
+          for (i = 0; i < len; ++i) {
+            if (i in promisesOrValues) {
+              when(promisesOrValues[i], fulfiller, rejecter, progress);
+            }
+          }
+        }
+        return deferred.then(onFulfilled, onRejected, onProgress);
+        function rejecter(reason) {
+          rejectOne(reason);
+        }
+        function fulfiller(val) {
+          fulfillOne(val);
+        }
+      });
+    }
+    function any(promisesOrValues, onFulfilled, onRejected, onProgress) {
+      function unwrapSingleResult(val) {
+        return onFulfilled ? onFulfilled(val[0]) : val[0];
+      }
+      return some(promisesOrValues, 1, unwrapSingleResult, onRejected, onProgress);
+    }
+    function all(promisesOrValues, onFulfilled, onRejected, onProgress) {
+      checkCallbacks(1, arguments);
+      return map(promisesOrValues, identity).then(onFulfilled, onRejected, onProgress);
+    }
+    function join() {
+      return map(arguments, identity);
+    }
+    function map(promise, mapFunc) {
+      return when(promise, function(array) {
+        var results,
+            len,
+            toResolve,
+            resolve,
+            i,
+            d;
+        toResolve = len = array.length >>> 0;
+        results = [];
+        d = defer();
+        if (!toResolve) {
+          d.resolve(results);
+        } else {
+          resolve = function resolveOne(item, i) {
+            when(item, mapFunc).then(function(mapped) {
+              results[i] = mapped;
+              if (!--toResolve) {
+                d.resolve(results);
+              }
+            }, d.reject);
+          };
+          for (i = 0; i < len; i++) {
+            if (i in array) {
+              resolve(array[i], i);
+            } else {
+              --toResolve;
+            }
+          }
+        }
+        return d.promise;
+      });
+    }
+    function reduce(promise, reduceFunc) {
+      var args = slice.call(arguments, 1);
+      return when(promise, function(array) {
+        var total;
+        total = array.length;
+        args[0] = function(current, val, i) {
+          return when(current, function(c) {
+            return when(val, function(value) {
+              return reduceFunc(c, value, i, total);
+            });
+          });
+        };
+        return reduceArray.apply(array, args);
+      });
+    }
+    function chain(promiseOrValue, resolver, resolveValue) {
+      var useResolveValue = arguments.length > 2;
+      return when(promiseOrValue, function(val) {
+        val = useResolveValue ? resolveValue : val;
+        resolver.resolve(val);
+        return val;
+      }, function(reason) {
+        resolver.reject(reason);
+        return rejected(reason);
+      }, resolver.progress);
+    }
+    function processQueue(queue, value) {
+      var handler,
+          i = 0;
+      while (handler = queue[i++]) {
+        handler(value);
+      }
+    }
+    function checkCallbacks(start, arrayOfCallbacks) {
+      var arg,
+          i = arrayOfCallbacks.length;
+      while (i > start) {
+        arg = arrayOfCallbacks[--i];
+        if (arg != null && typeof arg != 'function') {
+          throw new Error('arg ' + i + ' must be a function');
+        }
+      }
+    }
+    function noop() {}
+    slice = [].slice;
+    reduceArray = [].reduce || function(reduceFunc) {
+      var arr,
+          args,
+          reduced,
+          len,
+          i;
+      i = 0;
+      arr = Object(this);
+      len = arr.length >>> 0;
+      args = arguments;
+      if (args.length <= 1) {
+        for (; ; ) {
+          if (i in arr) {
+            reduced = arr[i++];
+            break;
+          }
+          if (++i >= len) {
+            throw new TypeError();
+          }
+        }
+      } else {
+        reduced = args[1];
+      }
+      for (; i < len; ++i) {
+        if (i in arr) {
+          reduced = reduceFunc(reduced, arr[i], i, arr);
+        }
+      }
+      return reduced;
+    };
+    function identity(x) {
+      return x;
+    }
+    return when;
+  });
+})(typeof define == 'function' && define.amd ? define : function(factory) {
+  typeof exports === 'object' ? (module.exports = factory()) : (this.when = factory());
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("53", [], function() {
+  "use strict";
+  function parseResponseHeaders(headerString) {
+    var headers = {};
+    if (!headerString) {
+      return headers;
+    }
+    var headerPairs = headerString.split('\u000d\u000a');
+    for (var i = 0; i < headerPairs.length; ++i) {
+      var headerPair = headerPairs[i];
+      var index = headerPair.indexOf('\u003a\u0020');
+      if (index > 0) {
+        var key = headerPair.substring(0, index);
+        var val = headerPair.substring(index + 2);
+        headers[key] = val;
+      }
+    }
+    return headers;
+  }
+  return parseResponseHeaders;
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("54", ["15", "53"], function(defined, parseResponseHeaders) {
+  "use strict";
+  function RequestErrorEvent(statusCode, response, responseHeaders) {
+    this.statusCode = statusCode;
+    this.response = response;
+    this.responseHeaders = responseHeaders;
+    if (typeof this.responseHeaders === 'string') {
+      this.responseHeaders = parseResponseHeaders(this.responseHeaders);
+    }
+  }
+  RequestErrorEvent.prototype.toString = function() {
+    var str = 'Request has failed.';
+    if (defined(this.statusCode)) {
+      str += ' Status Code: ' + this.statusCode;
+    }
+    return str;
+  };
+  return RequestErrorEvent;
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("55", ["4a", "1e", "15", "17", "54", "34"], function(when, defaultValue, defined, DeveloperError, RequestErrorEvent, RuntimeError) {
+  "use strict";
+  function loadWithXhr(options) {
+    options = defaultValue(options, defaultValue.EMPTY_OBJECT);
+    if (!defined(options.url)) {
+      throw new DeveloperError('options.url is required.');
+    }
+    var responseType = options.responseType;
+    var method = defaultValue(options.method, 'GET');
+    var data = options.data;
+    var headers = options.headers;
+    var overrideMimeType = options.overrideMimeType;
+    return when(options.url, function(url) {
+      var deferred = when.defer();
+      loadWithXhr.load(url, responseType, method, data, headers, deferred, overrideMimeType);
+      return deferred.promise;
+    });
+  }
+  var dataUriRegex = /^data:(.*?)(;base64)?,(.*)$/;
+  function decodeDataUriText(isBase64, data) {
+    var result = decodeURIComponent(data);
+    if (isBase64) {
+      return atob(result);
+    }
+    return result;
+  }
+  function decodeDataUriArrayBuffer(isBase64, data) {
+    var byteString = decodeDataUriText(isBase64, data);
+    var buffer = new ArrayBuffer(byteString.length);
+    var view = new Uint8Array(buffer);
+    for (var i = 0; i < byteString.length; i++) {
+      view[i] = byteString.charCodeAt(i);
+    }
+    return buffer;
+  }
+  function decodeDataUri(dataUriRegexResult, responseType) {
+    responseType = defaultValue(responseType, '');
+    var mimeType = dataUriRegexResult[1];
+    var isBase64 = !!dataUriRegexResult[2];
+    var data = dataUriRegexResult[3];
+    switch (responseType) {
+      case '':
+      case 'text':
+        return decodeDataUriText(isBase64, data);
+      case 'arraybuffer':
+        return decodeDataUriArrayBuffer(isBase64, data);
+      case 'blob':
+        var buffer = decodeDataUriArrayBuffer(isBase64, data);
+        return new Blob([buffer], {type: mimeType});
+      case 'document':
+        var parser = new DOMParser();
+        return parser.parseFromString(decodeDataUriText(isBase64, data), mimeType);
+      case 'json':
+        return JSON.parse(decodeDataUriText(isBase64, data));
+      default:
+        throw new DeveloperError('Unhandled responseType: ' + responseType);
+    }
+  }
+  loadWithXhr.load = function(url, responseType, method, data, headers, deferred, overrideMimeType) {
+    var dataUriRegexResult = dataUriRegex.exec(url);
+    if (dataUriRegexResult !== null) {
+      deferred.resolve(decodeDataUri(dataUriRegexResult, responseType));
+      return;
+    }
+    var xhr = new XMLHttpRequest();
+    if (defined(overrideMimeType) && defined(xhr.overrideMimeType)) {
+      xhr.overrideMimeType(overrideMimeType);
+    }
+    xhr.open(method, url, true);
+    if (defined(headers)) {
+      for (var key in headers) {
+        if (headers.hasOwnProperty(key)) {
+          xhr.setRequestHeader(key, headers[key]);
+        }
+      }
+    }
+    if (defined(responseType)) {
+      xhr.responseType = responseType;
+    }
+    xhr.onload = function() {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        if (defined(xhr.response)) {
+          deferred.resolve(xhr.response);
+        } else {
+          if (defined(xhr.responseXML) && xhr.responseXML.hasChildNodes()) {
+            deferred.resolve(xhr.responseXML);
+          } else if (defined(xhr.responseText)) {
+            deferred.resolve(xhr.responseText);
+          } else {
+            deferred.reject(new RuntimeError('unknown XMLHttpRequest response type.'));
+          }
+        }
+      } else {
+        deferred.reject(new RequestErrorEvent(xhr.status, xhr.response, xhr.getAllResponseHeaders()));
+      }
+    };
+    xhr.onerror = function(e) {
+      deferred.reject(new RequestErrorEvent());
+    };
+    xhr.send(data);
+  };
+  loadWithXhr.defaultLoad = loadWithXhr.load;
+  return loadWithXhr;
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("56", ["55"], function(loadWithXhr) {
+  "use strict";
+  function loadText(url, headers) {
+    return loadWithXhr({
+      url: url,
+      headers: headers
+    });
+  }
+  return loadText;
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("4d", ["52", "15", "17", "56"], function(clone, defined, DeveloperError, loadText) {
+  "use strict";
+  var defaultHeaders = {Accept: 'application/json,*/*;q=0.01'};
+  function loadJson(url, headers) {
+    if (!defined(url)) {
+      throw new DeveloperError('url is required.');
+    }
+    if (!defined(headers)) {
+      headers = defaultHeaders;
+    } else if (!defined(headers.Accept)) {
+      headers = clone(headers);
+      headers.Accept = defaultHeaders.Accept;
+    }
+    return loadText(url, headers).then(function(value) {
+      return JSON.parse(value);
+    });
+  }
+  return loadJson;
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("57", ["4a", "51", "1e", "15", "58", "1f", "4d", "4f"], function(when, buildModuleUrl, defaultValue, defined, Iau2006XysSample, JulianDate, loadJson, TimeStandard) {
+  "use strict";
+  function Iau2006XysData(options) {
+    options = defaultValue(options, defaultValue.EMPTY_OBJECT);
+    this._xysFileUrlTemplate = options.xysFileUrlTemplate;
+    this._interpolationOrder = defaultValue(options.interpolationOrder, 9);
+    this._sampleZeroJulianEphemerisDate = defaultValue(options.sampleZeroJulianEphemerisDate, 2442396.5);
+    this._sampleZeroDateTT = new JulianDate(this._sampleZeroJulianEphemerisDate, 0.0, TimeStandard.TAI);
+    this._stepSizeDays = defaultValue(options.stepSizeDays, 1.0);
+    this._samplesPerXysFile = defaultValue(options.samplesPerXysFile, 1000);
+    this._totalSamples = defaultValue(options.totalSamples, 27426);
+    this._samples = new Array(this._totalSamples * 3);
+    this._chunkDownloadsInProgress = [];
+    var order = this._interpolationOrder;
+    var denom = this._denominators = new Array(order + 1);
+    var xTable = this._xTable = new Array(order + 1);
+    var stepN = Math.pow(this._stepSizeDays, order);
+    for (var i = 0; i <= order; ++i) {
+      denom[i] = stepN;
+      xTable[i] = i * this._stepSizeDays;
+      for (var j = 0; j <= order; ++j) {
+        if (j !== i) {
+          denom[i] *= (i - j);
+        }
+      }
+      denom[i] = 1.0 / denom[i];
+    }
+    this._work = new Array(order + 1);
+    this._coef = new Array(order + 1);
+  }
+  var julianDateScratch = new JulianDate(0, 0.0, TimeStandard.TAI);
+  function getDaysSinceEpoch(xys, dayTT, secondTT) {
+    var dateTT = julianDateScratch;
+    dateTT.dayNumber = dayTT;
+    dateTT.secondsOfDay = secondTT;
+    return JulianDate.daysDifference(dateTT, xys._sampleZeroDateTT);
+  }
+  Iau2006XysData.prototype.preload = function(startDayTT, startSecondTT, stopDayTT, stopSecondTT) {
+    var startDaysSinceEpoch = getDaysSinceEpoch(this, startDayTT, startSecondTT);
+    var stopDaysSinceEpoch = getDaysSinceEpoch(this, stopDayTT, stopSecondTT);
+    var startIndex = (startDaysSinceEpoch / this._stepSizeDays - this._interpolationOrder / 2) | 0;
+    if (startIndex < 0) {
+      startIndex = 0;
+    }
+    var stopIndex = (stopDaysSinceEpoch / this._stepSizeDays - this._interpolationOrder / 2) | 0 + this._interpolationOrder;
+    if (stopIndex >= this._totalSamples) {
+      stopIndex = this._totalSamples - 1;
+    }
+    var startChunk = (startIndex / this._samplesPerXysFile) | 0;
+    var stopChunk = (stopIndex / this._samplesPerXysFile) | 0;
+    var promises = [];
+    for (var i = startChunk; i <= stopChunk; ++i) {
+      promises.push(requestXysChunk(this, i));
+    }
+    return when.all(promises);
+  };
+  Iau2006XysData.prototype.computeXysRadians = function(dayTT, secondTT, result) {
+    var daysSinceEpoch = getDaysSinceEpoch(this, dayTT, secondTT);
+    if (daysSinceEpoch < 0.0) {
+      return undefined;
+    }
+    var centerIndex = (daysSinceEpoch / this._stepSizeDays) | 0;
+    if (centerIndex >= this._totalSamples) {
+      return undefined;
+    }
+    var degree = this._interpolationOrder;
+    var firstIndex = centerIndex - ((degree / 2) | 0);
+    if (firstIndex < 0) {
+      firstIndex = 0;
+    }
+    var lastIndex = firstIndex + degree;
+    if (lastIndex >= this._totalSamples) {
+      lastIndex = this._totalSamples - 1;
+      firstIndex = lastIndex - degree;
+      if (firstIndex < 0) {
+        firstIndex = 0;
+      }
+    }
+    var isDataMissing = false;
+    var samples = this._samples;
+    if (!defined(samples[firstIndex * 3])) {
+      requestXysChunk(this, (firstIndex / this._samplesPerXysFile) | 0);
+      isDataMissing = true;
+    }
+    if (!defined(samples[lastIndex * 3])) {
+      requestXysChunk(this, (lastIndex / this._samplesPerXysFile) | 0);
+      isDataMissing = true;
+    }
+    if (isDataMissing) {
+      return undefined;
+    }
+    if (!defined(result)) {
+      result = new Iau2006XysSample(0.0, 0.0, 0.0);
+    } else {
+      result.x = 0.0;
+      result.y = 0.0;
+      result.s = 0.0;
+    }
+    var x = daysSinceEpoch - firstIndex * this._stepSizeDays;
+    var work = this._work;
+    var denom = this._denominators;
+    var coef = this._coef;
+    var xTable = this._xTable;
+    var i,
+        j;
+    for (i = 0; i <= degree; ++i) {
+      work[i] = x - xTable[i];
+    }
+    for (i = 0; i <= degree; ++i) {
+      coef[i] = 1.0;
+      for (j = 0; j <= degree; ++j) {
+        if (j !== i) {
+          coef[i] *= work[j];
+        }
+      }
+      coef[i] *= denom[i];
+      var sampleIndex = (firstIndex + i) * 3;
+      result.x += coef[i] * samples[sampleIndex++];
+      result.y += coef[i] * samples[sampleIndex++];
+      result.s += coef[i] * samples[sampleIndex];
+    }
+    return result;
+  };
+  function requestXysChunk(xysData, chunkIndex) {
+    if (xysData._chunkDownloadsInProgress[chunkIndex]) {
+      return xysData._chunkDownloadsInProgress[chunkIndex];
+    }
+    var deferred = when.defer();
+    xysData._chunkDownloadsInProgress[chunkIndex] = deferred;
+    var chunkUrl;
+    var xysFileUrlTemplate = xysData._xysFileUrlTemplate;
+    if (defined(xysFileUrlTemplate)) {
+      chunkUrl = xysFileUrlTemplate.replace('{0}', chunkIndex);
+    } else {
+      chunkUrl = buildModuleUrl('Assets/IAU2006_XYS/IAU2006_XYS_' + chunkIndex + '.json');
+    }
+    when(loadJson(chunkUrl), function(chunk) {
+      xysData._chunkDownloadsInProgress[chunkIndex] = false;
+      var samples = xysData._samples;
+      var newSamples = chunk.samples;
+      var startIndex = chunkIndex * xysData._samplesPerXysFile * 3;
+      for (var i = 0,
+          len = newSamples.length; i < len; ++i) {
+        samples[startIndex + i] = newSamples[i];
+      }
+      deferred.resolve();
+    });
+    return deferred.promise;
+  }
+  return Iau2006XysData;
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("58", [], function() {
+  "use strict";
+  function Iau2006XysSample(x, y, s) {
+    this.x = x;
+    this.y = y;
+    this.s = s;
+  }
+  return Iau2006XysSample;
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("59", ["15", "16"], function(defined, defineProperties) {
+  "use strict";
+  var _supportsFullscreen;
+  var _names = {
+    requestFullscreen: undefined,
+    exitFullscreen: undefined,
+    fullscreenEnabled: undefined,
+    fullscreenElement: undefined,
+    fullscreenchange: undefined,
+    fullscreenerror: undefined
+  };
+  var Fullscreen = {};
+  defineProperties(Fullscreen, {
+    element: {get: function() {
+        if (!Fullscreen.supportsFullscreen()) {
+          return undefined;
+        }
+        return document[_names.fullscreenElement];
+      }},
+    changeEventName: {get: function() {
+        if (!Fullscreen.supportsFullscreen()) {
+          return undefined;
+        }
+        return _names.fullscreenchange;
+      }},
+    errorEventName: {get: function() {
+        if (!Fullscreen.supportsFullscreen()) {
+          return undefined;
+        }
+        return _names.fullscreenerror;
+      }},
+    enabled: {get: function() {
+        if (!Fullscreen.supportsFullscreen()) {
+          return undefined;
+        }
+        return document[_names.fullscreenEnabled];
+      }},
+    fullscreen: {get: function() {
+        if (!Fullscreen.supportsFullscreen()) {
+          return undefined;
+        }
+        return Fullscreen.element !== null;
+      }}
+  });
+  Fullscreen.supportsFullscreen = function() {
+    if (defined(_supportsFullscreen)) {
+      return _supportsFullscreen;
+    }
+    _supportsFullscreen = false;
+    var body = document.body;
+    if (typeof body.requestFullscreen === 'function') {
+      _names.requestFullscreen = 'requestFullscreen';
+      _names.exitFullscreen = 'exitFullscreen';
+      _names.fullscreenEnabled = 'fullscreenEnabled';
+      _names.fullscreenElement = 'fullscreenElement';
+      _names.fullscreenchange = 'fullscreenchange';
+      _names.fullscreenerror = 'fullscreenerror';
+      _supportsFullscreen = true;
+      return _supportsFullscreen;
+    }
+    var prefixes = ['webkit', 'moz', 'o', 'ms', 'khtml'];
+    var name;
+    for (var i = 0,
+        len = prefixes.length; i < len; ++i) {
+      var prefix = prefixes[i];
+      name = prefix + 'RequestFullscreen';
+      if (typeof body[name] === 'function') {
+        _names.requestFullscreen = name;
+        _supportsFullscreen = true;
+      } else {
+        name = prefix + 'RequestFullScreen';
+        if (typeof body[name] === 'function') {
+          _names.requestFullscreen = name;
+          _supportsFullscreen = true;
+        }
+      }
+      name = prefix + 'ExitFullscreen';
+      if (typeof document[name] === 'function') {
+        _names.exitFullscreen = name;
+      } else {
+        name = prefix + 'CancelFullScreen';
+        if (typeof document[name] === 'function') {
+          _names.exitFullscreen = name;
+        }
+      }
+      name = prefix + 'FullscreenEnabled';
+      if (defined(document[name])) {
+        _names.fullscreenEnabled = name;
+      } else {
+        name = prefix + 'FullScreenEnabled';
+        if (defined(document[name])) {
+          _names.fullscreenEnabled = name;
+        }
+      }
+      name = prefix + 'FullscreenElement';
+      if (defined(document[name])) {
+        _names.fullscreenElement = name;
+      } else {
+        name = prefix + 'FullScreenElement';
+        if (defined(document[name])) {
+          _names.fullscreenElement = name;
+        }
+      }
+      name = prefix + 'fullscreenchange';
+      if (defined(document['on' + name])) {
+        if (prefix === 'ms') {
+          name = 'MSFullscreenChange';
+        }
+        _names.fullscreenchange = name;
+      }
+      name = prefix + 'fullscreenerror';
+      if (defined(document['on' + name])) {
+        if (prefix === 'ms') {
+          name = 'MSFullscreenError';
+        }
+        _names.fullscreenerror = name;
+      }
+    }
+    return _supportsFullscreen;
+  };
+  Fullscreen.requestFullscreen = function(element) {
+    if (!Fullscreen.supportsFullscreen()) {
+      return;
+    }
+    element[_names.requestFullscreen]();
+  };
+  Fullscreen.exitFullscreen = function() {
+    if (!Fullscreen.supportsFullscreen()) {
+      return;
+    }
+    document[_names.exitFullscreen]();
+  };
+  return Fullscreen;
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("5a", ["1e", "15", "59"], function(defaultValue, defined, Fullscreen) {
+  "use strict";
+  var theNavigator;
+  if (typeof navigator !== 'undefined') {
+    theNavigator = navigator;
+  } else {
+    theNavigator = {};
+  }
+  function extractVersion(versionString) {
+    var parts = versionString.split('.');
+    for (var i = 0,
+        len = parts.length; i < len; ++i) {
+      parts[i] = parseInt(parts[i], 10);
+    }
+    return parts;
+  }
+  var isChromeResult;
+  var chromeVersionResult;
+  function isChrome() {
+    if (!defined(isChromeResult)) {
+      isChromeResult = false;
+      var fields = (/ Chrome\/([\.0-9]+)/).exec(theNavigator.userAgent);
+      if (fields !== null) {
+        isChromeResult = true;
+        chromeVersionResult = extractVersion(fields[1]);
+      }
+    }
+    return isChromeResult;
+  }
+  function chromeVersion() {
+    return isChrome() && chromeVersionResult;
+  }
+  var isSafariResult;
+  var safariVersionResult;
+  function isSafari() {
+    if (!defined(isSafariResult)) {
+      isSafariResult = false;
+      if (!isChrome() && (/ Safari\/[\.0-9]+/).test(theNavigator.userAgent)) {
+        var fields = (/ Version\/([\.0-9]+)/).exec(theNavigator.userAgent);
+        if (fields !== null) {
+          isSafariResult = true;
+          safariVersionResult = extractVersion(fields[1]);
+        }
+      }
+    }
+    return isSafariResult;
+  }
+  function safariVersion() {
+    return isSafari() && safariVersionResult;
+  }
+  var isWebkitResult;
+  var webkitVersionResult;
+  function isWebkit() {
+    if (!defined(isWebkitResult)) {
+      isWebkitResult = false;
+      var fields = (/ AppleWebKit\/([\.0-9]+)(\+?)/).exec(theNavigator.userAgent);
+      if (fields !== null) {
+        isWebkitResult = true;
+        webkitVersionResult = extractVersion(fields[1]);
+        webkitVersionResult.isNightly = !!fields[2];
+      }
+    }
+    return isWebkitResult;
+  }
+  function webkitVersion() {
+    return isWebkit() && webkitVersionResult;
+  }
+  var isInternetExplorerResult;
+  var internetExplorerVersionResult;
+  function isInternetExplorer() {
+    if (!defined(isInternetExplorerResult)) {
+      isInternetExplorerResult = false;
+      var fields;
+      if (theNavigator.appName === 'Microsoft Internet Explorer') {
+        fields = /MSIE ([0-9]{1,}[\.0-9]{0,})/.exec(theNavigator.userAgent);
+        if (fields !== null) {
+          isInternetExplorerResult = true;
+          internetExplorerVersionResult = extractVersion(fields[1]);
+        }
+      } else if (theNavigator.appName === 'Netscape') {
+        fields = /Trident\/.*rv:([0-9]{1,}[\.0-9]{0,})/.exec(theNavigator.userAgent);
+        if (fields !== null) {
+          isInternetExplorerResult = true;
+          internetExplorerVersionResult = extractVersion(fields[1]);
+        }
+      }
+    }
+    return isInternetExplorerResult;
+  }
+  function internetExplorerVersion() {
+    return isInternetExplorer() && internetExplorerVersionResult;
+  }
+  var isFirefoxResult;
+  var firefoxVersionResult;
+  function isFirefox() {
+    if (!defined(isFirefoxResult)) {
+      isFirefoxResult = false;
+      var fields = /Firefox\/([\.0-9]+)/.exec(theNavigator.userAgent);
+      if (fields !== null) {
+        isFirefoxResult = true;
+        firefoxVersionResult = extractVersion(fields[1]);
+      }
+    }
+    return isFirefoxResult;
+  }
+  var isWindowsResult;
+  function isWindows() {
+    if (!defined(isWindowsResult)) {
+      isWindowsResult = /Windows/i.test(theNavigator.appVersion);
+    }
+    return isWindowsResult;
+  }
+  function firefoxVersion() {
+    return isFirefox() && firefoxVersionResult;
+  }
+  var hasPointerEvents;
+  function supportsPointerEvents() {
+    if (!defined(hasPointerEvents)) {
+      hasPointerEvents = typeof PointerEvent !== 'undefined' && (!defined(theNavigator.pointerEnabled) || theNavigator.pointerEnabled);
+    }
+    return hasPointerEvents;
+  }
+  var FeatureDetection = {
+    isChrome: isChrome,
+    chromeVersion: chromeVersion,
+    isSafari: isSafari,
+    safariVersion: safariVersion,
+    isWebkit: isWebkit,
+    webkitVersion: webkitVersion,
+    isInternetExplorer: isInternetExplorer,
+    internetExplorerVersion: internetExplorerVersion,
+    isFirefox: isFirefox,
+    firefoxVersion: firefoxVersion,
+    isWindows: isWindows,
+    hardwareConcurrency: defaultValue(theNavigator.hardwareConcurrency, 3),
+    supportsPointerEvents: supportsPointerEvents
+  };
+  FeatureDetection.supportsFullscreen = function() {
+    return Fullscreen.supportsFullscreen();
+  };
+  FeatureDetection.supportsTypedArrays = function() {
+    return typeof ArrayBuffer !== 'undefined';
+  };
+  FeatureDetection.supportsWebWorkers = function() {
+    return typeof Worker !== 'undefined';
+  };
+  return FeatureDetection;
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("30", ["29", "1e", "15", "17", "5a", "1a", "22", "2e"], function(Cartesian3, defaultValue, defined, DeveloperError, FeatureDetection, freezeObject, CesiumMath, Matrix3) {
+  "use strict";
+  function Quaternion(x, y, z, w) {
+    this.x = defaultValue(x, 0.0);
+    this.y = defaultValue(y, 0.0);
+    this.z = defaultValue(z, 0.0);
+    this.w = defaultValue(w, 0.0);
+  }
+  var fromAxisAngleScratch = new Cartesian3();
+  Quaternion.fromAxisAngle = function(axis, angle, result) {
+    if (!defined(axis)) {
+      throw new DeveloperError('axis is required.');
+    }
+    if (typeof angle !== 'number') {
+      throw new DeveloperError('angle is required and must be a number.');
+    }
+    var halfAngle = angle / 2.0;
+    var s = Math.sin(halfAngle);
+    fromAxisAngleScratch = Cartesian3.normalize(axis, fromAxisAngleScratch);
+    var x = fromAxisAngleScratch.x * s;
+    var y = fromAxisAngleScratch.y * s;
+    var z = fromAxisAngleScratch.z * s;
+    var w = Math.cos(halfAngle);
+    if (!defined(result)) {
+      return new Quaternion(x, y, z, w);
+    }
+    result.x = x;
+    result.y = y;
+    result.z = z;
+    result.w = w;
+    return result;
+  };
+  var fromRotationMatrixNext = [1, 2, 0];
+  var fromRotationMatrixQuat = new Array(3);
+  Quaternion.fromRotationMatrix = function(matrix, result) {
+    if (!defined(matrix)) {
+      throw new DeveloperError('matrix is required.');
+    }
+    var root;
+    var x;
+    var y;
+    var z;
+    var w;
+    var m00 = matrix[Matrix3.COLUMN0ROW0];
+    var m11 = matrix[Matrix3.COLUMN1ROW1];
+    var m22 = matrix[Matrix3.COLUMN2ROW2];
+    var trace = m00 + m11 + m22;
+    if (trace > 0.0) {
+      root = Math.sqrt(trace + 1.0);
+      w = 0.5 * root;
+      root = 0.5 / root;
+      x = (matrix[Matrix3.COLUMN1ROW2] - matrix[Matrix3.COLUMN2ROW1]) * root;
+      y = (matrix[Matrix3.COLUMN2ROW0] - matrix[Matrix3.COLUMN0ROW2]) * root;
+      z = (matrix[Matrix3.COLUMN0ROW1] - matrix[Matrix3.COLUMN1ROW0]) * root;
+    } else {
+      var next = fromRotationMatrixNext;
+      var i = 0;
+      if (m11 > m00) {
+        i = 1;
+      }
+      if (m22 > m00 && m22 > m11) {
+        i = 2;
+      }
+      var j = next[i];
+      var k = next[j];
+      root = Math.sqrt(matrix[Matrix3.getElementIndex(i, i)] - matrix[Matrix3.getElementIndex(j, j)] - matrix[Matrix3.getElementIndex(k, k)] + 1.0);
+      var quat = fromRotationMatrixQuat;
+      quat[i] = 0.5 * root;
+      root = 0.5 / root;
+      w = (matrix[Matrix3.getElementIndex(k, j)] - matrix[Matrix3.getElementIndex(j, k)]) * root;
+      quat[j] = (matrix[Matrix3.getElementIndex(j, i)] + matrix[Matrix3.getElementIndex(i, j)]) * root;
+      quat[k] = (matrix[Matrix3.getElementIndex(k, i)] + matrix[Matrix3.getElementIndex(i, k)]) * root;
+      x = -quat[0];
+      y = -quat[1];
+      z = -quat[2];
+    }
+    if (!defined(result)) {
+      return new Quaternion(x, y, z, w);
+    }
+    result.x = x;
+    result.y = y;
+    result.z = z;
+    result.w = w;
+    return result;
+  };
+  var scratchHPRQuaternion = new Quaternion();
+  Quaternion.fromHeadingPitchRoll = function(heading, pitch, roll, result) {
+    if (!defined(heading)) {
+      throw new DeveloperError('heading is required.');
+    }
+    if (!defined(pitch)) {
+      throw new DeveloperError('pitch is required.');
+    }
+    if (!defined(roll)) {
+      throw new DeveloperError('roll is required.');
+    }
+    var rollQuaternion = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, roll, scratchHPRQuaternion);
+    var pitchQuaternion = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, -pitch, result);
+    result = Quaternion.multiply(pitchQuaternion, rollQuaternion, pitchQuaternion);
+    var headingQuaternion = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, -heading, scratchHPRQuaternion);
+    return Quaternion.multiply(headingQuaternion, result, result);
+  };
+  var sampledQuaternionAxis = new Cartesian3();
+  var sampledQuaternionRotation = new Cartesian3();
+  var sampledQuaternionTempQuaternion = new Quaternion();
+  var sampledQuaternionQuaternion0 = new Quaternion();
+  var sampledQuaternionQuaternion0Conjugate = new Quaternion();
+  Quaternion.packedLength = 4;
+  Quaternion.pack = function(value, array, startingIndex) {
+    if (!defined(value)) {
+      throw new DeveloperError('value is required');
+    }
+    if (!defined(array)) {
+      throw new DeveloperError('array is required');
+    }
+    startingIndex = defaultValue(startingIndex, 0);
+    array[startingIndex++] = value.x;
+    array[startingIndex++] = value.y;
+    array[startingIndex++] = value.z;
+    array[startingIndex] = value.w;
+  };
+  Quaternion.unpack = function(array, startingIndex, result) {
+    if (!defined(array)) {
+      throw new DeveloperError('array is required');
+    }
+    startingIndex = defaultValue(startingIndex, 0);
+    if (!defined(result)) {
+      result = new Quaternion();
+    }
+    result.x = array[startingIndex];
+    result.y = array[startingIndex + 1];
+    result.z = array[startingIndex + 2];
+    result.w = array[startingIndex + 3];
+    return result;
+  };
+  Quaternion.packedInterpolationLength = 3;
+  Quaternion.convertPackedArrayForInterpolation = function(packedArray, startingIndex, lastIndex, result) {
+    Quaternion.unpack(packedArray, lastIndex * 4, sampledQuaternionQuaternion0Conjugate);
+    Quaternion.conjugate(sampledQuaternionQuaternion0Conjugate, sampledQuaternionQuaternion0Conjugate);
+    for (var i = 0,
+        len = lastIndex - startingIndex + 1; i < len; i++) {
+      var offset = i * 3;
+      Quaternion.unpack(packedArray, (startingIndex + i) * 4, sampledQuaternionTempQuaternion);
+      Quaternion.multiply(sampledQuaternionTempQuaternion, sampledQuaternionQuaternion0Conjugate, sampledQuaternionTempQuaternion);
+      if (sampledQuaternionTempQuaternion.w < 0) {
+        Quaternion.negate(sampledQuaternionTempQuaternion, sampledQuaternionTempQuaternion);
+      }
+      Quaternion.computeAxis(sampledQuaternionTempQuaternion, sampledQuaternionAxis);
+      var angle = Quaternion.computeAngle(sampledQuaternionTempQuaternion);
+      result[offset] = sampledQuaternionAxis.x * angle;
+      result[offset + 1] = sampledQuaternionAxis.y * angle;
+      result[offset + 2] = sampledQuaternionAxis.z * angle;
+    }
+  };
+  Quaternion.unpackInterpolationResult = function(array, sourceArray, firstIndex, lastIndex, result) {
+    if (!defined(result)) {
+      result = new Quaternion();
+    }
+    Cartesian3.fromArray(array, 0, sampledQuaternionRotation);
+    var magnitude = Cartesian3.magnitude(sampledQuaternionRotation);
+    Quaternion.unpack(sourceArray, lastIndex * 4, sampledQuaternionQuaternion0);
+    if (magnitude === 0) {
+      Quaternion.clone(Quaternion.IDENTITY, sampledQuaternionTempQuaternion);
+    } else {
+      Quaternion.fromAxisAngle(sampledQuaternionRotation, magnitude, sampledQuaternionTempQuaternion);
+    }
+    return Quaternion.multiply(sampledQuaternionTempQuaternion, sampledQuaternionQuaternion0, result);
+  };
+  Quaternion.clone = function(quaternion, result) {
+    if (!defined(quaternion)) {
+      return undefined;
+    }
+    if (!defined(result)) {
+      return new Quaternion(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
+    }
+    result.x = quaternion.x;
+    result.y = quaternion.y;
+    result.z = quaternion.z;
+    result.w = quaternion.w;
+    return result;
+  };
+  Quaternion.conjugate = function(quaternion, result) {
+    if (!defined(quaternion)) {
+      throw new DeveloperError('quaternion is required');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    result.x = -quaternion.x;
+    result.y = -quaternion.y;
+    result.z = -quaternion.z;
+    result.w = quaternion.w;
+    return result;
+  };
+  Quaternion.magnitudeSquared = function(quaternion) {
+    if (!defined(quaternion)) {
+      throw new DeveloperError('quaternion is required');
+    }
+    return quaternion.x * quaternion.x + quaternion.y * quaternion.y + quaternion.z * quaternion.z + quaternion.w * quaternion.w;
+  };
+  Quaternion.magnitude = function(quaternion) {
+    return Math.sqrt(Quaternion.magnitudeSquared(quaternion));
+  };
+  Quaternion.normalize = function(quaternion, result) {
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    var inverseMagnitude = 1.0 / Quaternion.magnitude(quaternion);
+    var x = quaternion.x * inverseMagnitude;
+    var y = quaternion.y * inverseMagnitude;
+    var z = quaternion.z * inverseMagnitude;
+    var w = quaternion.w * inverseMagnitude;
+    result.x = x;
+    result.y = y;
+    result.z = z;
+    result.w = w;
+    return result;
+  };
+  Quaternion.inverse = function(quaternion, result) {
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    var magnitudeSquared = Quaternion.magnitudeSquared(quaternion);
+    result = Quaternion.conjugate(quaternion, result);
+    return Quaternion.multiplyByScalar(result, 1.0 / magnitudeSquared, result);
+  };
+  Quaternion.add = function(left, right, result) {
+    if (!defined(left)) {
+      throw new DeveloperError('left is required');
+    }
+    if (!defined(right)) {
+      throw new DeveloperError('right is required');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    result.x = left.x + right.x;
+    result.y = left.y + right.y;
+    result.z = left.z + right.z;
+    result.w = left.w + right.w;
+    return result;
+  };
+  Quaternion.subtract = function(left, right, result) {
+    if (!defined(left)) {
+      throw new DeveloperError('left is required');
+    }
+    if (!defined(right)) {
+      throw new DeveloperError('right is required');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    result.x = left.x - right.x;
+    result.y = left.y - right.y;
+    result.z = left.z - right.z;
+    result.w = left.w - right.w;
+    return result;
+  };
+  Quaternion.negate = function(quaternion, result) {
+    if (!defined(quaternion)) {
+      throw new DeveloperError('quaternion is required');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    result.x = -quaternion.x;
+    result.y = -quaternion.y;
+    result.z = -quaternion.z;
+    result.w = -quaternion.w;
+    return result;
+  };
+  Quaternion.dot = function(left, right) {
+    if (!defined(left)) {
+      throw new DeveloperError('left is required');
+    }
+    if (!defined(right)) {
+      throw new DeveloperError('right is required');
+    }
+    return left.x * right.x + left.y * right.y + left.z * right.z + left.w * right.w;
+  };
+  Quaternion.multiply = function(left, right, result) {
+    if (!defined(left)) {
+      throw new DeveloperError('left is required');
+    }
+    if (!defined(right)) {
+      throw new DeveloperError('right is required');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    var leftX = left.x;
+    var leftY = left.y;
+    var leftZ = left.z;
+    var leftW = left.w;
+    var rightX = right.x;
+    var rightY = right.y;
+    var rightZ = right.z;
+    var rightW = right.w;
+    var x = leftW * rightX + leftX * rightW + leftY * rightZ - leftZ * rightY;
+    var y = leftW * rightY - leftX * rightZ + leftY * rightW + leftZ * rightX;
+    var z = leftW * rightZ + leftX * rightY - leftY * rightX + leftZ * rightW;
+    var w = leftW * rightW - leftX * rightX - leftY * rightY - leftZ * rightZ;
+    result.x = x;
+    result.y = y;
+    result.z = z;
+    result.w = w;
+    return result;
+  };
+  Quaternion.multiplyByScalar = function(quaternion, scalar, result) {
+    if (!defined(quaternion)) {
+      throw new DeveloperError('quaternion is required');
+    }
+    if (typeof scalar !== 'number') {
+      throw new DeveloperError('scalar is required and must be a number.');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    result.x = quaternion.x * scalar;
+    result.y = quaternion.y * scalar;
+    result.z = quaternion.z * scalar;
+    result.w = quaternion.w * scalar;
+    return result;
+  };
+  Quaternion.divideByScalar = function(quaternion, scalar, result) {
+    if (!defined(quaternion)) {
+      throw new DeveloperError('quaternion is required');
+    }
+    if (typeof scalar !== 'number') {
+      throw new DeveloperError('scalar is required and must be a number.');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    result.x = quaternion.x / scalar;
+    result.y = quaternion.y / scalar;
+    result.z = quaternion.z / scalar;
+    result.w = quaternion.w / scalar;
+    return result;
+  };
+  Quaternion.computeAxis = function(quaternion, result) {
+    if (!defined(quaternion)) {
+      throw new DeveloperError('quaternion is required');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    var w = quaternion.w;
+    if (Math.abs(w - 1.0) < CesiumMath.EPSILON6) {
+      result.x = result.y = result.z = 0;
+      return result;
+    }
+    var scalar = 1.0 / Math.sqrt(1.0 - (w * w));
+    result.x = quaternion.x * scalar;
+    result.y = quaternion.y * scalar;
+    result.z = quaternion.z * scalar;
+    return result;
+  };
+  Quaternion.computeAngle = function(quaternion) {
+    if (!defined(quaternion)) {
+      throw new DeveloperError('quaternion is required');
+    }
+    if (Math.abs(quaternion.w - 1.0) < CesiumMath.EPSILON6) {
+      return 0.0;
+    }
+    return 2.0 * Math.acos(quaternion.w);
+  };
+  var lerpScratch = new Quaternion();
+  Quaternion.lerp = function(start, end, t, result) {
+    if (!defined(start)) {
+      throw new DeveloperError('start is required.');
+    }
+    if (!defined(end)) {
+      throw new DeveloperError('end is required.');
+    }
+    if (typeof t !== 'number') {
+      throw new DeveloperError('t is required and must be a number.');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    lerpScratch = Quaternion.multiplyByScalar(end, t, lerpScratch);
+    result = Quaternion.multiplyByScalar(start, 1.0 - t, result);
+    return Quaternion.add(lerpScratch, result, result);
+  };
+  var slerpEndNegated = new Quaternion();
+  var slerpScaledP = new Quaternion();
+  var slerpScaledR = new Quaternion();
+  Quaternion.slerp = function(start, end, t, result) {
+    if (!defined(start)) {
+      throw new DeveloperError('start is required.');
+    }
+    if (!defined(end)) {
+      throw new DeveloperError('end is required.');
+    }
+    if (typeof t !== 'number') {
+      throw new DeveloperError('t is required and must be a number.');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    var dot = Quaternion.dot(start, end);
+    var r = end;
+    if (dot < 0.0) {
+      dot = -dot;
+      r = slerpEndNegated = Quaternion.negate(end, slerpEndNegated);
+    }
+    if (1.0 - dot < CesiumMath.EPSILON6) {
+      return Quaternion.lerp(start, r, t, result);
+    }
+    var theta = Math.acos(dot);
+    slerpScaledP = Quaternion.multiplyByScalar(start, Math.sin((1 - t) * theta), slerpScaledP);
+    slerpScaledR = Quaternion.multiplyByScalar(r, Math.sin(t * theta), slerpScaledR);
+    result = Quaternion.add(slerpScaledP, slerpScaledR, result);
+    return Quaternion.multiplyByScalar(result, 1.0 / Math.sin(theta), result);
+  };
+  Quaternion.log = function(quaternion, result) {
+    if (!defined(quaternion)) {
+      throw new DeveloperError('quaternion is required.');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    var theta = CesiumMath.acosClamped(quaternion.w);
+    var thetaOverSinTheta = 0.0;
+    if (theta !== 0.0) {
+      thetaOverSinTheta = theta / Math.sin(theta);
+    }
+    return Cartesian3.multiplyByScalar(quaternion, thetaOverSinTheta, result);
+  };
+  Quaternion.exp = function(cartesian, result) {
+    if (!defined(cartesian)) {
+      throw new DeveloperError('cartesian is required.');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    var theta = Cartesian3.magnitude(cartesian);
+    var sinThetaOverTheta = 0.0;
+    if (theta !== 0.0) {
+      sinThetaOverTheta = Math.sin(theta) / theta;
+    }
+    result.x = cartesian.x * sinThetaOverTheta;
+    result.y = cartesian.y * sinThetaOverTheta;
+    result.z = cartesian.z * sinThetaOverTheta;
+    result.w = Math.cos(theta);
+    return result;
+  };
+  var squadScratchCartesian0 = new Cartesian3();
+  var squadScratchCartesian1 = new Cartesian3();
+  var squadScratchQuaternion0 = new Quaternion();
+  var squadScratchQuaternion1 = new Quaternion();
+  Quaternion.computeInnerQuadrangle = function(q0, q1, q2, result) {
+    if (!defined(q0) || !defined(q1) || !defined(q2)) {
+      throw new DeveloperError('q0, q1, and q2 are required.');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    var qInv = Quaternion.conjugate(q1, squadScratchQuaternion0);
+    Quaternion.multiply(qInv, q2, squadScratchQuaternion1);
+    var cart0 = Quaternion.log(squadScratchQuaternion1, squadScratchCartesian0);
+    Quaternion.multiply(qInv, q0, squadScratchQuaternion1);
+    var cart1 = Quaternion.log(squadScratchQuaternion1, squadScratchCartesian1);
+    Cartesian3.add(cart0, cart1, cart0);
+    Cartesian3.multiplyByScalar(cart0, 0.25, cart0);
+    Cartesian3.negate(cart0, cart0);
+    Quaternion.exp(cart0, squadScratchQuaternion0);
+    return Quaternion.multiply(q1, squadScratchQuaternion0, result);
+  };
+  Quaternion.squad = function(q0, q1, s0, s1, t, result) {
+    if (!defined(q0) || !defined(q1) || !defined(s0) || !defined(s1)) {
+      throw new DeveloperError('q0, q1, s0, and s1 are required.');
+    }
+    if (typeof t !== 'number') {
+      throw new DeveloperError('t is required and must be a number.');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    var slerp0 = Quaternion.slerp(q0, q1, t, squadScratchQuaternion0);
+    var slerp1 = Quaternion.slerp(s0, s1, t, squadScratchQuaternion1);
+    return Quaternion.slerp(slerp0, slerp1, 2.0 * t * (1.0 - t), result);
+  };
+  var fastSlerpScratchQuaternion = new Quaternion();
+  var opmu = 1.90110745351730037;
+  var u = FeatureDetection.supportsTypedArrays() ? new Float32Array(8) : [];
+  var v = FeatureDetection.supportsTypedArrays() ? new Float32Array(8) : [];
+  var bT = FeatureDetection.supportsTypedArrays() ? new Float32Array(8) : [];
+  var bD = FeatureDetection.supportsTypedArrays() ? new Float32Array(8) : [];
+  for (var i = 0; i < 7; ++i) {
+    var s = i + 1.0;
+    var t = 2.0 * s + 1.0;
+    u[i] = 1.0 / (s * t);
+    v[i] = s / t;
+  }
+  u[7] = opmu / (8.0 * 17.0);
+  v[7] = opmu * 8.0 / 17.0;
+  Quaternion.fastSlerp = function(start, end, t, result) {
+    if (!defined(start)) {
+      throw new DeveloperError('start is required.');
+    }
+    if (!defined(end)) {
+      throw new DeveloperError('end is required.');
+    }
+    if (typeof t !== 'number') {
+      throw new DeveloperError('t is required and must be a number.');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    var x = Quaternion.dot(start, end);
+    var sign;
+    if (x >= 0) {
+      sign = 1.0;
+    } else {
+      sign = -1.0;
+      x = -x;
+    }
+    var xm1 = x - 1.0;
+    var d = 1.0 - t;
+    var sqrT = t * t;
+    var sqrD = d * d;
+    for (var i = 7; i >= 0; --i) {
+      bT[i] = (u[i] * sqrT - v[i]) * xm1;
+      bD[i] = (u[i] * sqrD - v[i]) * xm1;
+    }
+    var cT = sign * t * (1.0 + bT[0] * (1.0 + bT[1] * (1.0 + bT[2] * (1.0 + bT[3] * (1.0 + bT[4] * (1.0 + bT[5] * (1.0 + bT[6] * (1.0 + bT[7]))))))));
+    var cD = d * (1.0 + bD[0] * (1.0 + bD[1] * (1.0 + bD[2] * (1.0 + bD[3] * (1.0 + bD[4] * (1.0 + bD[5] * (1.0 + bD[6] * (1.0 + bD[7]))))))));
+    var temp = Quaternion.multiplyByScalar(start, cD, fastSlerpScratchQuaternion);
+    Quaternion.multiplyByScalar(end, cT, result);
+    return Quaternion.add(temp, result, result);
+  };
+  Quaternion.fastSquad = function(q0, q1, s0, s1, t, result) {
+    if (!defined(q0) || !defined(q1) || !defined(s0) || !defined(s1)) {
+      throw new DeveloperError('q0, q1, s0, and s1 are required.');
+    }
+    if (typeof t !== 'number') {
+      throw new DeveloperError('t is required and must be a number.');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    var slerp0 = Quaternion.fastSlerp(q0, q1, t, squadScratchQuaternion0);
+    var slerp1 = Quaternion.fastSlerp(s0, s1, t, squadScratchQuaternion1);
+    return Quaternion.fastSlerp(slerp0, slerp1, 2.0 * t * (1.0 - t), result);
+  };
+  Quaternion.equals = function(left, right) {
+    return (left === right) || ((defined(left)) && (defined(right)) && (left.x === right.x) && (left.y === right.y) && (left.z === right.z) && (left.w === right.w));
+  };
+  Quaternion.equalsEpsilon = function(left, right, epsilon) {
+    if (typeof epsilon !== 'number') {
+      throw new DeveloperError('epsilon is required and must be a number.');
+    }
+    return (left === right) || ((defined(left)) && (defined(right)) && (Math.abs(left.x - right.x) <= epsilon) && (Math.abs(left.y - right.y) <= epsilon) && (Math.abs(left.z - right.z) <= epsilon) && (Math.abs(left.w - right.w) <= epsilon));
+  };
+  Quaternion.ZERO = freezeObject(new Quaternion(0.0, 0.0, 0.0, 0.0));
+  Quaternion.IDENTITY = freezeObject(new Quaternion(0.0, 0.0, 0.0, 1.0));
+  Quaternion.prototype.clone = function(result) {
+    return Quaternion.clone(this, result);
+  };
+  Quaternion.prototype.equals = function(right) {
+    return Quaternion.equals(this, right);
+  };
+  Quaternion.prototype.equalsEpsilon = function(right, epsilon) {
+    return Quaternion.equalsEpsilon(this, right, epsilon);
+  };
+  Quaternion.prototype.toString = function() {
+    return '(' + this.x + ', ' + this.y + ', ' + this.z + ', ' + this.w + ')';
+  };
+  return Quaternion;
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("31", ["4a", "3f", "29", "40", "1e", "15", "17", "49", "4b", "38", "57", "58", "1f", "22", "2e", "2f", "30", "4e"], function(when, Cartesian2, Cartesian3, Cartesian4, defaultValue, defined, DeveloperError, EarthOrientationParameters, EarthOrientationParametersSample, Ellipsoid, Iau2006XysData, Iau2006XysSample, JulianDate, CesiumMath, Matrix3, Matrix4, Quaternion, TimeConstants) {
+  "use strict";
+  var Transforms = {};
+  var eastNorthUpToFixedFrameNormal = new Cartesian3();
+  var eastNorthUpToFixedFrameTangent = new Cartesian3();
+  var eastNorthUpToFixedFrameBitangent = new Cartesian3();
+  Transforms.eastNorthUpToFixedFrame = function(origin, ellipsoid, result) {
+    if (!defined(origin)) {
+      throw new DeveloperError('origin is required.');
+    }
+    if (CesiumMath.equalsEpsilon(origin.x, 0.0, CesiumMath.EPSILON14) && CesiumMath.equalsEpsilon(origin.y, 0.0, CesiumMath.EPSILON14)) {
+      var sign = CesiumMath.sign(origin.z);
+      if (!defined(result)) {
+        return new Matrix4(0.0, -sign, 0.0, origin.x, 1.0, 0.0, 0.0, origin.y, 0.0, 0.0, sign, origin.z, 0.0, 0.0, 0.0, 1.0);
+      }
+      result[0] = 0.0;
+      result[1] = 1.0;
+      result[2] = 0.0;
+      result[3] = 0.0;
+      result[4] = -sign;
+      result[5] = 0.0;
+      result[6] = 0.0;
+      result[7] = 0.0;
+      result[8] = 0.0;
+      result[9] = 0.0;
+      result[10] = sign;
+      result[11] = 0.0;
+      result[12] = origin.x;
+      result[13] = origin.y;
+      result[14] = origin.z;
+      result[15] = 1.0;
+      return result;
+    }
+    var normal = eastNorthUpToFixedFrameNormal;
+    var tangent = eastNorthUpToFixedFrameTangent;
+    var bitangent = eastNorthUpToFixedFrameBitangent;
+    ellipsoid = defaultValue(ellipsoid, Ellipsoid.WGS84);
+    ellipsoid.geodeticSurfaceNormal(origin, normal);
+    tangent.x = -origin.y;
+    tangent.y = origin.x;
+    tangent.z = 0.0;
+    Cartesian3.normalize(tangent, tangent);
+    Cartesian3.cross(normal, tangent, bitangent);
+    if (!defined(result)) {
+      return new Matrix4(tangent.x, bitangent.x, normal.x, origin.x, tangent.y, bitangent.y, normal.y, origin.y, tangent.z, bitangent.z, normal.z, origin.z, 0.0, 0.0, 0.0, 1.0);
+    }
+    result[0] = tangent.x;
+    result[1] = tangent.y;
+    result[2] = tangent.z;
+    result[3] = 0.0;
+    result[4] = bitangent.x;
+    result[5] = bitangent.y;
+    result[6] = bitangent.z;
+    result[7] = 0.0;
+    result[8] = normal.x;
+    result[9] = normal.y;
+    result[10] = normal.z;
+    result[11] = 0.0;
+    result[12] = origin.x;
+    result[13] = origin.y;
+    result[14] = origin.z;
+    result[15] = 1.0;
+    return result;
+  };
+  var northEastDownToFixedFrameNormal = new Cartesian3();
+  var northEastDownToFixedFrameTangent = new Cartesian3();
+  var northEastDownToFixedFrameBitangent = new Cartesian3();
+  Transforms.northEastDownToFixedFrame = function(origin, ellipsoid, result) {
+    if (!defined(origin)) {
+      throw new DeveloperError('origin is required.');
+    }
+    if (CesiumMath.equalsEpsilon(origin.x, 0.0, CesiumMath.EPSILON14) && CesiumMath.equalsEpsilon(origin.y, 0.0, CesiumMath.EPSILON14)) {
+      var sign = CesiumMath.sign(origin.z);
+      if (!defined(result)) {
+        return new Matrix4(-sign, 0.0, 0.0, origin.x, 0.0, 1.0, 0.0, origin.y, 0.0, 0.0, -sign, origin.z, 0.0, 0.0, 0.0, 1.0);
+      }
+      result[0] = -sign;
+      result[1] = 0.0;
+      result[2] = 0.0;
+      result[3] = 0.0;
+      result[4] = 0.0;
+      result[5] = 1.0;
+      result[6] = 0.0;
+      result[7] = 0.0;
+      result[8] = 0.0;
+      result[9] = 0.0;
+      result[10] = -sign;
+      result[11] = 0.0;
+      result[12] = origin.x;
+      result[13] = origin.y;
+      result[14] = origin.z;
+      result[15] = 1.0;
+      return result;
+    }
+    var normal = northEastDownToFixedFrameNormal;
+    var tangent = northEastDownToFixedFrameTangent;
+    var bitangent = northEastDownToFixedFrameBitangent;
+    ellipsoid = defaultValue(ellipsoid, Ellipsoid.WGS84);
+    ellipsoid.geodeticSurfaceNormal(origin, normal);
+    tangent.x = -origin.y;
+    tangent.y = origin.x;
+    tangent.z = 0.0;
+    Cartesian3.normalize(tangent, tangent);
+    Cartesian3.cross(normal, tangent, bitangent);
+    if (!defined(result)) {
+      return new Matrix4(bitangent.x, tangent.x, -normal.x, origin.x, bitangent.y, tangent.y, -normal.y, origin.y, bitangent.z, tangent.z, -normal.z, origin.z, 0.0, 0.0, 0.0, 1.0);
+    }
+    result[0] = bitangent.x;
+    result[1] = bitangent.y;
+    result[2] = bitangent.z;
+    result[3] = 0.0;
+    result[4] = tangent.x;
+    result[5] = tangent.y;
+    result[6] = tangent.z;
+    result[7] = 0.0;
+    result[8] = -normal.x;
+    result[9] = -normal.y;
+    result[10] = -normal.z;
+    result[11] = 0.0;
+    result[12] = origin.x;
+    result[13] = origin.y;
+    result[14] = origin.z;
+    result[15] = 1.0;
+    return result;
+  };
+  Transforms.northUpEastToFixedFrame = function(origin, ellipsoid, result) {
+    if (!defined(origin)) {
+      throw new DeveloperError('origin is required.');
+    }
+    if (CesiumMath.equalsEpsilon(origin.x, 0.0, CesiumMath.EPSILON14) && CesiumMath.equalsEpsilon(origin.y, 0.0, CesiumMath.EPSILON14)) {
+      var sign = CesiumMath.sign(origin.z);
+      if (!defined(result)) {
+        return new Matrix4(-sign, 0.0, 0.0, origin.x, 0.0, 0.0, 1.0, origin.y, 0.0, sign, 0.0, origin.z, 0.0, 0.0, 0.0, 1.0);
+      }
+      result[0] = -sign;
+      result[1] = 0.0;
+      result[2] = 0.0;
+      result[3] = 0.0;
+      result[4] = 0.0;
+      result[5] = 0.0;
+      result[6] = sign;
+      result[7] = 0.0;
+      result[8] = 0.0;
+      result[9] = 1.0;
+      result[10] = 0.0;
+      result[11] = 0.0;
+      result[12] = origin.x;
+      result[13] = origin.y;
+      result[14] = origin.z;
+      result[15] = 1.0;
+      return result;
+    }
+    var normal = eastNorthUpToFixedFrameNormal;
+    var tangent = eastNorthUpToFixedFrameTangent;
+    var bitangent = eastNorthUpToFixedFrameBitangent;
+    ellipsoid = defaultValue(ellipsoid, Ellipsoid.WGS84);
+    ellipsoid.geodeticSurfaceNormal(origin, normal);
+    tangent.x = -origin.y;
+    tangent.y = origin.x;
+    tangent.z = 0.0;
+    Cartesian3.normalize(tangent, tangent);
+    Cartesian3.cross(normal, tangent, bitangent);
+    if (!defined(result)) {
+      return new Matrix4(bitangent.x, normal.x, tangent.x, origin.x, bitangent.y, normal.y, tangent.y, origin.y, bitangent.z, normal.z, tangent.z, origin.z, 0.0, 0.0, 0.0, 1.0);
+    }
+    result[0] = bitangent.x;
+    result[1] = bitangent.y;
+    result[2] = bitangent.z;
+    result[3] = 0.0;
+    result[4] = normal.x;
+    result[5] = normal.y;
+    result[6] = normal.z;
+    result[7] = 0.0;
+    result[8] = tangent.x;
+    result[9] = tangent.y;
+    result[10] = tangent.z;
+    result[11] = 0.0;
+    result[12] = origin.x;
+    result[13] = origin.y;
+    result[14] = origin.z;
+    result[15] = 1.0;
+    return result;
+  };
+  var scratchHPRQuaternion = new Quaternion();
+  var scratchScale = new Cartesian3(1.0, 1.0, 1.0);
+  var scratchHPRMatrix4 = new Matrix4();
+  Transforms.headingPitchRollToFixedFrame = function(origin, heading, pitch, roll, ellipsoid, result) {
+    var hprQuaternion = Quaternion.fromHeadingPitchRoll(heading, pitch, roll, scratchHPRQuaternion);
+    var hprMatrix = Matrix4.fromTranslationQuaternionRotationScale(Cartesian3.ZERO, hprQuaternion, scratchScale, scratchHPRMatrix4);
+    result = Transforms.eastNorthUpToFixedFrame(origin, ellipsoid, result);
+    return Matrix4.multiply(result, hprMatrix, result);
+  };
+  var scratchENUMatrix4 = new Matrix4();
+  var scratchHPRMatrix3 = new Matrix3();
+  Transforms.headingPitchRollQuaternion = function(origin, heading, pitch, roll, ellipsoid, result) {
+    var transform = Transforms.headingPitchRollToFixedFrame(origin, heading, pitch, roll, ellipsoid, scratchENUMatrix4);
+    var rotation = Matrix4.getRotation(transform, scratchHPRMatrix3);
+    return Quaternion.fromRotationMatrix(rotation, result);
+  };
+  var gmstConstant0 = 6 * 3600 + 41 * 60 + 50.54841;
+  var gmstConstant1 = 8640184.812866;
+  var gmstConstant2 = 0.093104;
+  var gmstConstant3 = -6.2E-6;
+  var rateCoef = 1.1772758384668e-19;
+  var wgs84WRPrecessing = 7.2921158553E-5;
+  var twoPiOverSecondsInDay = CesiumMath.TWO_PI / 86400.0;
+  var dateInUtc = new JulianDate();
+  Transforms.computeTemeToPseudoFixedMatrix = function(date, result) {
+    if (!defined(date)) {
+      throw new DeveloperError('date is required.');
+    }
+    dateInUtc = JulianDate.addSeconds(date, -JulianDate.computeTaiMinusUtc(date), dateInUtc);
+    var utcDayNumber = dateInUtc.dayNumber;
+    var utcSecondsIntoDay = dateInUtc.secondsOfDay;
+    var t;
+    var diffDays = utcDayNumber - 2451545;
+    if (utcSecondsIntoDay >= 43200.0) {
+      t = (diffDays + 0.5) / TimeConstants.DAYS_PER_JULIAN_CENTURY;
+    } else {
+      t = (diffDays - 0.5) / TimeConstants.DAYS_PER_JULIAN_CENTURY;
+    }
+    var gmst0 = gmstConstant0 + t * (gmstConstant1 + t * (gmstConstant2 + t * gmstConstant3));
+    var angle = (gmst0 * twoPiOverSecondsInDay) % CesiumMath.TWO_PI;
+    var ratio = wgs84WRPrecessing + rateCoef * (utcDayNumber - 2451545.5);
+    var secondsSinceMidnight = (utcSecondsIntoDay + TimeConstants.SECONDS_PER_DAY * 0.5) % TimeConstants.SECONDS_PER_DAY;
+    var gha = angle + (ratio * secondsSinceMidnight);
+    var cosGha = Math.cos(gha);
+    var sinGha = Math.sin(gha);
+    if (!defined(result)) {
+      return new Matrix3(cosGha, sinGha, 0.0, -sinGha, cosGha, 0.0, 0.0, 0.0, 1.0);
+    }
+    result[0] = cosGha;
+    result[1] = -sinGha;
+    result[2] = 0.0;
+    result[3] = sinGha;
+    result[4] = cosGha;
+    result[5] = 0.0;
+    result[6] = 0.0;
+    result[7] = 0.0;
+    result[8] = 1.0;
+    return result;
+  };
+  Transforms.iau2006XysData = new Iau2006XysData();
+  Transforms.earthOrientationParameters = EarthOrientationParameters.NONE;
+  var ttMinusTai = 32.184;
+  var j2000ttDays = 2451545.0;
+  Transforms.preloadIcrfFixed = function(timeInterval) {
+    var startDayTT = timeInterval.start.dayNumber;
+    var startSecondTT = timeInterval.start.secondsOfDay + ttMinusTai;
+    var stopDayTT = timeInterval.stop.dayNumber;
+    var stopSecondTT = timeInterval.stop.secondsOfDay + ttMinusTai;
+    var xysPromise = Transforms.iau2006XysData.preload(startDayTT, startSecondTT, stopDayTT, stopSecondTT);
+    var eopPromise = Transforms.earthOrientationParameters.getPromiseToLoad();
+    return when.all([xysPromise, eopPromise]);
+  };
+  Transforms.computeIcrfToFixedMatrix = function(date, result) {
+    if (!defined(date)) {
+      throw new DeveloperError('date is required.');
+    }
+    if (!defined(result)) {
+      result = new Matrix3();
+    }
+    var fixedToIcrfMtx = Transforms.computeFixedToIcrfMatrix(date, result);
+    if (!defined(fixedToIcrfMtx)) {
+      return undefined;
+    }
+    return Matrix3.transpose(fixedToIcrfMtx, result);
+  };
+  var xysScratch = new Iau2006XysSample(0.0, 0.0, 0.0);
+  var eopScratch = new EarthOrientationParametersSample(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+  var rotation1Scratch = new Matrix3();
+  var rotation2Scratch = new Matrix3();
+  Transforms.computeFixedToIcrfMatrix = function(date, result) {
+    if (!defined(date)) {
+      throw new DeveloperError('date is required.');
+    }
+    if (!defined(result)) {
+      result = new Matrix3();
+    }
+    var eop = Transforms.earthOrientationParameters.compute(date, eopScratch);
+    if (!defined(eop)) {
+      return undefined;
+    }
+    var dayTT = date.dayNumber;
+    var secondTT = date.secondsOfDay + ttMinusTai;
+    var xys = Transforms.iau2006XysData.computeXysRadians(dayTT, secondTT, xysScratch);
+    if (!defined(xys)) {
+      return undefined;
+    }
+    var x = xys.x + eop.xPoleOffset;
+    var y = xys.y + eop.yPoleOffset;
+    var a = 1.0 / (1.0 + Math.sqrt(1.0 - x * x - y * y));
+    var rotation1 = rotation1Scratch;
+    rotation1[0] = 1.0 - a * x * x;
+    rotation1[3] = -a * x * y;
+    rotation1[6] = x;
+    rotation1[1] = -a * x * y;
+    rotation1[4] = 1 - a * y * y;
+    rotation1[7] = y;
+    rotation1[2] = -x;
+    rotation1[5] = -y;
+    rotation1[8] = 1 - a * (x * x + y * y);
+    var rotation2 = Matrix3.fromRotationZ(-xys.s, rotation2Scratch);
+    var matrixQ = Matrix3.multiply(rotation1, rotation2, rotation1Scratch);
+    var dateUt1day = date.dayNumber;
+    var dateUt1sec = date.secondsOfDay - JulianDate.computeTaiMinusUtc(date) + eop.ut1MinusUtc;
+    var daysSinceJ2000 = dateUt1day - 2451545;
+    var fractionOfDay = dateUt1sec / TimeConstants.SECONDS_PER_DAY;
+    var era = 0.7790572732640 + fractionOfDay + 0.00273781191135448 * (daysSinceJ2000 + fractionOfDay);
+    era = (era % 1.0) * CesiumMath.TWO_PI;
+    var earthRotation = Matrix3.fromRotationZ(era, rotation2Scratch);
+    var pfToIcrf = Matrix3.multiply(matrixQ, earthRotation, rotation1Scratch);
+    var cosxp = Math.cos(eop.xPoleWander);
+    var cosyp = Math.cos(eop.yPoleWander);
+    var sinxp = Math.sin(eop.xPoleWander);
+    var sinyp = Math.sin(eop.yPoleWander);
+    var ttt = (dayTT - j2000ttDays) + secondTT / TimeConstants.SECONDS_PER_DAY;
+    ttt /= 36525.0;
+    var sp = -47.0e-6 * ttt * CesiumMath.RADIANS_PER_DEGREE / 3600.0;
+    var cossp = Math.cos(sp);
+    var sinsp = Math.sin(sp);
+    var fToPfMtx = rotation2Scratch;
+    fToPfMtx[0] = cosxp * cossp;
+    fToPfMtx[1] = cosxp * sinsp;
+    fToPfMtx[2] = sinxp;
+    fToPfMtx[3] = -cosyp * sinsp + sinyp * sinxp * cossp;
+    fToPfMtx[4] = cosyp * cossp + sinyp * sinxp * sinsp;
+    fToPfMtx[5] = -sinyp * cosxp;
+    fToPfMtx[6] = -sinyp * sinsp - cosyp * sinxp * cossp;
+    fToPfMtx[7] = sinyp * cossp - cosyp * sinxp * sinsp;
+    fToPfMtx[8] = cosyp * cosxp;
+    return Matrix3.multiply(pfToIcrf, fToPfMtx, result);
+  };
+  var pointToWindowCoordinatesTemp = new Cartesian4();
+  Transforms.pointToWindowCoordinates = function(modelViewProjectionMatrix, viewportTransformation, point, result) {
+    result = Transforms.pointToGLWindowCoordinates(modelViewProjectionMatrix, viewportTransformation, point, result);
+    result.y = 2.0 * viewportTransformation[5] - result.y;
+    return result;
+  };
+  Transforms.pointToGLWindowCoordinates = function(modelViewProjectionMatrix, viewportTransformation, point, result) {
+    if (!defined(modelViewProjectionMatrix)) {
+      throw new DeveloperError('modelViewProjectionMatrix is required.');
+    }
+    if (!defined(viewportTransformation)) {
+      throw new DeveloperError('viewportTransformation is required.');
+    }
+    if (!defined(point)) {
+      throw new DeveloperError('point is required.');
+    }
+    if (!defined(result)) {
+      result = new Cartesian2();
+    }
+    var tmp = pointToWindowCoordinatesTemp;
+    Matrix4.multiplyByVector(modelViewProjectionMatrix, Cartesian4.fromElements(point.x, point.y, point.z, 1, tmp), tmp);
+    Cartesian4.multiplyByScalar(tmp, 1.0 / tmp.w, tmp);
+    Matrix4.multiplyByVector(viewportTransformation, tmp, tmp);
+    return Cartesian2.fromCartesian4(tmp, result);
+  };
+  var normalScratch = new Cartesian3();
+  var rightScratch = new Cartesian3();
+  var upScratch = new Cartesian3();
+  Transforms.rotationMatrixFromPositionVelocity = function(position, velocity, ellipsoid, result) {
+    if (!defined(position)) {
+      throw new DeveloperError('position is required.');
+    }
+    if (!defined(velocity)) {
+      throw new DeveloperError('velocity is required.');
+    }
+    var normal = defaultValue(ellipsoid, Ellipsoid.WGS84).geodeticSurfaceNormal(position, normalScratch);
+    var right = Cartesian3.cross(velocity, normal, rightScratch);
+    if (Cartesian3.equalsEpsilon(right, Cartesian3.ZERO, CesiumMath.EPSILON6)) {
+      right = Cartesian3.clone(Cartesian3.UNIT_X, right);
+    }
+    var up = Cartesian3.cross(right, velocity, upScratch);
+    Cartesian3.cross(velocity, up, right);
+    Cartesian3.negate(right, right);
+    if (!defined(result)) {
+      result = new Matrix3();
+    }
+    result[0] = velocity.x;
+    result[1] = velocity.y;
+    result[2] = velocity.z;
+    result[3] = right.x;
+    result[4] = right.y;
+    result[5] = right.z;
+    result[6] = up.x;
+    result[7] = up.y;
+    result[8] = up.z;
+    return result;
+  };
+  return Transforms;
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("5b", [], function() {
+  function sprintf() {
+    var regex = /%%|%(\d+\$)?([-+\'#0 ]*)(\*\d+\$|\*|\d+)?(\.(\*\d+\$|\*|\d+))?([scboxXuideEfFgG])/g;
+    var a = arguments,
+        i = 0,
+        format = a[i++];
+    var pad = function(str, len, chr, leftJustify) {
+      if (!chr) {
+        chr = ' ';
+      }
+      var padding = (str.length >= len) ? '' : Array(1 + len - str.length >>> 0).join(chr);
+      return leftJustify ? str + padding : padding + str;
+    };
+    var justify = function(value, prefix, leftJustify, minWidth, zeroPad, customPadChar) {
+      var diff = minWidth - value.length;
+      if (diff > 0) {
+        if (leftJustify || !zeroPad) {
+          value = pad(value, minWidth, customPadChar, leftJustify);
+        } else {
+          value = value.slice(0, prefix.length) + pad('', diff, '0', true) + value.slice(prefix.length);
+        }
+      }
+      return value;
+    };
+    var formatBaseX = function(value, base, prefix, leftJustify, minWidth, precision, zeroPad) {
+      var number = value >>> 0;
+      prefix = prefix && number && {
+        '2': '0b',
+        '8': '0',
+        '16': '0x'
+      }[base] || '';
+      value = prefix + pad(number.toString(base), precision || 0, '0', false);
+      return justify(value, prefix, leftJustify, minWidth, zeroPad);
+    };
+    var formatString = function(value, leftJustify, minWidth, precision, zeroPad, customPadChar) {
+      if (precision != null) {
+        value = value.slice(0, precision);
+      }
+      return justify(value, '', leftJustify, minWidth, zeroPad, customPadChar);
+    };
+    var doFormat = function(substring, valueIndex, flags, minWidth, _, precision, type) {
+      var number;
+      var prefix;
+      var method;
+      var textTransform;
+      var value;
+      if (substring == '%%') {
+        return '%';
+      }
+      var leftJustify = false,
+          positivePrefix = '',
+          zeroPad = false,
+          prefixBaseX = false,
+          customPadChar = ' ';
+      var flagsl = flags.length;
+      for (var j = 0; flags && j < flagsl; j++) {
+        switch (flags.charAt(j)) {
+          case ' ':
+            positivePrefix = ' ';
+            break;
+          case '+':
+            positivePrefix = '+';
+            break;
+          case '-':
+            leftJustify = true;
+            break;
+          case "'":
+            customPadChar = flags.charAt(j + 1);
+            break;
+          case '0':
+            zeroPad = true;
+            break;
+          case '#':
+            prefixBaseX = true;
+            break;
+        }
+      }
+      if (!minWidth) {
+        minWidth = 0;
+      } else if (minWidth == '*') {
+        minWidth = +a[i++];
+      } else if (minWidth.charAt(0) == '*') {
+        minWidth = +a[minWidth.slice(1, -1)];
+      } else {
+        minWidth = +minWidth;
+      }
+      if (minWidth < 0) {
+        minWidth = -minWidth;
+        leftJustify = true;
+      }
+      if (!isFinite(minWidth)) {
+        throw new Error('sprintf: (minimum-)width must be finite');
+      }
+      if (!precision) {
+        precision = 'fFeE'.indexOf(type) > -1 ? 6 : (type == 'd') ? 0 : undefined;
+      } else if (precision == '*') {
+        precision = +a[i++];
+      } else if (precision.charAt(0) == '*') {
+        precision = +a[precision.slice(1, -1)];
+      } else {
+        precision = +precision;
+      }
+      value = valueIndex ? a[valueIndex.slice(0, -1)] : a[i++];
+      switch (type) {
+        case 's':
+          return formatString(String(value), leftJustify, minWidth, precision, zeroPad, customPadChar);
+        case 'c':
+          return formatString(String.fromCharCode(+value), leftJustify, minWidth, precision, zeroPad);
+        case 'b':
+          return formatBaseX(value, 2, prefixBaseX, leftJustify, minWidth, precision, zeroPad);
+        case 'o':
+          return formatBaseX(value, 8, prefixBaseX, leftJustify, minWidth, precision, zeroPad);
+        case 'x':
+          return formatBaseX(value, 16, prefixBaseX, leftJustify, minWidth, precision, zeroPad);
+        case 'X':
+          return formatBaseX(value, 16, prefixBaseX, leftJustify, minWidth, precision, zeroPad).toUpperCase();
+        case 'u':
+          return formatBaseX(value, 10, prefixBaseX, leftJustify, minWidth, precision, zeroPad);
+        case 'i':
+        case 'd':
+          number = +value || 0;
+          number = Math.round(number - number % 1);
+          prefix = number < 0 ? '-' : positivePrefix;
+          value = prefix + pad(String(Math.abs(number)), precision, '0', false);
+          return justify(value, prefix, leftJustify, minWidth, zeroPad);
+        case 'e':
+        case 'E':
+        case 'f':
+        case 'F':
+        case 'g':
+        case 'G':
+          number = +value;
+          prefix = number < 0 ? '-' : positivePrefix;
+          method = ['toExponential', 'toFixed', 'toPrecision']['efg'.indexOf(type.toLowerCase())];
+          textTransform = ['toString', 'toUpperCase']['eEfFgG'.indexOf(type) % 2];
+          value = prefix + Math.abs(number)[method](precision);
+          return justify(value, prefix, leftJustify, minWidth, zeroPad)[textTransform]();
+        default:
+          return substring;
+      }
+    };
+    return format.replace(regex, doFormat);
+  }
+  return sprintf;
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("48", ["15", "17"], function(defined, DeveloperError) {
+  "use strict";
+  function binarySearch(array, itemToFind, comparator) {
+    if (!defined(array)) {
+      throw new DeveloperError('array is required.');
+    }
+    if (!defined(itemToFind)) {
+      throw new DeveloperError('itemToFind is required.');
+    }
+    if (!defined(comparator)) {
+      throw new DeveloperError('comparator is required.');
+    }
+    var low = 0;
+    var high = array.length - 1;
+    var i;
+    var comparison;
+    while (low <= high) {
+      i = ~~((low + high) / 2);
+      comparison = comparator(array[i], itemToFind);
+      if (comparison < 0) {
+        low = i + 1;
+        continue;
+      }
+      if (comparison > 0) {
+        high = i - 1;
+        continue;
+      }
+      return i;
+    }
+    return ~(high + 1);
+  }
+  return binarySearch;
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("5c", [], function() {
+  "use strict";
+  function GregorianDate(year, month, day, hour, minute, second, millisecond, isLeapSecond) {
+    this.year = year;
+    this.month = month;
+    this.day = day;
+    this.hour = hour;
+    this.minute = minute;
+    this.second = second;
+    this.millisecond = millisecond;
+    this.isLeapSecond = isLeapSecond;
+  }
+  return GregorianDate;
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("5d", ["17"], function(DeveloperError) {
+  "use strict";
+  function isLeapYear(year) {
+    if (year === null || isNaN(year)) {
+      throw new DeveloperError('year is required and must be a number.');
+    }
+    return ((year % 4 === 0) && (year % 100 !== 0)) || (year % 400 === 0);
+  }
+  return isLeapYear;
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("4c", [], function() {
+  "use strict";
+  function LeapSecond(date, offset) {
+    this.julianDate = date;
+    this.offset = offset;
+  }
+  return LeapSecond;
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("1f", ["5b", "48", "1e", "15", "17", "5c", "5d", "4c", "4e", "4f"], function(sprintf, binarySearch, defaultValue, defined, DeveloperError, GregorianDate, isLeapYear, LeapSecond, TimeConstants, TimeStandard) {
+  "use strict";
+  var gregorianDateScratch = new GregorianDate();
+  var daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  var daysInLeapFeburary = 29;
+  function compareLeapSecondDates(leapSecond, dateToFind) {
+    return JulianDate.compare(leapSecond.julianDate, dateToFind.julianDate);
+  }
+  var binarySearchScratchLeapSecond = new LeapSecond();
+  function convertUtcToTai(julianDate) {
+    binarySearchScratchLeapSecond.julianDate = julianDate;
+    var leapSeconds = JulianDate.leapSeconds;
+    var index = binarySearch(leapSeconds, binarySearchScratchLeapSecond, compareLeapSecondDates);
+    if (index < 0) {
+      index = ~index;
+    }
+    if (index >= leapSeconds.length) {
+      index = leapSeconds.length - 1;
+    }
+    var offset = leapSeconds[index].offset;
+    if (index > 0) {
+      var difference = JulianDate.secondsDifference(leapSeconds[index].julianDate, julianDate);
+      if (difference > offset) {
+        index--;
+        offset = leapSeconds[index].offset;
+      }
+    }
+    JulianDate.addSeconds(julianDate, offset, julianDate);
+  }
+  function convertTaiToUtc(julianDate, result) {
+    binarySearchScratchLeapSecond.julianDate = julianDate;
+    var leapSeconds = JulianDate.leapSeconds;
+    var index = binarySearch(leapSeconds, binarySearchScratchLeapSecond, compareLeapSecondDates);
+    if (index < 0) {
+      index = ~index;
+    }
+    if (index === 0) {
+      return JulianDate.addSeconds(julianDate, -leapSeconds[0].offset, result);
+    }
+    if (index >= leapSeconds.length) {
+      return JulianDate.addSeconds(julianDate, -leapSeconds[index - 1].offset, result);
+    }
+    var difference = JulianDate.secondsDifference(leapSeconds[index].julianDate, julianDate);
+    if (difference === 0) {
+      return JulianDate.addSeconds(julianDate, -leapSeconds[index].offset, result);
+    }
+    if (difference <= 1.0) {
+      return undefined;
+    }
+    return JulianDate.addSeconds(julianDate, -leapSeconds[--index].offset, result);
+  }
+  function setComponents(wholeDays, secondsOfDay, julianDate) {
+    var extraDays = (secondsOfDay / TimeConstants.SECONDS_PER_DAY) | 0;
+    wholeDays += extraDays;
+    secondsOfDay -= TimeConstants.SECONDS_PER_DAY * extraDays;
+    if (secondsOfDay < 0) {
+      wholeDays--;
+      secondsOfDay += TimeConstants.SECONDS_PER_DAY;
+    }
+    julianDate.dayNumber = wholeDays;
+    julianDate.secondsOfDay = secondsOfDay;
+    return julianDate;
+  }
+  function computeJulianDateComponents(year, month, day, hour, minute, second, millisecond) {
+    var a = ((month - 14) / 12) | 0;
+    var b = year + 4800 + a;
+    var dayNumber = (((1461 * b) / 4) | 0) + (((367 * (month - 2 - 12 * a)) / 12) | 0) - (((3 * (((b + 100) / 100) | 0)) / 4) | 0) + day - 32075;
+    hour = hour - 12;
+    if (hour < 0) {
+      hour += 24;
+    }
+    var secondsOfDay = second + ((hour * TimeConstants.SECONDS_PER_HOUR) + (minute * TimeConstants.SECONDS_PER_MINUTE) + (millisecond * TimeConstants.SECONDS_PER_MILLISECOND));
+    if (secondsOfDay >= 43200.0) {
+      dayNumber -= 1;
+    }
+    return [dayNumber, secondsOfDay];
+  }
+  var matchCalendarYear = /^(\d{4})$/;
+  var matchCalendarMonth = /^(\d{4})-(\d{2})$/;
+  var matchOrdinalDate = /^(\d{4})-?(\d{3})$/;
+  var matchWeekDate = /^(\d{4})-?W(\d{2})-?(\d{1})?$/;
+  var matchCalendarDate = /^(\d{4})-?(\d{2})-?(\d{2})$/;
+  var utcOffset = /([Z+\-])?(\d{2})?:?(\d{2})?$/;
+  var matchHours = /^(\d{2})(\.\d+)?/.source + utcOffset.source;
+  var matchHoursMinutes = /^(\d{2}):?(\d{2})(\.\d+)?/.source + utcOffset.source;
+  var matchHoursMinutesSeconds = /^(\d{2}):?(\d{2}):?(\d{2})(\.\d+)?/.source + utcOffset.source;
+  var iso8601ErrorMessage = 'Invalid ISO 8601 date.';
+  function JulianDate(julianDayNumber, secondsOfDay, timeStandard) {
+    this.dayNumber = undefined;
+    this.secondsOfDay = undefined;
+    julianDayNumber = defaultValue(julianDayNumber, 0.0);
+    secondsOfDay = defaultValue(secondsOfDay, 0.0);
+    timeStandard = defaultValue(timeStandard, TimeStandard.UTC);
+    var wholeDays = julianDayNumber | 0;
+    secondsOfDay = secondsOfDay + (julianDayNumber - wholeDays) * TimeConstants.SECONDS_PER_DAY;
+    setComponents(wholeDays, secondsOfDay, this);
+    if (timeStandard === TimeStandard.UTC) {
+      convertUtcToTai(this);
+    }
+  }
+  JulianDate.fromDate = function(date, result) {
+    if (!(date instanceof Date) || isNaN(date.getTime())) {
+      throw new DeveloperError('date must be a valid JavaScript Date.');
+    }
+    var components = computeJulianDateComponents(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds(), date.getUTCMilliseconds());
+    if (!defined(result)) {
+      return new JulianDate(components[0], components[1], TimeStandard.UTC);
+    }
+    setComponents(components[0], components[1], result);
+    convertUtcToTai(result);
+    return result;
+  };
+  JulianDate.fromIso8601 = function(iso8601String, result) {
+    if (typeof iso8601String !== 'string') {
+      throw new DeveloperError(iso8601ErrorMessage);
+    }
+    iso8601String = iso8601String.replace(',', '.');
+    var tokens = iso8601String.split('T');
+    var year;
+    var month = 1;
+    var day = 1;
+    var hour = 0;
+    var minute = 0;
+    var second = 0;
+    var millisecond = 0;
+    var date = tokens[0];
+    var time = tokens[1];
+    var tmp;
+    var inLeapYear;
+    if (!defined(date)) {
+      throw new DeveloperError(iso8601ErrorMessage);
+    }
+    var dashCount;
+    tokens = date.match(matchCalendarDate);
+    if (tokens !== null) {
+      dashCount = date.split('-').length - 1;
+      if (dashCount > 0 && dashCount !== 2) {
+        throw new DeveloperError(iso8601ErrorMessage);
+      }
+      year = +tokens[1];
+      month = +tokens[2];
+      day = +tokens[3];
+    } else {
+      tokens = date.match(matchCalendarMonth);
+      if (tokens !== null) {
+        year = +tokens[1];
+        month = +tokens[2];
+      } else {
+        tokens = date.match(matchCalendarYear);
+        if (tokens !== null) {
+          year = +tokens[1];
+        } else {
+          var dayOfYear;
+          tokens = date.match(matchOrdinalDate);
+          if (tokens !== null) {
+            year = +tokens[1];
+            dayOfYear = +tokens[2];
+            inLeapYear = isLeapYear(year);
+            if (dayOfYear < 1 || (inLeapYear && dayOfYear > 366) || (!inLeapYear && dayOfYear > 365)) {
+              throw new DeveloperError(iso8601ErrorMessage);
+            }
+          } else {
+            tokens = date.match(matchWeekDate);
+            if (tokens !== null) {
+              year = +tokens[1];
+              var weekNumber = +tokens[2];
+              var dayOfWeek = +tokens[3] || 0;
+              dashCount = date.split('-').length - 1;
+              if (dashCount > 0 && ((!defined(tokens[3]) && dashCount !== 1) || (defined(tokens[3]) && dashCount !== 2))) {
+                throw new DeveloperError(iso8601ErrorMessage);
+              }
+              var january4 = new Date(Date.UTC(year, 0, 4));
+              dayOfYear = (weekNumber * 7) + dayOfWeek - january4.getUTCDay() - 3;
+            } else {
+              throw new DeveloperError(iso8601ErrorMessage);
+            }
+          }
+          tmp = new Date(Date.UTC(year, 0, 1));
+          tmp.setUTCDate(dayOfYear);
+          month = tmp.getUTCMonth() + 1;
+          day = tmp.getUTCDate();
+        }
+      }
+    }
+    inLeapYear = isLeapYear(year);
+    if (month < 1 || month > 12 || day < 1 || ((month !== 2 || !inLeapYear) && day > daysInMonth[month - 1]) || (inLeapYear && month === 2 && day > daysInLeapFeburary)) {
+      throw new DeveloperError(iso8601ErrorMessage);
+    }
+    var offsetIndex;
+    if (defined(time)) {
+      tokens = time.match(matchHoursMinutesSeconds);
+      if (tokens !== null) {
+        dashCount = time.split(':').length - 1;
+        if (dashCount > 0 && dashCount !== 2 && dashCount !== 3) {
+          throw new DeveloperError(iso8601ErrorMessage);
+        }
+        hour = +tokens[1];
+        minute = +tokens[2];
+        second = +tokens[3];
+        millisecond = +(tokens[4] || 0) * 1000.0;
+        offsetIndex = 5;
+      } else {
+        tokens = time.match(matchHoursMinutes);
+        if (tokens !== null) {
+          dashCount = time.split(':').length - 1;
+          if (dashCount > 2) {
+            throw new DeveloperError(iso8601ErrorMessage);
+          }
+          hour = +tokens[1];
+          minute = +tokens[2];
+          second = +(tokens[3] || 0) * 60.0;
+          offsetIndex = 4;
+        } else {
+          tokens = time.match(matchHours);
+          if (tokens !== null) {
+            hour = +tokens[1];
+            minute = +(tokens[2] || 0) * 60.0;
+            offsetIndex = 3;
+          } else {
+            throw new DeveloperError(iso8601ErrorMessage);
+          }
+        }
+      }
+      if (minute >= 60 || second >= 61 || hour > 24 || (hour === 24 && (minute > 0 || second > 0 || millisecond > 0))) {
+        throw new DeveloperError(iso8601ErrorMessage);
+      }
+      var offset = tokens[offsetIndex];
+      var offsetHours = +(tokens[offsetIndex + 1]);
+      var offsetMinutes = +(tokens[offsetIndex + 2] || 0);
+      switch (offset) {
+        case '+':
+          hour = hour - offsetHours;
+          minute = minute - offsetMinutes;
+          break;
+        case '-':
+          hour = hour + offsetHours;
+          minute = minute + offsetMinutes;
+          break;
+        case 'Z':
+          break;
+        default:
+          minute = minute + new Date(Date.UTC(year, month - 1, day, hour, minute)).getTimezoneOffset();
+          break;
+      }
+    } else {
+      minute = minute + new Date(year, month - 1, day).getTimezoneOffset();
+    }
+    var isLeapSecond = second === 60;
+    if (isLeapSecond) {
+      second--;
+    }
+    while (minute >= 60) {
+      minute -= 60;
+      hour++;
+    }
+    while (hour >= 24) {
+      hour -= 24;
+      day++;
+    }
+    tmp = (inLeapYear && month === 2) ? daysInLeapFeburary : daysInMonth[month - 1];
+    while (day > tmp) {
+      day -= tmp;
+      month++;
+      if (month > 12) {
+        month -= 12;
+        year++;
+      }
+      tmp = (inLeapYear && month === 2) ? daysInLeapFeburary : daysInMonth[month - 1];
+    }
+    while (minute < 0) {
+      minute += 60;
+      hour--;
+    }
+    while (hour < 0) {
+      hour += 24;
+      day--;
+    }
+    while (day < 1) {
+      month--;
+      if (month < 1) {
+        month += 12;
+        year--;
+      }
+      tmp = (inLeapYear && month === 2) ? daysInLeapFeburary : daysInMonth[month - 1];
+      day += tmp;
+    }
+    var components = computeJulianDateComponents(year, month, day, hour, minute, second, millisecond);
+    if (!defined(result)) {
+      result = new JulianDate(components[0], components[1], TimeStandard.UTC);
+    } else {
+      setComponents(components[0], components[1], result);
+      convertUtcToTai(result);
+    }
+    if (isLeapSecond) {
+      JulianDate.addSeconds(result, 1, result);
+    }
+    return result;
+  };
+  JulianDate.now = function(result) {
+    return JulianDate.fromDate(new Date(), result);
+  };
+  var toGregorianDateScratch = new JulianDate(0, 0, TimeStandard.TAI);
+  JulianDate.toGregorianDate = function(julianDate, result) {
+    if (!defined(julianDate)) {
+      throw new DeveloperError('julianDate is required.');
+    }
+    var isLeapSecond = false;
+    var thisUtc = convertTaiToUtc(julianDate, toGregorianDateScratch);
+    if (!defined(thisUtc)) {
+      JulianDate.addSeconds(julianDate, -1, toGregorianDateScratch);
+      thisUtc = convertTaiToUtc(toGregorianDateScratch, toGregorianDateScratch);
+      isLeapSecond = true;
+    }
+    var julianDayNumber = thisUtc.dayNumber;
+    var secondsOfDay = thisUtc.secondsOfDay;
+    if (secondsOfDay >= 43200.0) {
+      julianDayNumber += 1;
+    }
+    var L = (julianDayNumber + 68569) | 0;
+    var N = (4 * L / 146097) | 0;
+    L = (L - (((146097 * N + 3) / 4) | 0)) | 0;
+    var I = ((4000 * (L + 1)) / 1461001) | 0;
+    L = (L - (((1461 * I) / 4) | 0) + 31) | 0;
+    var J = ((80 * L) / 2447) | 0;
+    var day = (L - (((2447 * J) / 80) | 0)) | 0;
+    L = (J / 11) | 0;
+    var month = (J + 2 - 12 * L) | 0;
+    var year = (100 * (N - 49) + I + L) | 0;
+    var hour = (secondsOfDay / TimeConstants.SECONDS_PER_HOUR) | 0;
+    var remainingSeconds = secondsOfDay - (hour * TimeConstants.SECONDS_PER_HOUR);
+    var minute = (remainingSeconds / TimeConstants.SECONDS_PER_MINUTE) | 0;
+    remainingSeconds = remainingSeconds - (minute * TimeConstants.SECONDS_PER_MINUTE);
+    var second = remainingSeconds | 0;
+    var millisecond = ((remainingSeconds - second) / TimeConstants.SECONDS_PER_MILLISECOND);
+    hour += 12;
+    if (hour > 23) {
+      hour -= 24;
+    }
+    if (isLeapSecond) {
+      second += 1;
+    }
+    if (!defined(result)) {
+      return new GregorianDate(year, month, day, hour, minute, second, millisecond, isLeapSecond);
+    }
+    result.year = year;
+    result.month = month;
+    result.day = day;
+    result.hour = hour;
+    result.minute = minute;
+    result.second = second;
+    result.millisecond = millisecond;
+    result.isLeapSecond = isLeapSecond;
+    return result;
+  };
+  JulianDate.toDate = function(julianDate) {
+    if (!defined(julianDate)) {
+      throw new DeveloperError('julianDate is required.');
+    }
+    var gDate = JulianDate.toGregorianDate(julianDate, gregorianDateScratch);
+    var second = gDate.second;
+    if (gDate.isLeapSecond) {
+      second -= 1;
+    }
+    return new Date(Date.UTC(gDate.year, gDate.month - 1, gDate.day, gDate.hour, gDate.minute, second, gDate.millisecond));
+  };
+  JulianDate.toIso8601 = function(julianDate, precision) {
+    if (!defined(julianDate)) {
+      throw new DeveloperError('julianDate is required.');
+    }
+    var gDate = JulianDate.toGregorianDate(julianDate, gDate);
+    var millisecondStr;
+    if (!defined(precision) && gDate.millisecond !== 0) {
+      millisecondStr = (gDate.millisecond * 0.01).toString().replace('.', '');
+      return sprintf("%04d-%02d-%02dT%02d:%02d:%02d.%sZ", gDate.year, gDate.month, gDate.day, gDate.hour, gDate.minute, gDate.second, millisecondStr);
+    }
+    if (!defined(precision) || precision === 0) {
+      return sprintf("%04d-%02d-%02dT%02d:%02d:%02dZ", gDate.year, gDate.month, gDate.day, gDate.hour, gDate.minute, gDate.second);
+    }
+    millisecondStr = (gDate.millisecond * 0.01).toFixed(precision).replace('.', '').slice(0, precision);
+    return sprintf("%04d-%02d-%02dT%02d:%02d:%02d.%sZ", gDate.year, gDate.month, gDate.day, gDate.hour, gDate.minute, gDate.second, millisecondStr);
+  };
+  JulianDate.clone = function(julianDate, result) {
+    if (!defined(julianDate)) {
+      return undefined;
+    }
+    if (!defined(result)) {
+      return new JulianDate(julianDate.dayNumber, julianDate.secondsOfDay, TimeStandard.TAI);
+    }
+    result.dayNumber = julianDate.dayNumber;
+    result.secondsOfDay = julianDate.secondsOfDay;
+    return result;
+  };
+  JulianDate.compare = function(left, right) {
+    if (!defined(left)) {
+      throw new DeveloperError('left is required.');
+    }
+    if (!defined(right)) {
+      throw new DeveloperError('right is required.');
+    }
+    var julianDayNumberDifference = left.dayNumber - right.dayNumber;
+    if (julianDayNumberDifference !== 0) {
+      return julianDayNumberDifference;
+    }
+    return left.secondsOfDay - right.secondsOfDay;
+  };
+  JulianDate.equals = function(left, right) {
+    return (left === right) || (defined(left) && defined(right) && left.dayNumber === right.dayNumber && left.secondsOfDay === right.secondsOfDay);
+  };
+  JulianDate.equalsEpsilon = function(left, right, epsilon) {
+    if (!defined(epsilon)) {
+      throw new DeveloperError('epsilon is required.');
+    }
+    return (left === right) || (defined(left) && defined(right) && Math.abs(JulianDate.secondsDifference(left, right)) <= epsilon);
+  };
+  JulianDate.totalDays = function(julianDate) {
+    if (!defined(julianDate)) {
+      throw new DeveloperError('julianDate is required.');
+    }
+    return julianDate.dayNumber + (julianDate.secondsOfDay / TimeConstants.SECONDS_PER_DAY);
+  };
+  JulianDate.secondsDifference = function(left, right) {
+    if (!defined(left)) {
+      throw new DeveloperError('left is required.');
+    }
+    if (!defined(right)) {
+      throw new DeveloperError('right is required.');
+    }
+    var dayDifference = (left.dayNumber - right.dayNumber) * TimeConstants.SECONDS_PER_DAY;
+    return (dayDifference + (left.secondsOfDay - right.secondsOfDay));
+  };
+  JulianDate.daysDifference = function(left, right) {
+    if (!defined(left)) {
+      throw new DeveloperError('left is required.');
+    }
+    if (!defined(right)) {
+      throw new DeveloperError('right is required.');
+    }
+    var dayDifference = (left.dayNumber - right.dayNumber);
+    var secondDifference = (left.secondsOfDay - right.secondsOfDay) / TimeConstants.SECONDS_PER_DAY;
+    return dayDifference + secondDifference;
+  };
+  JulianDate.computeTaiMinusUtc = function(julianDate) {
+    binarySearchScratchLeapSecond.julianDate = julianDate;
+    var leapSeconds = JulianDate.leapSeconds;
+    var index = binarySearch(leapSeconds, binarySearchScratchLeapSecond, compareLeapSecondDates);
+    if (index < 0) {
+      index = ~index;
+      --index;
+      if (index < 0) {
+        index = 0;
+      }
+    }
+    return leapSeconds[index].offset;
+  };
+  JulianDate.addSeconds = function(julianDate, seconds, result) {
+    if (!defined(julianDate)) {
+      throw new DeveloperError('julianDate is required.');
+    }
+    if (!defined(seconds)) {
+      throw new DeveloperError('seconds is required.');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required.');
+    }
+    return setComponents(julianDate.dayNumber, julianDate.secondsOfDay + seconds, result);
+  };
+  JulianDate.addMinutes = function(julianDate, minutes, result) {
+    if (!defined(julianDate)) {
+      throw new DeveloperError('julianDate is required.');
+    }
+    if (!defined(minutes)) {
+      throw new DeveloperError('minutes is required.');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required.');
+    }
+    var newSecondsOfDay = julianDate.secondsOfDay + (minutes * TimeConstants.SECONDS_PER_MINUTE);
+    return setComponents(julianDate.dayNumber, newSecondsOfDay, result);
+  };
+  JulianDate.addHours = function(julianDate, hours, result) {
+    if (!defined(julianDate)) {
+      throw new DeveloperError('julianDate is required.');
+    }
+    if (!defined(hours)) {
+      throw new DeveloperError('hours is required.');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required.');
+    }
+    var newSecondsOfDay = julianDate.secondsOfDay + (hours * TimeConstants.SECONDS_PER_HOUR);
+    return setComponents(julianDate.dayNumber, newSecondsOfDay, result);
+  };
+  JulianDate.addDays = function(julianDate, days, result) {
+    if (!defined(julianDate)) {
+      throw new DeveloperError('julianDate is required.');
+    }
+    if (!defined(days)) {
+      throw new DeveloperError('days is required.');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required.');
+    }
+    var newJulianDayNumber = julianDate.dayNumber + days;
+    return setComponents(newJulianDayNumber, julianDate.secondsOfDay, result);
+  };
+  JulianDate.lessThan = function(left, right) {
+    return JulianDate.compare(left, right) < 0;
+  };
+  JulianDate.lessThanOrEquals = function(left, right) {
+    return JulianDate.compare(left, right) <= 0;
+  };
+  JulianDate.greaterThan = function(left, right) {
+    return JulianDate.compare(left, right) > 0;
+  };
+  JulianDate.greaterThanOrEquals = function(left, right) {
+    return JulianDate.compare(left, right) >= 0;
+  };
+  JulianDate.prototype.clone = function(result) {
+    return JulianDate.clone(this, result);
+  };
+  JulianDate.prototype.equals = function(right) {
+    return JulianDate.equals(this, right);
+  };
+  JulianDate.prototype.equalsEpsilon = function(right, epsilon) {
+    return JulianDate.equalsEpsilon(this, right, epsilon);
+  };
+  JulianDate.prototype.toString = function() {
+    return JulianDate.toIso8601(this);
+  };
+  JulianDate.leapSeconds = [new LeapSecond(new JulianDate(2441317, 43210.0, TimeStandard.TAI), 10), new LeapSecond(new JulianDate(2441499, 43211.0, TimeStandard.TAI), 11), new LeapSecond(new JulianDate(2441683, 43212.0, TimeStandard.TAI), 12), new LeapSecond(new JulianDate(2442048, 43213.0, TimeStandard.TAI), 13), new LeapSecond(new JulianDate(2442413, 43214.0, TimeStandard.TAI), 14), new LeapSecond(new JulianDate(2442778, 43215.0, TimeStandard.TAI), 15), new LeapSecond(new JulianDate(2443144, 43216.0, TimeStandard.TAI), 16), new LeapSecond(new JulianDate(2443509, 43217.0, TimeStandard.TAI), 17), new LeapSecond(new JulianDate(2443874, 43218.0, TimeStandard.TAI), 18), new LeapSecond(new JulianDate(2444239, 43219.0, TimeStandard.TAI), 19), new LeapSecond(new JulianDate(2444786, 43220.0, TimeStandard.TAI), 20), new LeapSecond(new JulianDate(2445151, 43221.0, TimeStandard.TAI), 21), new LeapSecond(new JulianDate(2445516, 43222.0, TimeStandard.TAI), 22), new LeapSecond(new JulianDate(2446247, 43223.0, TimeStandard.TAI), 23), new LeapSecond(new JulianDate(2447161, 43224.0, TimeStandard.TAI), 24), new LeapSecond(new JulianDate(2447892, 43225.0, TimeStandard.TAI), 25), new LeapSecond(new JulianDate(2448257, 43226.0, TimeStandard.TAI), 26), new LeapSecond(new JulianDate(2448804, 43227.0, TimeStandard.TAI), 27), new LeapSecond(new JulianDate(2449169, 43228.0, TimeStandard.TAI), 28), new LeapSecond(new JulianDate(2449534, 43229.0, TimeStandard.TAI), 29), new LeapSecond(new JulianDate(2450083, 43230.0, TimeStandard.TAI), 30), new LeapSecond(new JulianDate(2450630, 43231.0, TimeStandard.TAI), 31), new LeapSecond(new JulianDate(2451179, 43232.0, TimeStandard.TAI), 32), new LeapSecond(new JulianDate(2453736, 43233.0, TimeStandard.TAI), 33), new LeapSecond(new JulianDate(2454832, 43234.0, TimeStandard.TAI), 34), new LeapSecond(new JulianDate(2456109, 43235.0, TimeStandard.TAI), 35), new LeapSecond(new JulianDate(2457204, 43236.0, TimeStandard.TAI), 36)];
+  return JulianDate;
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("4e", ["1a"], function(freezeObject) {
+  "use strict";
+  var TimeConstants = {
+    SECONDS_PER_MILLISECOND: 0.001,
+    SECONDS_PER_MINUTE: 60.0,
+    MINUTES_PER_HOUR: 60.0,
+    HOURS_PER_DAY: 24.0,
+    SECONDS_PER_HOUR: 3600.0,
+    MINUTES_PER_DAY: 1440.0,
+    SECONDS_PER_DAY: 86400.0,
+    DAYS_PER_JULIAN_CENTURY: 36525.0,
+    PICOSECOND: 0.000000001,
+    MODIFIED_JULIAN_DATE_DIFFERENCE: 2400000.5
+  };
+  return freezeObject(TimeConstants);
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("4f", ["1a"], function(freezeObject) {
+  "use strict";
+  var TimeStandard = {
+    UTC: 0,
+    TAI: 1
+  };
+  return freezeObject(TimeStandard);
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("5e", ["29", "15", "17", "1f", "22", "2e", "4e", "4f"], function(Cartesian3, defined, DeveloperError, JulianDate, CesiumMath, Matrix3, TimeConstants, TimeStandard) {
   "use strict";
   var Simon1994PlanetaryPositions = {};
   function computeTdbMinusTtSpice(daysSinceJ2000InTerrestrialTime) {
@@ -6706,7 +11104,266 @@ define("46", ["26", "12", "14", "1c", "1f", "2b", "47", "48"], function(Cartesia
 })();
 (function() {
 var define = $__System.amdDefine;
-define("49", ["26", "34", "1b", "12", "13", "14", "35", "1f"], function(Cartesian3, Cartographic, defaultValue, defined, defineProperties, DeveloperError, Ellipsoid, CesiumMath) {
+define("16", ["15"], function(defined) {
+  "use strict";
+  var definePropertyWorks = (function() {
+    try {
+      return 'x' in Object.defineProperty({}, 'x', {});
+    } catch (e) {
+      return false;
+    }
+  })();
+  var defineProperties = Object.defineProperties;
+  if (!definePropertyWorks || !defined(defineProperties)) {
+    defineProperties = function(o) {
+      return o;
+    };
+  }
+  return defineProperties;
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("38", ["29", "37", "1e", "15", "16", "17", "1a", "22", "5f"], function(Cartesian3, Cartographic, defaultValue, defined, defineProperties, DeveloperError, freezeObject, CesiumMath, scaleToGeodeticSurface) {
+  "use strict";
+  function initialize(ellipsoid, x, y, z) {
+    x = defaultValue(x, 0.0);
+    y = defaultValue(y, 0.0);
+    z = defaultValue(z, 0.0);
+    if (x < 0.0 || y < 0.0 || z < 0.0) {
+      throw new DeveloperError('All radii components must be greater than or equal to zero.');
+    }
+    ellipsoid._radii = new Cartesian3(x, y, z);
+    ellipsoid._radiiSquared = new Cartesian3(x * x, y * y, z * z);
+    ellipsoid._radiiToTheFourth = new Cartesian3(x * x * x * x, y * y * y * y, z * z * z * z);
+    ellipsoid._oneOverRadii = new Cartesian3(x === 0.0 ? 0.0 : 1.0 / x, y === 0.0 ? 0.0 : 1.0 / y, z === 0.0 ? 0.0 : 1.0 / z);
+    ellipsoid._oneOverRadiiSquared = new Cartesian3(x === 0.0 ? 0.0 : 1.0 / (x * x), y === 0.0 ? 0.0 : 1.0 / (y * y), z === 0.0 ? 0.0 : 1.0 / (z * z));
+    ellipsoid._minimumRadius = Math.min(x, y, z);
+    ellipsoid._maximumRadius = Math.max(x, y, z);
+    ellipsoid._centerToleranceSquared = CesiumMath.EPSILON1;
+  }
+  function Ellipsoid(x, y, z) {
+    this._radii = undefined;
+    this._radiiSquared = undefined;
+    this._radiiToTheFourth = undefined;
+    this._oneOverRadii = undefined;
+    this._oneOverRadiiSquared = undefined;
+    this._minimumRadius = undefined;
+    this._maximumRadius = undefined;
+    this._centerToleranceSquared = undefined;
+    initialize(this, x, y, z);
+  }
+  defineProperties(Ellipsoid.prototype, {
+    radii: {get: function() {
+        return this._radii;
+      }},
+    radiiSquared: {get: function() {
+        return this._radiiSquared;
+      }},
+    radiiToTheFourth: {get: function() {
+        return this._radiiToTheFourth;
+      }},
+    oneOverRadii: {get: function() {
+        return this._oneOverRadii;
+      }},
+    oneOverRadiiSquared: {get: function() {
+        return this._oneOverRadiiSquared;
+      }},
+    minimumRadius: {get: function() {
+        return this._minimumRadius;
+      }},
+    maximumRadius: {get: function() {
+        return this._maximumRadius;
+      }}
+  });
+  Ellipsoid.clone = function(ellipsoid, result) {
+    if (!defined(ellipsoid)) {
+      return undefined;
+    }
+    var radii = ellipsoid._radii;
+    if (!defined(result)) {
+      return new Ellipsoid(radii.x, radii.y, radii.z);
+    }
+    Cartesian3.clone(radii, result._radii);
+    Cartesian3.clone(ellipsoid._radiiSquared, result._radiiSquared);
+    Cartesian3.clone(ellipsoid._radiiToTheFourth, result._radiiToTheFourth);
+    Cartesian3.clone(ellipsoid._oneOverRadii, result._oneOverRadii);
+    Cartesian3.clone(ellipsoid._oneOverRadiiSquared, result._oneOverRadiiSquared);
+    result._minimumRadius = ellipsoid._minimumRadius;
+    result._maximumRadius = ellipsoid._maximumRadius;
+    result._centerToleranceSquared = ellipsoid._centerToleranceSquared;
+    return result;
+  };
+  Ellipsoid.fromCartesian3 = function(cartesian, result) {
+    if (!defined(result)) {
+      result = new Ellipsoid();
+    }
+    if (!defined(cartesian)) {
+      return result;
+    }
+    initialize(result, cartesian.x, cartesian.y, cartesian.z);
+    return result;
+  };
+  Ellipsoid.WGS84 = freezeObject(new Ellipsoid(6378137.0, 6378137.0, 6356752.3142451793));
+  Ellipsoid.UNIT_SPHERE = freezeObject(new Ellipsoid(1.0, 1.0, 1.0));
+  Ellipsoid.MOON = freezeObject(new Ellipsoid(CesiumMath.LUNAR_RADIUS, CesiumMath.LUNAR_RADIUS, CesiumMath.LUNAR_RADIUS));
+  Ellipsoid.prototype.clone = function(result) {
+    return Ellipsoid.clone(this, result);
+  };
+  Ellipsoid.packedLength = Cartesian3.packedLength;
+  Ellipsoid.pack = function(value, array, startingIndex) {
+    if (!defined(value)) {
+      throw new DeveloperError('value is required');
+    }
+    if (!defined(array)) {
+      throw new DeveloperError('array is required');
+    }
+    startingIndex = defaultValue(startingIndex, 0);
+    Cartesian3.pack(value._radii, array, startingIndex);
+  };
+  Ellipsoid.unpack = function(array, startingIndex, result) {
+    if (!defined(array)) {
+      throw new DeveloperError('array is required');
+    }
+    startingIndex = defaultValue(startingIndex, 0);
+    var radii = Cartesian3.unpack(array, startingIndex);
+    return Ellipsoid.fromCartesian3(radii, result);
+  };
+  Ellipsoid.prototype.geocentricSurfaceNormal = Cartesian3.normalize;
+  Ellipsoid.prototype.geodeticSurfaceNormalCartographic = function(cartographic, result) {
+    if (!defined(cartographic)) {
+      throw new DeveloperError('cartographic is required.');
+    }
+    var longitude = cartographic.longitude;
+    var latitude = cartographic.latitude;
+    var cosLatitude = Math.cos(latitude);
+    var x = cosLatitude * Math.cos(longitude);
+    var y = cosLatitude * Math.sin(longitude);
+    var z = Math.sin(latitude);
+    if (!defined(result)) {
+      result = new Cartesian3();
+    }
+    result.x = x;
+    result.y = y;
+    result.z = z;
+    return Cartesian3.normalize(result, result);
+  };
+  Ellipsoid.prototype.geodeticSurfaceNormal = function(cartesian, result) {
+    if (!defined(result)) {
+      result = new Cartesian3();
+    }
+    result = Cartesian3.multiplyComponents(cartesian, this._oneOverRadiiSquared, result);
+    return Cartesian3.normalize(result, result);
+  };
+  var cartographicToCartesianNormal = new Cartesian3();
+  var cartographicToCartesianK = new Cartesian3();
+  Ellipsoid.prototype.cartographicToCartesian = function(cartographic, result) {
+    var n = cartographicToCartesianNormal;
+    var k = cartographicToCartesianK;
+    this.geodeticSurfaceNormalCartographic(cartographic, n);
+    Cartesian3.multiplyComponents(this._radiiSquared, n, k);
+    var gamma = Math.sqrt(Cartesian3.dot(n, k));
+    Cartesian3.divideByScalar(k, gamma, k);
+    Cartesian3.multiplyByScalar(n, cartographic.height, n);
+    if (!defined(result)) {
+      result = new Cartesian3();
+    }
+    return Cartesian3.add(k, n, result);
+  };
+  Ellipsoid.prototype.cartographicArrayToCartesianArray = function(cartographics, result) {
+    if (!defined(cartographics)) {
+      throw new DeveloperError('cartographics is required.');
+    }
+    var length = cartographics.length;
+    if (!defined(result)) {
+      result = new Array(length);
+    } else {
+      result.length = length;
+    }
+    for (var i = 0; i < length; i++) {
+      result[i] = this.cartographicToCartesian(cartographics[i], result[i]);
+    }
+    return result;
+  };
+  var cartesianToCartographicN = new Cartesian3();
+  var cartesianToCartographicP = new Cartesian3();
+  var cartesianToCartographicH = new Cartesian3();
+  Ellipsoid.prototype.cartesianToCartographic = function(cartesian, result) {
+    var p = this.scaleToGeodeticSurface(cartesian, cartesianToCartographicP);
+    if (!defined(p)) {
+      return undefined;
+    }
+    var n = this.geodeticSurfaceNormal(p, cartesianToCartographicN);
+    var h = Cartesian3.subtract(cartesian, p, cartesianToCartographicH);
+    var longitude = Math.atan2(n.y, n.x);
+    var latitude = Math.asin(n.z);
+    var height = CesiumMath.sign(Cartesian3.dot(h, cartesian)) * Cartesian3.magnitude(h);
+    if (!defined(result)) {
+      return new Cartographic(longitude, latitude, height);
+    }
+    result.longitude = longitude;
+    result.latitude = latitude;
+    result.height = height;
+    return result;
+  };
+  Ellipsoid.prototype.cartesianArrayToCartographicArray = function(cartesians, result) {
+    if (!defined(cartesians)) {
+      throw new DeveloperError('cartesians is required.');
+    }
+    var length = cartesians.length;
+    if (!defined(result)) {
+      result = new Array(length);
+    } else {
+      result.length = length;
+    }
+    for (var i = 0; i < length; ++i) {
+      result[i] = this.cartesianToCartographic(cartesians[i], result[i]);
+    }
+    return result;
+  };
+  Ellipsoid.prototype.scaleToGeodeticSurface = function(cartesian, result) {
+    return scaleToGeodeticSurface(cartesian, this._oneOverRadii, this._oneOverRadiiSquared, this._centerToleranceSquared, result);
+  };
+  Ellipsoid.prototype.scaleToGeocentricSurface = function(cartesian, result) {
+    if (!defined(cartesian)) {
+      throw new DeveloperError('cartesian is required.');
+    }
+    if (!defined(result)) {
+      result = new Cartesian3();
+    }
+    var positionX = cartesian.x;
+    var positionY = cartesian.y;
+    var positionZ = cartesian.z;
+    var oneOverRadiiSquared = this._oneOverRadiiSquared;
+    var beta = 1.0 / Math.sqrt((positionX * positionX) * oneOverRadiiSquared.x + (positionY * positionY) * oneOverRadiiSquared.y + (positionZ * positionZ) * oneOverRadiiSquared.z);
+    return Cartesian3.multiplyByScalar(cartesian, beta, result);
+  };
+  Ellipsoid.prototype.transformPositionToScaledSpace = function(position, result) {
+    if (!defined(result)) {
+      result = new Cartesian3();
+    }
+    return Cartesian3.multiplyComponents(position, this._oneOverRadii, result);
+  };
+  Ellipsoid.prototype.transformPositionFromScaledSpace = function(position, result) {
+    if (!defined(result)) {
+      result = new Cartesian3();
+    }
+    return Cartesian3.multiplyComponents(position, this._radii, result);
+  };
+  Ellipsoid.prototype.equals = function(right) {
+    return (this === right) || (defined(right) && Cartesian3.equals(this._radii, right._radii));
+  };
+  Ellipsoid.prototype.toString = function() {
+    return this._radii.toString();
+  };
+  return Ellipsoid;
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("60", ["29", "37", "1e", "15", "16", "17", "38", "22"], function(Cartesian3, Cartographic, defaultValue, defined, defineProperties, DeveloperError, Ellipsoid, CesiumMath) {
   "use strict";
   function setConstants(ellipsoidGeodesic) {
     var uSquared = ellipsoidGeodesic._uSquared;
@@ -6934,7 +11591,191 @@ define("49", ["26", "34", "1b", "12", "13", "14", "35", "1f"], function(Cartesia
 })();
 (function() {
 var define = $__System.amdDefine;
-define("4a", ["14", "4b"], function(DeveloperError, QuadraticRealPolynomial) {
+define("5f", ["29", "15", "17", "22"], function(Cartesian3, defined, DeveloperError, CesiumMath) {
+  "use strict";
+  var scaleToGeodeticSurfaceIntersection = new Cartesian3();
+  var scaleToGeodeticSurfaceGradient = new Cartesian3();
+  function scaleToGeodeticSurface(cartesian, oneOverRadii, oneOverRadiiSquared, centerToleranceSquared, result) {
+    if (!defined(cartesian)) {
+      throw new DeveloperError('cartesian is required.');
+    }
+    if (!defined(oneOverRadii)) {
+      throw new DeveloperError('oneOverRadii is required.');
+    }
+    if (!defined(oneOverRadiiSquared)) {
+      throw new DeveloperError('oneOverRadiiSquared is required.');
+    }
+    if (!defined(centerToleranceSquared)) {
+      throw new DeveloperError('centerToleranceSquared is required.');
+    }
+    var positionX = cartesian.x;
+    var positionY = cartesian.y;
+    var positionZ = cartesian.z;
+    var oneOverRadiiX = oneOverRadii.x;
+    var oneOverRadiiY = oneOverRadii.y;
+    var oneOverRadiiZ = oneOverRadii.z;
+    var x2 = positionX * positionX * oneOverRadiiX * oneOverRadiiX;
+    var y2 = positionY * positionY * oneOverRadiiY * oneOverRadiiY;
+    var z2 = positionZ * positionZ * oneOverRadiiZ * oneOverRadiiZ;
+    var squaredNorm = x2 + y2 + z2;
+    var ratio = Math.sqrt(1.0 / squaredNorm);
+    var intersection = Cartesian3.multiplyByScalar(cartesian, ratio, scaleToGeodeticSurfaceIntersection);
+    if (squaredNorm < centerToleranceSquared) {
+      return !isFinite(ratio) ? undefined : Cartesian3.clone(intersection, result);
+    }
+    var oneOverRadiiSquaredX = oneOverRadiiSquared.x;
+    var oneOverRadiiSquaredY = oneOverRadiiSquared.y;
+    var oneOverRadiiSquaredZ = oneOverRadiiSquared.z;
+    var gradient = scaleToGeodeticSurfaceGradient;
+    gradient.x = intersection.x * oneOverRadiiSquaredX * 2.0;
+    gradient.y = intersection.y * oneOverRadiiSquaredY * 2.0;
+    gradient.z = intersection.z * oneOverRadiiSquaredZ * 2.0;
+    var lambda = (1.0 - ratio) * Cartesian3.magnitude(cartesian) / (0.5 * Cartesian3.magnitude(gradient));
+    var correction = 0.0;
+    var func;
+    var denominator;
+    var xMultiplier;
+    var yMultiplier;
+    var zMultiplier;
+    var xMultiplier2;
+    var yMultiplier2;
+    var zMultiplier2;
+    var xMultiplier3;
+    var yMultiplier3;
+    var zMultiplier3;
+    do {
+      lambda -= correction;
+      xMultiplier = 1.0 / (1.0 + lambda * oneOverRadiiSquaredX);
+      yMultiplier = 1.0 / (1.0 + lambda * oneOverRadiiSquaredY);
+      zMultiplier = 1.0 / (1.0 + lambda * oneOverRadiiSquaredZ);
+      xMultiplier2 = xMultiplier * xMultiplier;
+      yMultiplier2 = yMultiplier * yMultiplier;
+      zMultiplier2 = zMultiplier * zMultiplier;
+      xMultiplier3 = xMultiplier2 * xMultiplier;
+      yMultiplier3 = yMultiplier2 * yMultiplier;
+      zMultiplier3 = zMultiplier2 * zMultiplier;
+      func = x2 * xMultiplier2 + y2 * yMultiplier2 + z2 * zMultiplier2 - 1.0;
+      denominator = x2 * xMultiplier3 * oneOverRadiiSquaredX + y2 * yMultiplier3 * oneOverRadiiSquaredY + z2 * zMultiplier3 * oneOverRadiiSquaredZ;
+      var derivative = -2.0 * denominator;
+      correction = func / derivative;
+    } while (Math.abs(func) > CesiumMath.EPSILON12);
+    if (!defined(result)) {
+      return new Cartesian3(positionX * xMultiplier, positionY * yMultiplier, positionZ * zMultiplier);
+    }
+    result.x = positionX * xMultiplier;
+    result.y = positionY * yMultiplier;
+    result.z = positionZ * zMultiplier;
+    return result;
+  }
+  return scaleToGeodeticSurface;
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("37", ["29", "1e", "15", "17", "1a", "22", "5f"], function(Cartesian3, defaultValue, defined, DeveloperError, freezeObject, CesiumMath, scaleToGeodeticSurface) {
+  "use strict";
+  function Cartographic(longitude, latitude, height) {
+    this.longitude = defaultValue(longitude, 0.0);
+    this.latitude = defaultValue(latitude, 0.0);
+    this.height = defaultValue(height, 0.0);
+  }
+  Cartographic.fromRadians = function(longitude, latitude, height, result) {
+    if (!defined(longitude)) {
+      throw new DeveloperError('longitude is required.');
+    }
+    if (!defined(latitude)) {
+      throw new DeveloperError('latitude is required.');
+    }
+    height = defaultValue(height, 0.0);
+    if (!defined(result)) {
+      return new Cartographic(longitude, latitude, height);
+    }
+    result.longitude = longitude;
+    result.latitude = latitude;
+    result.height = height;
+    return result;
+  };
+  Cartographic.fromDegrees = function(longitude, latitude, height, result) {
+    if (!defined(longitude)) {
+      throw new DeveloperError('longitude is required.');
+    }
+    if (!defined(latitude)) {
+      throw new DeveloperError('latitude is required.');
+    }
+    longitude = CesiumMath.toRadians(longitude);
+    latitude = CesiumMath.toRadians(latitude);
+    return Cartographic.fromRadians(longitude, latitude, height, result);
+  };
+  var cartesianToCartographicN = new Cartesian3();
+  var cartesianToCartographicP = new Cartesian3();
+  var cartesianToCartographicH = new Cartesian3();
+  var wgs84OneOverRadii = new Cartesian3(1.0 / 6378137.0, 1.0 / 6378137.0, 1.0 / 6356752.3142451793);
+  var wgs84OneOverRadiiSquared = new Cartesian3(1.0 / (6378137.0 * 6378137.0), 1.0 / (6378137.0 * 6378137.0), 1.0 / (6356752.3142451793 * 6356752.3142451793));
+  var wgs84CenterToleranceSquared = CesiumMath.EPSILON1;
+  Cartographic.fromCartesian = function(cartesian, ellipsoid, result) {
+    var oneOverRadii = defined(ellipsoid) ? ellipsoid.oneOverRadii : wgs84OneOverRadii;
+    var oneOverRadiiSquared = defined(ellipsoid) ? ellipsoid.oneOverRadiiSquared : wgs84OneOverRadiiSquared;
+    var centerToleranceSquared = defined(ellipsoid) ? ellipsoid._centerToleranceSquared : wgs84CenterToleranceSquared;
+    var p = scaleToGeodeticSurface(cartesian, oneOverRadii, oneOverRadiiSquared, centerToleranceSquared, cartesianToCartographicP);
+    if (!defined(p)) {
+      return undefined;
+    }
+    var n = Cartesian3.multiplyComponents(cartesian, oneOverRadiiSquared, cartesianToCartographicN);
+    n = Cartesian3.normalize(n, n);
+    var h = Cartesian3.subtract(cartesian, p, cartesianToCartographicH);
+    var longitude = Math.atan2(n.y, n.x);
+    var latitude = Math.asin(n.z);
+    var height = CesiumMath.sign(Cartesian3.dot(h, cartesian)) * Cartesian3.magnitude(h);
+    if (!defined(result)) {
+      return new Cartographic(longitude, latitude, height);
+    }
+    result.longitude = longitude;
+    result.latitude = latitude;
+    result.height = height;
+    return result;
+  };
+  Cartographic.clone = function(cartographic, result) {
+    if (!defined(cartographic)) {
+      return undefined;
+    }
+    if (!defined(result)) {
+      return new Cartographic(cartographic.longitude, cartographic.latitude, cartographic.height);
+    }
+    result.longitude = cartographic.longitude;
+    result.latitude = cartographic.latitude;
+    result.height = cartographic.height;
+    return result;
+  };
+  Cartographic.equals = function(left, right) {
+    return (left === right) || ((defined(left)) && (defined(right)) && (left.longitude === right.longitude) && (left.latitude === right.latitude) && (left.height === right.height));
+  };
+  Cartographic.equalsEpsilon = function(left, right, epsilon) {
+    if (typeof epsilon !== 'number') {
+      throw new DeveloperError('epsilon is required and must be a number.');
+    }
+    return (left === right) || ((defined(left)) && (defined(right)) && (Math.abs(left.longitude - right.longitude) <= epsilon) && (Math.abs(left.latitude - right.latitude) <= epsilon) && (Math.abs(left.height - right.height) <= epsilon));
+  };
+  Cartographic.ZERO = freezeObject(new Cartographic(0.0, 0.0, 0.0));
+  Cartographic.prototype.clone = function(result) {
+    return Cartographic.clone(this, result);
+  };
+  Cartographic.prototype.equals = function(right) {
+    return Cartographic.equals(this, right);
+  };
+  Cartographic.prototype.equalsEpsilon = function(right, epsilon) {
+    return Cartographic.equalsEpsilon(this, right, epsilon);
+  };
+  Cartographic.prototype.toString = function() {
+    return '(' + this.longitude + ', ' + this.latitude + ', ' + this.height + ')';
+  };
+  return Cartographic;
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("61", ["17", "62"], function(DeveloperError, QuadraticRealPolynomial) {
   "use strict";
   var CubicRealPolynomial = {};
   CubicRealPolynomial.computeDiscriminant = function(a, b, c, d) {
@@ -7101,7 +11942,7 @@ define("4a", ["14", "4b"], function(DeveloperError, QuadraticRealPolynomial) {
 })();
 (function() {
 var define = $__System.amdDefine;
-define("4b", ["14", "1f"], function(DeveloperError, CesiumMath) {
+define("62", ["17", "22"], function(DeveloperError, CesiumMath) {
   "use strict";
   var QuadraticRealPolynomial = {};
   QuadraticRealPolynomial.computeDiscriminant = function(a, b, c) {
@@ -7182,7 +12023,7 @@ define("4b", ["14", "1f"], function(DeveloperError, CesiumMath) {
 })();
 (function() {
 var define = $__System.amdDefine;
-define("4c", ["4a", "14", "1f", "4b"], function(CubicRealPolynomial, DeveloperError, CesiumMath, QuadraticRealPolynomial) {
+define("63", ["61", "17", "22", "62"], function(CubicRealPolynomial, DeveloperError, CesiumMath, QuadraticRealPolynomial) {
   "use strict";
   var QuarticRealPolynomial = {};
   QuarticRealPolynomial.computeDiscriminant = function(a, b, c, d, e) {
@@ -7428,7 +12269,7 @@ define("4c", ["4a", "14", "1f", "4b"], function(CubicRealPolynomial, DeveloperEr
 })();
 (function() {
 var define = $__System.amdDefine;
-define("4d", ["26", "1b", "12", "14"], function(Cartesian3, defaultValue, defined, DeveloperError) {
+define("64", ["29", "1e", "15", "17"], function(Cartesian3, defaultValue, defined, DeveloperError) {
   "use strict";
   function Ray(origin, direction) {
     direction = Cartesian3.clone(defaultValue(direction, Cartesian3.ZERO));
@@ -7457,7 +12298,7 @@ define("4d", ["26", "1b", "12", "14"], function(Cartesian3, defaultValue, define
 })();
 (function() {
 var define = $__System.amdDefine;
-define("4e", ["26", "34", "1b", "12", "14", "1f", "2b", "4b", "4c", "4d"], function(Cartesian3, Cartographic, defaultValue, defined, DeveloperError, CesiumMath, Matrix3, QuadraticRealPolynomial, QuarticRealPolynomial, Ray) {
+define("65", ["29", "37", "1e", "15", "17", "22", "2e", "62", "63", "64"], function(Cartesian3, Cartographic, defaultValue, defined, DeveloperError, CesiumMath, Matrix3, QuadraticRealPolynomial, QuarticRealPolynomial, Ray) {
   "use strict";
   var IntersectionTests = {};
   IntersectionTests.rayPlane = function(ray, plane, result) {
@@ -8007,7 +12848,7 @@ define("4e", ["26", "34", "1b", "12", "14", "1f", "2b", "4b", "4c", "4d"], funct
 })();
 (function() {
 var define = $__System.amdDefine;
-define("4f", ["12"], function(defined) {
+define("66", ["15"], function(defined) {
   "use strict";
   var isArray = Array.isArray;
   if (!defined(isArray)) {
@@ -8021,2973 +12862,7 @@ define("4f", ["12"], function(defined) {
 })();
 (function() {
 var define = $__System.amdDefine;
-define("3a", ["26", "12", "14", "17"], function(Cartesian3, defined, DeveloperError, freezeObject) {
-  "use strict";
-  function Plane(normal, distance) {
-    if (!defined(normal)) {
-      throw new DeveloperError('normal is required.');
-    }
-    if (!defined(distance)) {
-      throw new DeveloperError('distance is required.');
-    }
-    this.normal = Cartesian3.clone(normal);
-    this.distance = distance;
-  }
-  Plane.fromPointNormal = function(point, normal, result) {
-    if (!defined(point)) {
-      throw new DeveloperError('point is required.');
-    }
-    if (!defined(normal)) {
-      throw new DeveloperError('normal is required.');
-    }
-    var distance = -Cartesian3.dot(normal, point);
-    if (!defined(result)) {
-      return new Plane(normal, distance);
-    }
-    Cartesian3.clone(normal, result.normal);
-    result.distance = distance;
-    return result;
-  };
-  var scratchNormal = new Cartesian3();
-  Plane.fromCartesian4 = function(coefficients, result) {
-    if (!defined(coefficients)) {
-      throw new DeveloperError('coefficients is required.');
-    }
-    var normal = Cartesian3.fromCartesian4(coefficients, scratchNormal);
-    var distance = coefficients.w;
-    if (!defined(result)) {
-      return new Plane(normal, distance);
-    } else {
-      Cartesian3.clone(normal, result.normal);
-      result.distance = distance;
-      return result;
-    }
-  };
-  Plane.getPointDistance = function(plane, point) {
-    if (!defined(plane)) {
-      throw new DeveloperError('plane is required.');
-    }
-    if (!defined(point)) {
-      throw new DeveloperError('point is required.');
-    }
-    return Cartesian3.dot(plane.normal, point) + plane.distance;
-  };
-  Plane.ORIGIN_XY_PLANE = freezeObject(new Plane(Cartesian3.UNIT_Z, 0.0));
-  Plane.ORIGIN_YZ_PLANE = freezeObject(new Plane(Cartesian3.UNIT_X, 0.0));
-  Plane.ORIGIN_ZX_PLANE = freezeObject(new Plane(Cartesian3.UNIT_Y, 0.0));
-  return Plane;
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("50", ["26", "34", "1b", "12", "14", "35", "49", "4e", "4f", "1f", "2c", "3a"], function(Cartesian3, Cartographic, defaultValue, defined, DeveloperError, Ellipsoid, EllipsoidGeodesic, IntersectionTests, isArray, CesiumMath, Matrix4, Plane) {
-  "use strict";
-  var PolylinePipeline = {};
-  PolylinePipeline.numberOfPoints = function(p0, p1, minDistance) {
-    var distance = Cartesian3.distance(p0, p1);
-    return Math.ceil(distance / minDistance);
-  };
-  var cartoScratch = new Cartographic();
-  PolylinePipeline.extractHeights = function(positions, ellipsoid) {
-    var length = positions.length;
-    var heights = new Array(length);
-    for (var i = 0; i < length; i++) {
-      var p = positions[i];
-      heights[i] = ellipsoid.cartesianToCartographic(p, cartoScratch).height;
-    }
-    return heights;
-  };
-  var wrapLongitudeInversMatrix = new Matrix4();
-  var wrapLongitudeOrigin = new Cartesian3();
-  var wrapLongitudeXZNormal = new Cartesian3();
-  var wrapLongitudeXZPlane = new Plane(Cartesian3.ZERO, 0.0);
-  var wrapLongitudeYZNormal = new Cartesian3();
-  var wrapLongitudeYZPlane = new Plane(Cartesian3.ZERO, 0.0);
-  var wrapLongitudeIntersection = new Cartesian3();
-  var wrapLongitudeOffset = new Cartesian3();
-  var subdivideHeightsScratchArray = [];
-  function subdivideHeights(numPoints, h0, h1) {
-    var heights = subdivideHeightsScratchArray;
-    heights.length = numPoints;
-    var i;
-    if (h0 === h1) {
-      for (i = 0; i < numPoints; i++) {
-        heights[i] = h0;
-      }
-      return heights;
-    }
-    var dHeight = h1 - h0;
-    var heightPerVertex = dHeight / numPoints;
-    for (i = 0; i < numPoints; i++) {
-      var h = h0 + i * heightPerVertex;
-      heights[i] = h;
-    }
-    return heights;
-  }
-  var carto1 = new Cartographic();
-  var carto2 = new Cartographic();
-  var cartesian = new Cartesian3();
-  var scaleFirst = new Cartesian3();
-  var scaleLast = new Cartesian3();
-  var ellipsoidGeodesic = new EllipsoidGeodesic();
-  function generateCartesianArc(p0, p1, minDistance, ellipsoid, h0, h1, array, offset) {
-    var first = ellipsoid.scaleToGeodeticSurface(p0, scaleFirst);
-    var last = ellipsoid.scaleToGeodeticSurface(p1, scaleLast);
-    var numPoints = PolylinePipeline.numberOfPoints(p0, p1, minDistance);
-    var start = ellipsoid.cartesianToCartographic(first, carto1);
-    var end = ellipsoid.cartesianToCartographic(last, carto2);
-    var heights = subdivideHeights(numPoints, h0, h1);
-    ellipsoidGeodesic.setEndPoints(start, end);
-    var surfaceDistanceBetweenPoints = ellipsoidGeodesic.surfaceDistance / numPoints;
-    var index = offset;
-    start.height = h0;
-    var cart = ellipsoid.cartographicToCartesian(start, cartesian);
-    Cartesian3.pack(cart, array, index);
-    index += 3;
-    for (var i = 1; i < numPoints; i++) {
-      var carto = ellipsoidGeodesic.interpolateUsingSurfaceDistance(i * surfaceDistanceBetweenPoints, carto2);
-      carto.height = heights[i];
-      cart = ellipsoid.cartographicToCartesian(carto, cartesian);
-      Cartesian3.pack(cart, array, index);
-      index += 3;
-    }
-    return index;
-  }
-  PolylinePipeline.wrapLongitude = function(positions, modelMatrix) {
-    var cartesians = [];
-    var segments = [];
-    if (defined(positions) && positions.length > 0) {
-      modelMatrix = defaultValue(modelMatrix, Matrix4.IDENTITY);
-      var inverseModelMatrix = Matrix4.inverseTransformation(modelMatrix, wrapLongitudeInversMatrix);
-      var origin = Matrix4.multiplyByPoint(inverseModelMatrix, Cartesian3.ZERO, wrapLongitudeOrigin);
-      var xzNormal = Matrix4.multiplyByPointAsVector(inverseModelMatrix, Cartesian3.UNIT_Y, wrapLongitudeXZNormal);
-      var xzPlane = Plane.fromPointNormal(origin, xzNormal, wrapLongitudeXZPlane);
-      var yzNormal = Matrix4.multiplyByPointAsVector(inverseModelMatrix, Cartesian3.UNIT_X, wrapLongitudeYZNormal);
-      var yzPlane = Plane.fromPointNormal(origin, yzNormal, wrapLongitudeYZPlane);
-      var count = 1;
-      cartesians.push(Cartesian3.clone(positions[0]));
-      var prev = cartesians[0];
-      var length = positions.length;
-      for (var i = 1; i < length; ++i) {
-        var cur = positions[i];
-        if (Plane.getPointDistance(yzPlane, prev) < 0.0 || Plane.getPointDistance(yzPlane, cur) < 0.0) {
-          var intersection = IntersectionTests.lineSegmentPlane(prev, cur, xzPlane, wrapLongitudeIntersection);
-          if (defined(intersection)) {
-            var offset = Cartesian3.multiplyByScalar(xzNormal, 5.0e-9, wrapLongitudeOffset);
-            if (Plane.getPointDistance(xzPlane, prev) < 0.0) {
-              Cartesian3.negate(offset, offset);
-            }
-            cartesians.push(Cartesian3.add(intersection, offset, new Cartesian3()));
-            segments.push(count + 1);
-            Cartesian3.negate(offset, offset);
-            cartesians.push(Cartesian3.add(intersection, offset, new Cartesian3()));
-            count = 1;
-          }
-        }
-        cartesians.push(Cartesian3.clone(positions[i]));
-        count++;
-        prev = cur;
-      }
-      segments.push(count);
-    }
-    return {
-      positions: cartesians,
-      lengths: segments
-    };
-  };
-  var removeDuplicatesEpsilon = CesiumMath.EPSILON10;
-  PolylinePipeline.removeDuplicates = function(positions) {
-    if (!defined(positions)) {
-      throw new DeveloperError('positions is required.');
-    }
-    var length = positions.length;
-    if (length < 2) {
-      return positions;
-    }
-    var i;
-    var v0;
-    var v1;
-    for (i = 1; i < length; ++i) {
-      v0 = positions[i - 1];
-      v1 = positions[i];
-      if (Cartesian3.equalsEpsilon(v0, v1, removeDuplicatesEpsilon)) {
-        break;
-      }
-    }
-    if (i === length) {
-      return positions;
-    }
-    var cleanedPositions = positions.slice(0, i);
-    for (; i < length; ++i) {
-      v1 = positions[i];
-      if (!Cartesian3.equalsEpsilon(v0, v1, removeDuplicatesEpsilon)) {
-        cleanedPositions.push(Cartesian3.clone(v1));
-        v0 = v1;
-      }
-    }
-    return cleanedPositions;
-  };
-  PolylinePipeline.generateArc = function(options) {
-    if (!defined(options)) {
-      options = {};
-    }
-    var positions = options.positions;
-    if (!defined(positions)) {
-      throw new DeveloperError('options.positions is required.');
-    }
-    var length = positions.length;
-    var ellipsoid = defaultValue(options.ellipsoid, Ellipsoid.WGS84);
-    var height = defaultValue(options.height, 0);
-    if (length < 1) {
-      return [];
-    } else if (length === 1) {
-      var p = ellipsoid.scaleToGeodeticSurface(positions[0], scaleFirst);
-      if (height !== 0) {
-        var n = ellipsoid.geodeticSurfaceNormal(p, cartesian);
-        Cartesian3.multiplyByScalar(n, height, n);
-        Cartesian3.add(p, n, p);
-      }
-      return [p.x, p.y, p.z];
-    }
-    var minDistance = options.minDistance;
-    if (!defined(minDistance)) {
-      var granularity = defaultValue(options.granularity, CesiumMath.RADIANS_PER_DEGREE);
-      minDistance = CesiumMath.chordLength(granularity, ellipsoid.maximumRadius);
-    }
-    var numPoints = 0;
-    var i;
-    for (i = 0; i < length - 1; i++) {
-      numPoints += PolylinePipeline.numberOfPoints(positions[i], positions[i + 1], minDistance);
-    }
-    var arrayLength = (numPoints + 1) * 3;
-    var newPositions = new Array(arrayLength);
-    var offset = 0;
-    var hasHeightArray = isArray(height);
-    for (i = 0; i < length - 1; i++) {
-      var p0 = positions[i];
-      var p1 = positions[i + 1];
-      var h0 = hasHeightArray ? height[i] : height;
-      var h1 = hasHeightArray ? height[i + 1] : height;
-      offset = generateCartesianArc(p0, p1, minDistance, ellipsoid, h0, h1, newPositions, offset);
-    }
-    subdivideHeightsScratchArray.length = 0;
-    var lastPoint = positions[length - 1];
-    var carto = ellipsoid.cartesianToCartographic(lastPoint, carto1);
-    carto.height = hasHeightArray ? height[length - 1] : height;
-    var cart = ellipsoid.cartographicToCartesian(carto, cartesian);
-    Cartesian3.pack(cart, newPositions, arrayLength - 3);
-    return newPositions;
-  };
-  PolylinePipeline.generateCartesianArc = function(options) {
-    var numberArray = PolylinePipeline.generateArc(options);
-    var size = numberArray.length / 3;
-    var newPositions = new Array(size);
-    for (var i = 0; i < size; i++) {
-      newPositions[i] = Cartesian3.unpack(numberArray, i * 3);
-    }
-    return newPositions;
-  };
-  return PolylinePipeline;
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("3c", ["1b", "12", "14", "17", "1f"], function(defaultValue, defined, DeveloperError, freezeObject, CesiumMath) {
-  "use strict";
-  function Cartesian2(x, y) {
-    this.x = defaultValue(x, 0.0);
-    this.y = defaultValue(y, 0.0);
-  }
-  Cartesian2.fromElements = function(x, y, result) {
-    if (!defined(result)) {
-      return new Cartesian2(x, y);
-    }
-    result.x = x;
-    result.y = y;
-    return result;
-  };
-  Cartesian2.clone = function(cartesian, result) {
-    if (!defined(cartesian)) {
-      return undefined;
-    }
-    if (!defined(result)) {
-      return new Cartesian2(cartesian.x, cartesian.y);
-    }
-    result.x = cartesian.x;
-    result.y = cartesian.y;
-    return result;
-  };
-  Cartesian2.fromCartesian3 = Cartesian2.clone;
-  Cartesian2.fromCartesian4 = Cartesian2.clone;
-  Cartesian2.packedLength = 2;
-  Cartesian2.pack = function(value, array, startingIndex) {
-    if (!defined(value)) {
-      throw new DeveloperError('value is required');
-    }
-    if (!defined(array)) {
-      throw new DeveloperError('array is required');
-    }
-    startingIndex = defaultValue(startingIndex, 0);
-    array[startingIndex++] = value.x;
-    array[startingIndex] = value.y;
-  };
-  Cartesian2.unpack = function(array, startingIndex, result) {
-    if (!defined(array)) {
-      throw new DeveloperError('array is required');
-    }
-    startingIndex = defaultValue(startingIndex, 0);
-    if (!defined(result)) {
-      result = new Cartesian2();
-    }
-    result.x = array[startingIndex++];
-    result.y = array[startingIndex];
-    return result;
-  };
-  Cartesian2.fromArray = Cartesian2.unpack;
-  Cartesian2.maximumComponent = function(cartesian) {
-    if (!defined(cartesian)) {
-      throw new DeveloperError('cartesian is required');
-    }
-    return Math.max(cartesian.x, cartesian.y);
-  };
-  Cartesian2.minimumComponent = function(cartesian) {
-    if (!defined(cartesian)) {
-      throw new DeveloperError('cartesian is required');
-    }
-    return Math.min(cartesian.x, cartesian.y);
-  };
-  Cartesian2.minimumByComponent = function(first, second, result) {
-    if (!defined(first)) {
-      throw new DeveloperError('first is required.');
-    }
-    if (!defined(second)) {
-      throw new DeveloperError('second is required.');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required.');
-    }
-    result.x = Math.min(first.x, second.x);
-    result.y = Math.min(first.y, second.y);
-    return result;
-  };
-  Cartesian2.maximumByComponent = function(first, second, result) {
-    if (!defined(first)) {
-      throw new DeveloperError('first is required.');
-    }
-    if (!defined(second)) {
-      throw new DeveloperError('second is required.');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required.');
-    }
-    result.x = Math.max(first.x, second.x);
-    result.y = Math.max(first.y, second.y);
-    return result;
-  };
-  Cartesian2.magnitudeSquared = function(cartesian) {
-    if (!defined(cartesian)) {
-      throw new DeveloperError('cartesian is required');
-    }
-    return cartesian.x * cartesian.x + cartesian.y * cartesian.y;
-  };
-  Cartesian2.magnitude = function(cartesian) {
-    return Math.sqrt(Cartesian2.magnitudeSquared(cartesian));
-  };
-  var distanceScratch = new Cartesian2();
-  Cartesian2.distance = function(left, right) {
-    if (!defined(left) || !defined(right)) {
-      throw new DeveloperError('left and right are required.');
-    }
-    Cartesian2.subtract(left, right, distanceScratch);
-    return Cartesian2.magnitude(distanceScratch);
-  };
-  Cartesian2.distanceSquared = function(left, right) {
-    if (!defined(left) || !defined(right)) {
-      throw new DeveloperError('left and right are required.');
-    }
-    Cartesian2.subtract(left, right, distanceScratch);
-    return Cartesian2.magnitudeSquared(distanceScratch);
-  };
-  Cartesian2.normalize = function(cartesian, result) {
-    if (!defined(cartesian)) {
-      throw new DeveloperError('cartesian is required');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    var magnitude = Cartesian2.magnitude(cartesian);
-    result.x = cartesian.x / magnitude;
-    result.y = cartesian.y / magnitude;
-    return result;
-  };
-  Cartesian2.dot = function(left, right) {
-    if (!defined(left)) {
-      throw new DeveloperError('left is required');
-    }
-    if (!defined(right)) {
-      throw new DeveloperError('right is required');
-    }
-    return left.x * right.x + left.y * right.y;
-  };
-  Cartesian2.multiplyComponents = function(left, right, result) {
-    if (!defined(left)) {
-      throw new DeveloperError('left is required');
-    }
-    if (!defined(right)) {
-      throw new DeveloperError('right is required');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    result.x = left.x * right.x;
-    result.y = left.y * right.y;
-    return result;
-  };
-  Cartesian2.add = function(left, right, result) {
-    if (!defined(left)) {
-      throw new DeveloperError('left is required');
-    }
-    if (!defined(right)) {
-      throw new DeveloperError('right is required');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    result.x = left.x + right.x;
-    result.y = left.y + right.y;
-    return result;
-  };
-  Cartesian2.subtract = function(left, right, result) {
-    if (!defined(left)) {
-      throw new DeveloperError('left is required');
-    }
-    if (!defined(right)) {
-      throw new DeveloperError('right is required');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    result.x = left.x - right.x;
-    result.y = left.y - right.y;
-    return result;
-  };
-  Cartesian2.multiplyByScalar = function(cartesian, scalar, result) {
-    if (!defined(cartesian)) {
-      throw new DeveloperError('cartesian is required');
-    }
-    if (typeof scalar !== 'number') {
-      throw new DeveloperError('scalar is required and must be a number.');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    result.x = cartesian.x * scalar;
-    result.y = cartesian.y * scalar;
-    return result;
-  };
-  Cartesian2.divideByScalar = function(cartesian, scalar, result) {
-    if (!defined(cartesian)) {
-      throw new DeveloperError('cartesian is required');
-    }
-    if (typeof scalar !== 'number') {
-      throw new DeveloperError('scalar is required and must be a number.');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    result.x = cartesian.x / scalar;
-    result.y = cartesian.y / scalar;
-    return result;
-  };
-  Cartesian2.negate = function(cartesian, result) {
-    if (!defined(cartesian)) {
-      throw new DeveloperError('cartesian is required');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    result.x = -cartesian.x;
-    result.y = -cartesian.y;
-    return result;
-  };
-  Cartesian2.abs = function(cartesian, result) {
-    if (!defined(cartesian)) {
-      throw new DeveloperError('cartesian is required');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    result.x = Math.abs(cartesian.x);
-    result.y = Math.abs(cartesian.y);
-    return result;
-  };
-  var lerpScratch = new Cartesian2();
-  Cartesian2.lerp = function(start, end, t, result) {
-    if (!defined(start)) {
-      throw new DeveloperError('start is required.');
-    }
-    if (!defined(end)) {
-      throw new DeveloperError('end is required.');
-    }
-    if (typeof t !== 'number') {
-      throw new DeveloperError('t is required and must be a number.');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required.');
-    }
-    Cartesian2.multiplyByScalar(end, t, lerpScratch);
-    result = Cartesian2.multiplyByScalar(start, 1.0 - t, result);
-    return Cartesian2.add(lerpScratch, result, result);
-  };
-  var angleBetweenScratch = new Cartesian2();
-  var angleBetweenScratch2 = new Cartesian2();
-  Cartesian2.angleBetween = function(left, right) {
-    if (!defined(left)) {
-      throw new DeveloperError('left is required');
-    }
-    if (!defined(right)) {
-      throw new DeveloperError('right is required');
-    }
-    Cartesian2.normalize(left, angleBetweenScratch);
-    Cartesian2.normalize(right, angleBetweenScratch2);
-    return CesiumMath.acosClamped(Cartesian2.dot(angleBetweenScratch, angleBetweenScratch2));
-  };
-  var mostOrthogonalAxisScratch = new Cartesian2();
-  Cartesian2.mostOrthogonalAxis = function(cartesian, result) {
-    if (!defined(cartesian)) {
-      throw new DeveloperError('cartesian is required.');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required.');
-    }
-    var f = Cartesian2.normalize(cartesian, mostOrthogonalAxisScratch);
-    Cartesian2.abs(f, f);
-    if (f.x <= f.y) {
-      result = Cartesian2.clone(Cartesian2.UNIT_X, result);
-    } else {
-      result = Cartesian2.clone(Cartesian2.UNIT_Y, result);
-    }
-    return result;
-  };
-  Cartesian2.equals = function(left, right) {
-    return (left === right) || ((defined(left)) && (defined(right)) && (left.x === right.x) && (left.y === right.y));
-  };
-  Cartesian2.equalsArray = function(cartesian, array, offset) {
-    return cartesian.x === array[offset] && cartesian.y === array[offset + 1];
-  };
-  Cartesian2.equalsEpsilon = function(left, right, relativeEpsilon, absoluteEpsilon) {
-    return (left === right) || (defined(left) && defined(right) && CesiumMath.equalsEpsilon(left.x, right.x, relativeEpsilon, absoluteEpsilon) && CesiumMath.equalsEpsilon(left.y, right.y, relativeEpsilon, absoluteEpsilon));
-  };
-  Cartesian2.ZERO = freezeObject(new Cartesian2(0.0, 0.0));
-  Cartesian2.UNIT_X = freezeObject(new Cartesian2(1.0, 0.0));
-  Cartesian2.UNIT_Y = freezeObject(new Cartesian2(0.0, 1.0));
-  Cartesian2.prototype.clone = function(result) {
-    return Cartesian2.clone(this, result);
-  };
-  Cartesian2.prototype.equals = function(right) {
-    return Cartesian2.equals(this, right);
-  };
-  Cartesian2.prototype.equalsEpsilon = function(right, relativeEpsilon, absoluteEpsilon) {
-    return Cartesian2.equalsEpsilon(this, right, relativeEpsilon, absoluteEpsilon);
-  };
-  Cartesian2.prototype.toString = function() {
-    return '(' + this.x + ', ' + this.y + ')';
-  };
-  return Cartesian2;
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("51", ["52", "45", "1b", "12", "53", "17", "1c", "54", "55", "31", "47", "48"], function(when, binarySearch, defaultValue, defined, EarthOrientationParametersSample, freezeObject, JulianDate, LeapSecond, loadJson, RuntimeError, TimeConstants, TimeStandard) {
-  "use strict";
-  function EarthOrientationParameters(options) {
-    options = defaultValue(options, defaultValue.EMPTY_OBJECT);
-    this._dates = undefined;
-    this._samples = undefined;
-    this._dateColumn = -1;
-    this._xPoleWanderRadiansColumn = -1;
-    this._yPoleWanderRadiansColumn = -1;
-    this._ut1MinusUtcSecondsColumn = -1;
-    this._xCelestialPoleOffsetRadiansColumn = -1;
-    this._yCelestialPoleOffsetRadiansColumn = -1;
-    this._taiMinusUtcSecondsColumn = -1;
-    this._columnCount = 0;
-    this._lastIndex = -1;
-    this._downloadPromise = undefined;
-    this._dataError = undefined;
-    this._addNewLeapSeconds = defaultValue(options.addNewLeapSeconds, true);
-    if (defined(options.data)) {
-      onDataReady(this, options.data);
-    } else if (defined(options.url)) {
-      var that = this;
-      this._downloadPromise = when(loadJson(options.url), function(eopData) {
-        onDataReady(that, eopData);
-      }, function() {
-        that._dataError = 'An error occurred while retrieving the EOP data from the URL ' + options.url + '.';
-      });
-    } else {
-      onDataReady(this, {
-        'columnNames': ['dateIso8601', 'modifiedJulianDateUtc', 'xPoleWanderRadians', 'yPoleWanderRadians', 'ut1MinusUtcSeconds', 'lengthOfDayCorrectionSeconds', 'xCelestialPoleOffsetRadians', 'yCelestialPoleOffsetRadians', 'taiMinusUtcSeconds'],
-        'samples': []
-      });
-    }
-  }
-  EarthOrientationParameters.NONE = freezeObject({
-    getPromiseToLoad: function() {
-      return when();
-    },
-    compute: function(date, result) {
-      if (!defined(result)) {
-        result = new EarthOrientationParametersSample(0.0, 0.0, 0.0, 0.0, 0.0);
-      } else {
-        result.xPoleWander = 0.0;
-        result.yPoleWander = 0.0;
-        result.xPoleOffset = 0.0;
-        result.yPoleOffset = 0.0;
-        result.ut1MinusUtc = 0.0;
-      }
-      return result;
-    }
-  });
-  EarthOrientationParameters.prototype.getPromiseToLoad = function() {
-    return when(this._downloadPromise);
-  };
-  EarthOrientationParameters.prototype.compute = function(date, result) {
-    if (!defined(this._samples)) {
-      if (defined(this._dataError)) {
-        throw new RuntimeError(this._dataError);
-      }
-      return undefined;
-    }
-    if (!defined(result)) {
-      result = new EarthOrientationParametersSample(0.0, 0.0, 0.0, 0.0, 0.0);
-    }
-    if (this._samples.length === 0) {
-      result.xPoleWander = 0.0;
-      result.yPoleWander = 0.0;
-      result.xPoleOffset = 0.0;
-      result.yPoleOffset = 0.0;
-      result.ut1MinusUtc = 0.0;
-      return result;
-    }
-    var dates = this._dates;
-    var lastIndex = this._lastIndex;
-    var before = 0;
-    var after = 0;
-    if (defined(lastIndex)) {
-      var previousIndexDate = dates[lastIndex];
-      var nextIndexDate = dates[lastIndex + 1];
-      var isAfterPrevious = JulianDate.lessThanOrEquals(previousIndexDate, date);
-      var isAfterLastSample = !defined(nextIndexDate);
-      var isBeforeNext = isAfterLastSample || JulianDate.greaterThanOrEquals(nextIndexDate, date);
-      if (isAfterPrevious && isBeforeNext) {
-        before = lastIndex;
-        if (!isAfterLastSample && nextIndexDate.equals(date)) {
-          ++before;
-        }
-        after = before + 1;
-        interpolate(this, dates, this._samples, date, before, after, result);
-        return result;
-      }
-    }
-    var index = binarySearch(dates, date, JulianDate.compare, this._dateColumn);
-    if (index >= 0) {
-      if (index < dates.length - 1 && dates[index + 1].equals(date)) {
-        ++index;
-      }
-      before = index;
-      after = index;
-    } else {
-      after = ~index;
-      before = after - 1;
-      if (before < 0) {
-        before = 0;
-      }
-    }
-    this._lastIndex = before;
-    interpolate(this, dates, this._samples, date, before, after, result);
-    return result;
-  };
-  function compareLeapSecondDates(leapSecond, dateToFind) {
-    return JulianDate.compare(leapSecond.julianDate, dateToFind);
-  }
-  function onDataReady(eop, eopData) {
-    if (!defined(eopData.columnNames)) {
-      eop._dataError = 'Error in loaded EOP data: The columnNames property is required.';
-      return;
-    }
-    if (!defined(eopData.samples)) {
-      eop._dataError = 'Error in loaded EOP data: The samples property is required.';
-      return;
-    }
-    var dateColumn = eopData.columnNames.indexOf('modifiedJulianDateUtc');
-    var xPoleWanderRadiansColumn = eopData.columnNames.indexOf('xPoleWanderRadians');
-    var yPoleWanderRadiansColumn = eopData.columnNames.indexOf('yPoleWanderRadians');
-    var ut1MinusUtcSecondsColumn = eopData.columnNames.indexOf('ut1MinusUtcSeconds');
-    var xCelestialPoleOffsetRadiansColumn = eopData.columnNames.indexOf('xCelestialPoleOffsetRadians');
-    var yCelestialPoleOffsetRadiansColumn = eopData.columnNames.indexOf('yCelestialPoleOffsetRadians');
-    var taiMinusUtcSecondsColumn = eopData.columnNames.indexOf('taiMinusUtcSeconds');
-    if (dateColumn < 0 || xPoleWanderRadiansColumn < 0 || yPoleWanderRadiansColumn < 0 || ut1MinusUtcSecondsColumn < 0 || xCelestialPoleOffsetRadiansColumn < 0 || yCelestialPoleOffsetRadiansColumn < 0 || taiMinusUtcSecondsColumn < 0) {
-      eop._dataError = 'Error in loaded EOP data: The columnNames property must include modifiedJulianDateUtc, xPoleWanderRadians, yPoleWanderRadians, ut1MinusUtcSeconds, xCelestialPoleOffsetRadians, yCelestialPoleOffsetRadians, and taiMinusUtcSeconds columns';
-      return;
-    }
-    var samples = eop._samples = eopData.samples;
-    var dates = eop._dates = [];
-    eop._dateColumn = dateColumn;
-    eop._xPoleWanderRadiansColumn = xPoleWanderRadiansColumn;
-    eop._yPoleWanderRadiansColumn = yPoleWanderRadiansColumn;
-    eop._ut1MinusUtcSecondsColumn = ut1MinusUtcSecondsColumn;
-    eop._xCelestialPoleOffsetRadiansColumn = xCelestialPoleOffsetRadiansColumn;
-    eop._yCelestialPoleOffsetRadiansColumn = yCelestialPoleOffsetRadiansColumn;
-    eop._taiMinusUtcSecondsColumn = taiMinusUtcSecondsColumn;
-    eop._columnCount = eopData.columnNames.length;
-    eop._lastIndex = undefined;
-    var lastTaiMinusUtc;
-    var addNewLeapSeconds = eop._addNewLeapSeconds;
-    for (var i = 0,
-        len = samples.length; i < len; i += eop._columnCount) {
-      var mjd = samples[i + dateColumn];
-      var taiMinusUtc = samples[i + taiMinusUtcSecondsColumn];
-      var day = mjd + TimeConstants.MODIFIED_JULIAN_DATE_DIFFERENCE;
-      var date = new JulianDate(day, taiMinusUtc, TimeStandard.TAI);
-      dates.push(date);
-      if (addNewLeapSeconds) {
-        if (taiMinusUtc !== lastTaiMinusUtc && defined(lastTaiMinusUtc)) {
-          var leapSeconds = JulianDate.leapSeconds;
-          var leapSecondIndex = binarySearch(leapSeconds, date, compareLeapSecondDates);
-          if (leapSecondIndex < 0) {
-            var leapSecond = new LeapSecond(date, taiMinusUtc);
-            leapSeconds.splice(~leapSecondIndex, 0, leapSecond);
-          }
-        }
-        lastTaiMinusUtc = taiMinusUtc;
-      }
-    }
-  }
-  function fillResultFromIndex(eop, samples, index, columnCount, result) {
-    var start = index * columnCount;
-    result.xPoleWander = samples[start + eop._xPoleWanderRadiansColumn];
-    result.yPoleWander = samples[start + eop._yPoleWanderRadiansColumn];
-    result.xPoleOffset = samples[start + eop._xCelestialPoleOffsetRadiansColumn];
-    result.yPoleOffset = samples[start + eop._yCelestialPoleOffsetRadiansColumn];
-    result.ut1MinusUtc = samples[start + eop._ut1MinusUtcSecondsColumn];
-  }
-  function linearInterp(dx, y1, y2) {
-    return y1 + dx * (y2 - y1);
-  }
-  function interpolate(eop, dates, samples, date, before, after, result) {
-    var columnCount = eop._columnCount;
-    if (after > dates.length - 1) {
-      result.xPoleWander = 0;
-      result.yPoleWander = 0;
-      result.xPoleOffset = 0;
-      result.yPoleOffset = 0;
-      result.ut1MinusUtc = 0;
-      return result;
-    }
-    var beforeDate = dates[before];
-    var afterDate = dates[after];
-    if (beforeDate.equals(afterDate) || date.equals(beforeDate)) {
-      fillResultFromIndex(eop, samples, before, columnCount, result);
-      return result;
-    } else if (date.equals(afterDate)) {
-      fillResultFromIndex(eop, samples, after, columnCount, result);
-      return result;
-    }
-    var factor = JulianDate.secondsDifference(date, beforeDate) / JulianDate.secondsDifference(afterDate, beforeDate);
-    var startBefore = before * columnCount;
-    var startAfter = after * columnCount;
-    var beforeUt1MinusUtc = samples[startBefore + eop._ut1MinusUtcSecondsColumn];
-    var afterUt1MinusUtc = samples[startAfter + eop._ut1MinusUtcSecondsColumn];
-    var offsetDifference = afterUt1MinusUtc - beforeUt1MinusUtc;
-    if (offsetDifference > 0.5 || offsetDifference < -0.5) {
-      var beforeTaiMinusUtc = samples[startBefore + eop._taiMinusUtcSecondsColumn];
-      var afterTaiMinusUtc = samples[startAfter + eop._taiMinusUtcSecondsColumn];
-      if (beforeTaiMinusUtc !== afterTaiMinusUtc) {
-        if (afterDate.equals(date)) {
-          beforeUt1MinusUtc = afterUt1MinusUtc;
-        } else {
-          afterUt1MinusUtc -= afterTaiMinusUtc - beforeTaiMinusUtc;
-        }
-      }
-    }
-    result.xPoleWander = linearInterp(factor, samples[startBefore + eop._xPoleWanderRadiansColumn], samples[startAfter + eop._xPoleWanderRadiansColumn]);
-    result.yPoleWander = linearInterp(factor, samples[startBefore + eop._yPoleWanderRadiansColumn], samples[startAfter + eop._yPoleWanderRadiansColumn]);
-    result.xPoleOffset = linearInterp(factor, samples[startBefore + eop._xCelestialPoleOffsetRadiansColumn], samples[startAfter + eop._xCelestialPoleOffsetRadiansColumn]);
-    result.yPoleOffset = linearInterp(factor, samples[startBefore + eop._yCelestialPoleOffsetRadiansColumn], samples[startAfter + eop._yCelestialPoleOffsetRadiansColumn]);
-    result.ut1MinusUtc = linearInterp(factor, beforeUt1MinusUtc, afterUt1MinusUtc);
-    return result;
-  }
-  return EarthOrientationParameters;
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("53", [], function() {
-  "use strict";
-  function EarthOrientationParametersSample(xPoleWander, yPoleWander, xPoleOffset, yPoleOffset, ut1MinusUtc) {
-    this.xPoleWander = xPoleWander;
-    this.yPoleWander = yPoleWander;
-    this.xPoleOffset = xPoleOffset;
-    this.yPoleOffset = yPoleOffset;
-    this.ut1MinusUtc = ut1MinusUtc;
-  }
-  return EarthOrientationParametersSample;
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("34", ["26", "1b", "12", "14", "17", "1f", "56"], function(Cartesian3, defaultValue, defined, DeveloperError, freezeObject, CesiumMath, scaleToGeodeticSurface) {
-  "use strict";
-  function Cartographic(longitude, latitude, height) {
-    this.longitude = defaultValue(longitude, 0.0);
-    this.latitude = defaultValue(latitude, 0.0);
-    this.height = defaultValue(height, 0.0);
-  }
-  Cartographic.fromRadians = function(longitude, latitude, height, result) {
-    if (!defined(longitude)) {
-      throw new DeveloperError('longitude is required.');
-    }
-    if (!defined(latitude)) {
-      throw new DeveloperError('latitude is required.');
-    }
-    height = defaultValue(height, 0.0);
-    if (!defined(result)) {
-      return new Cartographic(longitude, latitude, height);
-    }
-    result.longitude = longitude;
-    result.latitude = latitude;
-    result.height = height;
-    return result;
-  };
-  Cartographic.fromDegrees = function(longitude, latitude, height, result) {
-    if (!defined(longitude)) {
-      throw new DeveloperError('longitude is required.');
-    }
-    if (!defined(latitude)) {
-      throw new DeveloperError('latitude is required.');
-    }
-    longitude = CesiumMath.toRadians(longitude);
-    latitude = CesiumMath.toRadians(latitude);
-    return Cartographic.fromRadians(longitude, latitude, height, result);
-  };
-  var cartesianToCartographicN = new Cartesian3();
-  var cartesianToCartographicP = new Cartesian3();
-  var cartesianToCartographicH = new Cartesian3();
-  var wgs84OneOverRadii = new Cartesian3(1.0 / 6378137.0, 1.0 / 6378137.0, 1.0 / 6356752.3142451793);
-  var wgs84OneOverRadiiSquared = new Cartesian3(1.0 / (6378137.0 * 6378137.0), 1.0 / (6378137.0 * 6378137.0), 1.0 / (6356752.3142451793 * 6356752.3142451793));
-  var wgs84CenterToleranceSquared = CesiumMath.EPSILON1;
-  Cartographic.fromCartesian = function(cartesian, ellipsoid, result) {
-    var oneOverRadii = defined(ellipsoid) ? ellipsoid.oneOverRadii : wgs84OneOverRadii;
-    var oneOverRadiiSquared = defined(ellipsoid) ? ellipsoid.oneOverRadiiSquared : wgs84OneOverRadiiSquared;
-    var centerToleranceSquared = defined(ellipsoid) ? ellipsoid._centerToleranceSquared : wgs84CenterToleranceSquared;
-    var p = scaleToGeodeticSurface(cartesian, oneOverRadii, oneOverRadiiSquared, centerToleranceSquared, cartesianToCartographicP);
-    if (!defined(p)) {
-      return undefined;
-    }
-    var n = Cartesian3.multiplyComponents(cartesian, oneOverRadiiSquared, cartesianToCartographicN);
-    n = Cartesian3.normalize(n, n);
-    var h = Cartesian3.subtract(cartesian, p, cartesianToCartographicH);
-    var longitude = Math.atan2(n.y, n.x);
-    var latitude = Math.asin(n.z);
-    var height = CesiumMath.sign(Cartesian3.dot(h, cartesian)) * Cartesian3.magnitude(h);
-    if (!defined(result)) {
-      return new Cartographic(longitude, latitude, height);
-    }
-    result.longitude = longitude;
-    result.latitude = latitude;
-    result.height = height;
-    return result;
-  };
-  Cartographic.clone = function(cartographic, result) {
-    if (!defined(cartographic)) {
-      return undefined;
-    }
-    if (!defined(result)) {
-      return new Cartographic(cartographic.longitude, cartographic.latitude, cartographic.height);
-    }
-    result.longitude = cartographic.longitude;
-    result.latitude = cartographic.latitude;
-    result.height = cartographic.height;
-    return result;
-  };
-  Cartographic.equals = function(left, right) {
-    return (left === right) || ((defined(left)) && (defined(right)) && (left.longitude === right.longitude) && (left.latitude === right.latitude) && (left.height === right.height));
-  };
-  Cartographic.equalsEpsilon = function(left, right, epsilon) {
-    if (typeof epsilon !== 'number') {
-      throw new DeveloperError('epsilon is required and must be a number.');
-    }
-    return (left === right) || ((defined(left)) && (defined(right)) && (Math.abs(left.longitude - right.longitude) <= epsilon) && (Math.abs(left.latitude - right.latitude) <= epsilon) && (Math.abs(left.height - right.height) <= epsilon));
-  };
-  Cartographic.ZERO = freezeObject(new Cartographic(0.0, 0.0, 0.0));
-  Cartographic.prototype.clone = function(result) {
-    return Cartographic.clone(this, result);
-  };
-  Cartographic.prototype.equals = function(right) {
-    return Cartographic.equals(this, right);
-  };
-  Cartographic.prototype.equalsEpsilon = function(right, epsilon) {
-    return Cartographic.equalsEpsilon(this, right, epsilon);
-  };
-  Cartographic.prototype.toString = function() {
-    return '(' + this.longitude + ', ' + this.latitude + ', ' + this.height + ')';
-  };
-  return Cartographic;
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("56", ["26", "12", "14", "1f"], function(Cartesian3, defined, DeveloperError, CesiumMath) {
-  "use strict";
-  var scaleToGeodeticSurfaceIntersection = new Cartesian3();
-  var scaleToGeodeticSurfaceGradient = new Cartesian3();
-  function scaleToGeodeticSurface(cartesian, oneOverRadii, oneOverRadiiSquared, centerToleranceSquared, result) {
-    if (!defined(cartesian)) {
-      throw new DeveloperError('cartesian is required.');
-    }
-    if (!defined(oneOverRadii)) {
-      throw new DeveloperError('oneOverRadii is required.');
-    }
-    if (!defined(oneOverRadiiSquared)) {
-      throw new DeveloperError('oneOverRadiiSquared is required.');
-    }
-    if (!defined(centerToleranceSquared)) {
-      throw new DeveloperError('centerToleranceSquared is required.');
-    }
-    var positionX = cartesian.x;
-    var positionY = cartesian.y;
-    var positionZ = cartesian.z;
-    var oneOverRadiiX = oneOverRadii.x;
-    var oneOverRadiiY = oneOverRadii.y;
-    var oneOverRadiiZ = oneOverRadii.z;
-    var x2 = positionX * positionX * oneOverRadiiX * oneOverRadiiX;
-    var y2 = positionY * positionY * oneOverRadiiY * oneOverRadiiY;
-    var z2 = positionZ * positionZ * oneOverRadiiZ * oneOverRadiiZ;
-    var squaredNorm = x2 + y2 + z2;
-    var ratio = Math.sqrt(1.0 / squaredNorm);
-    var intersection = Cartesian3.multiplyByScalar(cartesian, ratio, scaleToGeodeticSurfaceIntersection);
-    if (squaredNorm < centerToleranceSquared) {
-      return !isFinite(ratio) ? undefined : Cartesian3.clone(intersection, result);
-    }
-    var oneOverRadiiSquaredX = oneOverRadiiSquared.x;
-    var oneOverRadiiSquaredY = oneOverRadiiSquared.y;
-    var oneOverRadiiSquaredZ = oneOverRadiiSquared.z;
-    var gradient = scaleToGeodeticSurfaceGradient;
-    gradient.x = intersection.x * oneOverRadiiSquaredX * 2.0;
-    gradient.y = intersection.y * oneOverRadiiSquaredY * 2.0;
-    gradient.z = intersection.z * oneOverRadiiSquaredZ * 2.0;
-    var lambda = (1.0 - ratio) * Cartesian3.magnitude(cartesian) / (0.5 * Cartesian3.magnitude(gradient));
-    var correction = 0.0;
-    var func;
-    var denominator;
-    var xMultiplier;
-    var yMultiplier;
-    var zMultiplier;
-    var xMultiplier2;
-    var yMultiplier2;
-    var zMultiplier2;
-    var xMultiplier3;
-    var yMultiplier3;
-    var zMultiplier3;
-    do {
-      lambda -= correction;
-      xMultiplier = 1.0 / (1.0 + lambda * oneOverRadiiSquaredX);
-      yMultiplier = 1.0 / (1.0 + lambda * oneOverRadiiSquaredY);
-      zMultiplier = 1.0 / (1.0 + lambda * oneOverRadiiSquaredZ);
-      xMultiplier2 = xMultiplier * xMultiplier;
-      yMultiplier2 = yMultiplier * yMultiplier;
-      zMultiplier2 = zMultiplier * zMultiplier;
-      xMultiplier3 = xMultiplier2 * xMultiplier;
-      yMultiplier3 = yMultiplier2 * yMultiplier;
-      zMultiplier3 = zMultiplier2 * zMultiplier;
-      func = x2 * xMultiplier2 + y2 * yMultiplier2 + z2 * zMultiplier2 - 1.0;
-      denominator = x2 * xMultiplier3 * oneOverRadiiSquaredX + y2 * yMultiplier3 * oneOverRadiiSquaredY + z2 * zMultiplier3 * oneOverRadiiSquaredZ;
-      var derivative = -2.0 * denominator;
-      correction = func / derivative;
-    } while (Math.abs(func) > CesiumMath.EPSILON12);
-    if (!defined(result)) {
-      return new Cartesian3(positionX * xMultiplier, positionY * yMultiplier, positionZ * zMultiplier);
-    }
-    result.x = positionX * xMultiplier;
-    result.y = positionY * yMultiplier;
-    result.z = positionZ * zMultiplier;
-    return result;
-  }
-  return scaleToGeodeticSurface;
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("35", ["26", "34", "1b", "12", "13", "14", "17", "1f", "56"], function(Cartesian3, Cartographic, defaultValue, defined, defineProperties, DeveloperError, freezeObject, CesiumMath, scaleToGeodeticSurface) {
-  "use strict";
-  function initialize(ellipsoid, x, y, z) {
-    x = defaultValue(x, 0.0);
-    y = defaultValue(y, 0.0);
-    z = defaultValue(z, 0.0);
-    if (x < 0.0 || y < 0.0 || z < 0.0) {
-      throw new DeveloperError('All radii components must be greater than or equal to zero.');
-    }
-    ellipsoid._radii = new Cartesian3(x, y, z);
-    ellipsoid._radiiSquared = new Cartesian3(x * x, y * y, z * z);
-    ellipsoid._radiiToTheFourth = new Cartesian3(x * x * x * x, y * y * y * y, z * z * z * z);
-    ellipsoid._oneOverRadii = new Cartesian3(x === 0.0 ? 0.0 : 1.0 / x, y === 0.0 ? 0.0 : 1.0 / y, z === 0.0 ? 0.0 : 1.0 / z);
-    ellipsoid._oneOverRadiiSquared = new Cartesian3(x === 0.0 ? 0.0 : 1.0 / (x * x), y === 0.0 ? 0.0 : 1.0 / (y * y), z === 0.0 ? 0.0 : 1.0 / (z * z));
-    ellipsoid._minimumRadius = Math.min(x, y, z);
-    ellipsoid._maximumRadius = Math.max(x, y, z);
-    ellipsoid._centerToleranceSquared = CesiumMath.EPSILON1;
-  }
-  function Ellipsoid(x, y, z) {
-    this._radii = undefined;
-    this._radiiSquared = undefined;
-    this._radiiToTheFourth = undefined;
-    this._oneOverRadii = undefined;
-    this._oneOverRadiiSquared = undefined;
-    this._minimumRadius = undefined;
-    this._maximumRadius = undefined;
-    this._centerToleranceSquared = undefined;
-    initialize(this, x, y, z);
-  }
-  defineProperties(Ellipsoid.prototype, {
-    radii: {get: function() {
-        return this._radii;
-      }},
-    radiiSquared: {get: function() {
-        return this._radiiSquared;
-      }},
-    radiiToTheFourth: {get: function() {
-        return this._radiiToTheFourth;
-      }},
-    oneOverRadii: {get: function() {
-        return this._oneOverRadii;
-      }},
-    oneOverRadiiSquared: {get: function() {
-        return this._oneOverRadiiSquared;
-      }},
-    minimumRadius: {get: function() {
-        return this._minimumRadius;
-      }},
-    maximumRadius: {get: function() {
-        return this._maximumRadius;
-      }}
-  });
-  Ellipsoid.clone = function(ellipsoid, result) {
-    if (!defined(ellipsoid)) {
-      return undefined;
-    }
-    var radii = ellipsoid._radii;
-    if (!defined(result)) {
-      return new Ellipsoid(radii.x, radii.y, radii.z);
-    }
-    Cartesian3.clone(radii, result._radii);
-    Cartesian3.clone(ellipsoid._radiiSquared, result._radiiSquared);
-    Cartesian3.clone(ellipsoid._radiiToTheFourth, result._radiiToTheFourth);
-    Cartesian3.clone(ellipsoid._oneOverRadii, result._oneOverRadii);
-    Cartesian3.clone(ellipsoid._oneOverRadiiSquared, result._oneOverRadiiSquared);
-    result._minimumRadius = ellipsoid._minimumRadius;
-    result._maximumRadius = ellipsoid._maximumRadius;
-    result._centerToleranceSquared = ellipsoid._centerToleranceSquared;
-    return result;
-  };
-  Ellipsoid.fromCartesian3 = function(cartesian, result) {
-    if (!defined(result)) {
-      result = new Ellipsoid();
-    }
-    if (!defined(cartesian)) {
-      return result;
-    }
-    initialize(result, cartesian.x, cartesian.y, cartesian.z);
-    return result;
-  };
-  Ellipsoid.WGS84 = freezeObject(new Ellipsoid(6378137.0, 6378137.0, 6356752.3142451793));
-  Ellipsoid.UNIT_SPHERE = freezeObject(new Ellipsoid(1.0, 1.0, 1.0));
-  Ellipsoid.MOON = freezeObject(new Ellipsoid(CesiumMath.LUNAR_RADIUS, CesiumMath.LUNAR_RADIUS, CesiumMath.LUNAR_RADIUS));
-  Ellipsoid.prototype.clone = function(result) {
-    return Ellipsoid.clone(this, result);
-  };
-  Ellipsoid.packedLength = Cartesian3.packedLength;
-  Ellipsoid.pack = function(value, array, startingIndex) {
-    if (!defined(value)) {
-      throw new DeveloperError('value is required');
-    }
-    if (!defined(array)) {
-      throw new DeveloperError('array is required');
-    }
-    startingIndex = defaultValue(startingIndex, 0);
-    Cartesian3.pack(value._radii, array, startingIndex);
-  };
-  Ellipsoid.unpack = function(array, startingIndex, result) {
-    if (!defined(array)) {
-      throw new DeveloperError('array is required');
-    }
-    startingIndex = defaultValue(startingIndex, 0);
-    var radii = Cartesian3.unpack(array, startingIndex);
-    return Ellipsoid.fromCartesian3(radii, result);
-  };
-  Ellipsoid.prototype.geocentricSurfaceNormal = Cartesian3.normalize;
-  Ellipsoid.prototype.geodeticSurfaceNormalCartographic = function(cartographic, result) {
-    if (!defined(cartographic)) {
-      throw new DeveloperError('cartographic is required.');
-    }
-    var longitude = cartographic.longitude;
-    var latitude = cartographic.latitude;
-    var cosLatitude = Math.cos(latitude);
-    var x = cosLatitude * Math.cos(longitude);
-    var y = cosLatitude * Math.sin(longitude);
-    var z = Math.sin(latitude);
-    if (!defined(result)) {
-      result = new Cartesian3();
-    }
-    result.x = x;
-    result.y = y;
-    result.z = z;
-    return Cartesian3.normalize(result, result);
-  };
-  Ellipsoid.prototype.geodeticSurfaceNormal = function(cartesian, result) {
-    if (!defined(result)) {
-      result = new Cartesian3();
-    }
-    result = Cartesian3.multiplyComponents(cartesian, this._oneOverRadiiSquared, result);
-    return Cartesian3.normalize(result, result);
-  };
-  var cartographicToCartesianNormal = new Cartesian3();
-  var cartographicToCartesianK = new Cartesian3();
-  Ellipsoid.prototype.cartographicToCartesian = function(cartographic, result) {
-    var n = cartographicToCartesianNormal;
-    var k = cartographicToCartesianK;
-    this.geodeticSurfaceNormalCartographic(cartographic, n);
-    Cartesian3.multiplyComponents(this._radiiSquared, n, k);
-    var gamma = Math.sqrt(Cartesian3.dot(n, k));
-    Cartesian3.divideByScalar(k, gamma, k);
-    Cartesian3.multiplyByScalar(n, cartographic.height, n);
-    if (!defined(result)) {
-      result = new Cartesian3();
-    }
-    return Cartesian3.add(k, n, result);
-  };
-  Ellipsoid.prototype.cartographicArrayToCartesianArray = function(cartographics, result) {
-    if (!defined(cartographics)) {
-      throw new DeveloperError('cartographics is required.');
-    }
-    var length = cartographics.length;
-    if (!defined(result)) {
-      result = new Array(length);
-    } else {
-      result.length = length;
-    }
-    for (var i = 0; i < length; i++) {
-      result[i] = this.cartographicToCartesian(cartographics[i], result[i]);
-    }
-    return result;
-  };
-  var cartesianToCartographicN = new Cartesian3();
-  var cartesianToCartographicP = new Cartesian3();
-  var cartesianToCartographicH = new Cartesian3();
-  Ellipsoid.prototype.cartesianToCartographic = function(cartesian, result) {
-    var p = this.scaleToGeodeticSurface(cartesian, cartesianToCartographicP);
-    if (!defined(p)) {
-      return undefined;
-    }
-    var n = this.geodeticSurfaceNormal(p, cartesianToCartographicN);
-    var h = Cartesian3.subtract(cartesian, p, cartesianToCartographicH);
-    var longitude = Math.atan2(n.y, n.x);
-    var latitude = Math.asin(n.z);
-    var height = CesiumMath.sign(Cartesian3.dot(h, cartesian)) * Cartesian3.magnitude(h);
-    if (!defined(result)) {
-      return new Cartographic(longitude, latitude, height);
-    }
-    result.longitude = longitude;
-    result.latitude = latitude;
-    result.height = height;
-    return result;
-  };
-  Ellipsoid.prototype.cartesianArrayToCartographicArray = function(cartesians, result) {
-    if (!defined(cartesians)) {
-      throw new DeveloperError('cartesians is required.');
-    }
-    var length = cartesians.length;
-    if (!defined(result)) {
-      result = new Array(length);
-    } else {
-      result.length = length;
-    }
-    for (var i = 0; i < length; ++i) {
-      result[i] = this.cartesianToCartographic(cartesians[i], result[i]);
-    }
-    return result;
-  };
-  Ellipsoid.prototype.scaleToGeodeticSurface = function(cartesian, result) {
-    return scaleToGeodeticSurface(cartesian, this._oneOverRadii, this._oneOverRadiiSquared, this._centerToleranceSquared, result);
-  };
-  Ellipsoid.prototype.scaleToGeocentricSurface = function(cartesian, result) {
-    if (!defined(cartesian)) {
-      throw new DeveloperError('cartesian is required.');
-    }
-    if (!defined(result)) {
-      result = new Cartesian3();
-    }
-    var positionX = cartesian.x;
-    var positionY = cartesian.y;
-    var positionZ = cartesian.z;
-    var oneOverRadiiSquared = this._oneOverRadiiSquared;
-    var beta = 1.0 / Math.sqrt((positionX * positionX) * oneOverRadiiSquared.x + (positionY * positionY) * oneOverRadiiSquared.y + (positionZ * positionZ) * oneOverRadiiSquared.z);
-    return Cartesian3.multiplyByScalar(cartesian, beta, result);
-  };
-  Ellipsoid.prototype.transformPositionToScaledSpace = function(position, result) {
-    if (!defined(result)) {
-      result = new Cartesian3();
-    }
-    return Cartesian3.multiplyComponents(position, this._oneOverRadii, result);
-  };
-  Ellipsoid.prototype.transformPositionFromScaledSpace = function(position, result) {
-    if (!defined(result)) {
-      result = new Cartesian3();
-    }
-    return Cartesian3.multiplyComponents(position, this._radii, result);
-  };
-  Ellipsoid.prototype.equals = function(right) {
-    return (this === right) || (defined(right) && Cartesian3.equals(this._radii, right._radii));
-  };
-  Ellipsoid.prototype.toString = function() {
-    return this._radii.toString();
-  };
-  return Ellipsoid;
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("57", [], function() {
-  function URI(uri) {
-    if (uri instanceof URI) {
-      this.scheme = uri.scheme;
-      this.authority = uri.authority;
-      this.path = uri.path;
-      this.query = uri.query;
-      this.fragment = uri.fragment;
-    } else if (uri) {
-      var c = parseRegex.exec(uri);
-      this.scheme = c[1];
-      this.authority = c[2];
-      this.path = c[3];
-      this.query = c[4];
-      this.fragment = c[5];
-    }
-  }
-  URI.prototype.scheme = null;
-  URI.prototype.authority = null;
-  URI.prototype.path = '';
-  URI.prototype.query = null;
-  URI.prototype.fragment = null;
-  var parseRegex = new RegExp('^(?:([^:/?#]+):)?(?://([^/?#]*))?([^?#]*)(?:\\?([^#]*))?(?:#(.*))?$');
-  URI.prototype.getScheme = function() {
-    return this.scheme;
-  };
-  URI.prototype.getAuthority = function() {
-    return this.authority;
-  };
-  URI.prototype.getPath = function() {
-    return this.path;
-  };
-  URI.prototype.getQuery = function() {
-    return this.query;
-  };
-  URI.prototype.getFragment = function() {
-    return this.fragment;
-  };
-  URI.prototype.isAbsolute = function() {
-    return !!this.scheme && !this.fragment;
-  };
-  URI.prototype.isSameDocumentAs = function(uri) {
-    return uri.scheme == this.scheme && uri.authority == this.authority && uri.path == this.path && uri.query == this.query;
-  };
-  URI.prototype.equals = function(uri) {
-    return this.isSameDocumentAs(uri) && uri.fragment == this.fragment;
-  };
-  URI.prototype.normalize = function() {
-    this.removeDotSegments();
-    if (this.scheme)
-      this.scheme = this.scheme.toLowerCase();
-    if (this.authority)
-      this.authority = this.authority.replace(authorityRegex, replaceAuthority).replace(caseRegex, replaceCase);
-    if (this.path)
-      this.path = this.path.replace(caseRegex, replaceCase);
-    if (this.query)
-      this.query = this.query.replace(caseRegex, replaceCase);
-    if (this.fragment)
-      this.fragment = this.fragment.replace(caseRegex, replaceCase);
-  };
-  var caseRegex = /%[0-9a-z]{2}/gi;
-  var percentRegex = /[a-zA-Z0-9\-\._~]/;
-  var authorityRegex = /(.*@)?([^@:]*)(:.*)?/;
-  function replaceCase(str) {
-    var dec = unescape(str);
-    return percentRegex.test(dec) ? dec : str.toUpperCase();
-  }
-  function replaceAuthority(str, p1, p2, p3) {
-    return (p1 || '') + p2.toLowerCase() + (p3 || '');
-  }
-  URI.prototype.resolve = function(baseURI) {
-    var uri = new URI();
-    if (this.scheme) {
-      uri.scheme = this.scheme;
-      uri.authority = this.authority;
-      uri.path = this.path;
-      uri.query = this.query;
-    } else {
-      uri.scheme = baseURI.scheme;
-      if (this.authority) {
-        uri.authority = this.authority;
-        uri.path = this.path;
-        uri.query = this.query;
-      } else {
-        uri.authority = baseURI.authority;
-        if (this.path == '') {
-          uri.path = baseURI.path;
-          uri.query = this.query || baseURI.query;
-        } else {
-          if (this.path.charAt(0) == '/') {
-            uri.path = this.path;
-            uri.removeDotSegments();
-          } else {
-            if (baseURI.authority && baseURI.path == '') {
-              uri.path = '/' + this.path;
-            } else {
-              uri.path = baseURI.path.substring(0, baseURI.path.lastIndexOf('/') + 1) + this.path;
-            }
-            uri.removeDotSegments();
-          }
-          uri.query = this.query;
-        }
-      }
-    }
-    uri.fragment = this.fragment;
-    return uri;
-  };
-  URI.prototype.removeDotSegments = function() {
-    var input = this.path.split('/'),
-        output = [],
-        segment,
-        absPath = input[0] == '';
-    if (absPath)
-      input.shift();
-    var sFirst = input[0] == '' ? input.shift() : null;
-    while (input.length) {
-      segment = input.shift();
-      if (segment == '..') {
-        output.pop();
-      } else if (segment != '.') {
-        output.push(segment);
-      }
-    }
-    if (segment == '.' || segment == '..')
-      output.push('');
-    if (absPath)
-      output.unshift('');
-    this.path = output.join('/');
-  };
-  URI.prototype.toString = function() {
-    var result = '';
-    if (this.scheme)
-      result += this.scheme + ':';
-    if (this.authority)
-      result += '//' + this.authority;
-    result += this.path;
-    if (this.query)
-      result += '?' + this.query;
-    if (this.fragment)
-      result += '#' + this.fragment;
-    return result;
-  };
-  return URI;
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("58", ["57", "12", "14", "require"], function(Uri, defined, DeveloperError, require) {
-  "use strict";
-  var cesiumScriptRegex = /((?:.*\/)|^)cesium[\w-]*\.js(?:\W|$)/i;
-  function getBaseUrlFromCesiumScript() {
-    var scripts = document.getElementsByTagName('script');
-    for (var i = 0,
-        len = scripts.length; i < len; ++i) {
-      var src = scripts[i].getAttribute('src');
-      var result = cesiumScriptRegex.exec(src);
-      if (result !== null) {
-        return result[1];
-      }
-    }
-    return undefined;
-  }
-  var baseUrl;
-  function getCesiumBaseUrl() {
-    if (defined(baseUrl)) {
-      return baseUrl;
-    }
-    var baseUrlString;
-    if (typeof CESIUM_BASE_URL !== 'undefined') {
-      baseUrlString = CESIUM_BASE_URL;
-    } else {
-      baseUrlString = getBaseUrlFromCesiumScript();
-    }
-    if (!defined(baseUrlString)) {
-      throw new DeveloperError('Unable to determine Cesium base URL automatically, try defining a global variable called CESIUM_BASE_URL.');
-    }
-    baseUrl = new Uri(baseUrlString).resolve(new Uri(document.location.href));
-    return baseUrl;
-  }
-  function buildModuleUrlFromRequireToUrl(moduleID) {
-    return require.toUrl('../' + moduleID);
-  }
-  function buildModuleUrlFromBaseUrl(moduleID) {
-    return new Uri(moduleID).resolve(getCesiumBaseUrl()).toString();
-  }
-  var implementation;
-  var a;
-  function buildModuleUrl(moduleID) {
-    if (!defined(implementation)) {
-      if (defined(require.toUrl)) {
-        implementation = buildModuleUrlFromRequireToUrl;
-      } else {
-        implementation = buildModuleUrlFromBaseUrl;
-      }
-    }
-    if (!defined(a)) {
-      a = document.createElement('a');
-    }
-    var url = implementation(moduleID);
-    a.href = url;
-    a.href = a.href;
-    return a.href;
-  }
-  buildModuleUrl._cesiumScriptRegex = cesiumScriptRegex;
-  buildModuleUrl.setBaseUrl = function(value) {
-    baseUrl = new Uri(value).resolve(new Uri(document.location.href));
-  };
-  return buildModuleUrl;
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("59", ["1b"], function(defaultValue) {
-  "use strict";
-  function clone(object, deep) {
-    if (object === null || typeof object !== 'object') {
-      return object;
-    }
-    deep = defaultValue(deep, false);
-    var result = new object.constructor();
-    for (var propertyName in object) {
-      if (object.hasOwnProperty(propertyName)) {
-        var value = object[propertyName];
-        if (deep) {
-          value = clone(value, deep);
-        }
-        result[propertyName] = value;
-      }
-    }
-    return result;
-  }
-  return clone;
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-(function(define) {
-  'use strict';
-  define("52", [], function() {
-    var reduceArray,
-        slice,
-        undef;
-    when.defer = defer;
-    when.resolve = resolve;
-    when.reject = reject;
-    when.join = join;
-    when.all = all;
-    when.map = map;
-    when.reduce = reduce;
-    when.any = any;
-    when.some = some;
-    when.chain = chain;
-    when.isPromise = isPromise;
-    function when(promiseOrValue, onFulfilled, onRejected, onProgress) {
-      return resolve(promiseOrValue).then(onFulfilled, onRejected, onProgress);
-    }
-    function resolve(promiseOrValue) {
-      var promise,
-          deferred;
-      if (promiseOrValue instanceof Promise) {
-        promise = promiseOrValue;
-      } else {
-        if (isPromise(promiseOrValue)) {
-          deferred = defer();
-          promiseOrValue.then(function(value) {
-            deferred.resolve(value);
-          }, function(reason) {
-            deferred.reject(reason);
-          }, function(update) {
-            deferred.progress(update);
-          });
-          promise = deferred.promise;
-        } else {
-          promise = fulfilled(promiseOrValue);
-        }
-      }
-      return promise;
-    }
-    function reject(promiseOrValue) {
-      return when(promiseOrValue, rejected);
-    }
-    function Promise(then) {
-      this.then = then;
-    }
-    Promise.prototype = {
-      always: function(onFulfilledOrRejected, onProgress) {
-        return this.then(onFulfilledOrRejected, onFulfilledOrRejected, onProgress);
-      },
-      otherwise: function(onRejected) {
-        return this.then(undef, onRejected);
-      },
-      yield: function(value) {
-        return this.then(function() {
-          return value;
-        });
-      },
-      spread: function(onFulfilled) {
-        return this.then(function(array) {
-          return all(array, function(array) {
-            return onFulfilled.apply(undef, array);
-          });
-        });
-      }
-    };
-    function fulfilled(value) {
-      var p = new Promise(function(onFulfilled) {
-        try {
-          return resolve(onFulfilled ? onFulfilled(value) : value);
-        } catch (e) {
-          return rejected(e);
-        }
-      });
-      return p;
-    }
-    function rejected(reason) {
-      var p = new Promise(function(_, onRejected) {
-        try {
-          return onRejected ? resolve(onRejected(reason)) : rejected(reason);
-        } catch (e) {
-          return rejected(e);
-        }
-      });
-      return p;
-    }
-    function defer() {
-      var deferred,
-          promise,
-          handlers,
-          progressHandlers,
-          _then,
-          _progress,
-          _resolve;
-      promise = new Promise(then);
-      deferred = {
-        then: then,
-        resolve: promiseResolve,
-        reject: promiseReject,
-        progress: promiseProgress,
-        promise: promise,
-        resolver: {
-          resolve: promiseResolve,
-          reject: promiseReject,
-          progress: promiseProgress
-        }
-      };
-      handlers = [];
-      progressHandlers = [];
-      _then = function(onFulfilled, onRejected, onProgress) {
-        var deferred,
-            progressHandler;
-        deferred = defer();
-        progressHandler = typeof onProgress === 'function' ? function(update) {
-          try {
-            deferred.progress(onProgress(update));
-          } catch (e) {
-            deferred.progress(e);
-          }
-        } : function(update) {
-          deferred.progress(update);
-        };
-        handlers.push(function(promise) {
-          promise.then(onFulfilled, onRejected).then(deferred.resolve, deferred.reject, progressHandler);
-        });
-        progressHandlers.push(progressHandler);
-        return deferred.promise;
-      };
-      _progress = function(update) {
-        processQueue(progressHandlers, update);
-        return update;
-      };
-      _resolve = function(value) {
-        value = resolve(value);
-        _then = value.then;
-        _resolve = resolve;
-        _progress = noop;
-        processQueue(handlers, value);
-        progressHandlers = handlers = undef;
-        return value;
-      };
-      return deferred;
-      function then(onFulfilled, onRejected, onProgress) {
-        return _then(onFulfilled, onRejected, onProgress);
-      }
-      function promiseResolve(val) {
-        return _resolve(val);
-      }
-      function promiseReject(err) {
-        return _resolve(rejected(err));
-      }
-      function promiseProgress(update) {
-        return _progress(update);
-      }
-    }
-    function isPromise(promiseOrValue) {
-      return promiseOrValue && typeof promiseOrValue.then === 'function';
-    }
-    function some(promisesOrValues, howMany, onFulfilled, onRejected, onProgress) {
-      checkCallbacks(2, arguments);
-      return when(promisesOrValues, function(promisesOrValues) {
-        var toResolve,
-            toReject,
-            values,
-            reasons,
-            deferred,
-            fulfillOne,
-            rejectOne,
-            progress,
-            len,
-            i;
-        len = promisesOrValues.length >>> 0;
-        toResolve = Math.max(0, Math.min(howMany, len));
-        values = [];
-        toReject = (len - toResolve) + 1;
-        reasons = [];
-        deferred = defer();
-        if (!toResolve) {
-          deferred.resolve(values);
-        } else {
-          progress = deferred.progress;
-          rejectOne = function(reason) {
-            reasons.push(reason);
-            if (!--toReject) {
-              fulfillOne = rejectOne = noop;
-              deferred.reject(reasons);
-            }
-          };
-          fulfillOne = function(val) {
-            values.push(val);
-            if (!--toResolve) {
-              fulfillOne = rejectOne = noop;
-              deferred.resolve(values);
-            }
-          };
-          for (i = 0; i < len; ++i) {
-            if (i in promisesOrValues) {
-              when(promisesOrValues[i], fulfiller, rejecter, progress);
-            }
-          }
-        }
-        return deferred.then(onFulfilled, onRejected, onProgress);
-        function rejecter(reason) {
-          rejectOne(reason);
-        }
-        function fulfiller(val) {
-          fulfillOne(val);
-        }
-      });
-    }
-    function any(promisesOrValues, onFulfilled, onRejected, onProgress) {
-      function unwrapSingleResult(val) {
-        return onFulfilled ? onFulfilled(val[0]) : val[0];
-      }
-      return some(promisesOrValues, 1, unwrapSingleResult, onRejected, onProgress);
-    }
-    function all(promisesOrValues, onFulfilled, onRejected, onProgress) {
-      checkCallbacks(1, arguments);
-      return map(promisesOrValues, identity).then(onFulfilled, onRejected, onProgress);
-    }
-    function join() {
-      return map(arguments, identity);
-    }
-    function map(promise, mapFunc) {
-      return when(promise, function(array) {
-        var results,
-            len,
-            toResolve,
-            resolve,
-            i,
-            d;
-        toResolve = len = array.length >>> 0;
-        results = [];
-        d = defer();
-        if (!toResolve) {
-          d.resolve(results);
-        } else {
-          resolve = function resolveOne(item, i) {
-            when(item, mapFunc).then(function(mapped) {
-              results[i] = mapped;
-              if (!--toResolve) {
-                d.resolve(results);
-              }
-            }, d.reject);
-          };
-          for (i = 0; i < len; i++) {
-            if (i in array) {
-              resolve(array[i], i);
-            } else {
-              --toResolve;
-            }
-          }
-        }
-        return d.promise;
-      });
-    }
-    function reduce(promise, reduceFunc) {
-      var args = slice.call(arguments, 1);
-      return when(promise, function(array) {
-        var total;
-        total = array.length;
-        args[0] = function(current, val, i) {
-          return when(current, function(c) {
-            return when(val, function(value) {
-              return reduceFunc(c, value, i, total);
-            });
-          });
-        };
-        return reduceArray.apply(array, args);
-      });
-    }
-    function chain(promiseOrValue, resolver, resolveValue) {
-      var useResolveValue = arguments.length > 2;
-      return when(promiseOrValue, function(val) {
-        val = useResolveValue ? resolveValue : val;
-        resolver.resolve(val);
-        return val;
-      }, function(reason) {
-        resolver.reject(reason);
-        return rejected(reason);
-      }, resolver.progress);
-    }
-    function processQueue(queue, value) {
-      var handler,
-          i = 0;
-      while (handler = queue[i++]) {
-        handler(value);
-      }
-    }
-    function checkCallbacks(start, arrayOfCallbacks) {
-      var arg,
-          i = arrayOfCallbacks.length;
-      while (i > start) {
-        arg = arrayOfCallbacks[--i];
-        if (arg != null && typeof arg != 'function') {
-          throw new Error('arg ' + i + ' must be a function');
-        }
-      }
-    }
-    function noop() {}
-    slice = [].slice;
-    reduceArray = [].reduce || function(reduceFunc) {
-      var arr,
-          args,
-          reduced,
-          len,
-          i;
-      i = 0;
-      arr = Object(this);
-      len = arr.length >>> 0;
-      args = arguments;
-      if (args.length <= 1) {
-        for (; ; ) {
-          if (i in arr) {
-            reduced = arr[i++];
-            break;
-          }
-          if (++i >= len) {
-            throw new TypeError();
-          }
-        }
-      } else {
-        reduced = args[1];
-      }
-      for (; i < len; ++i) {
-        if (i in arr) {
-          reduced = reduceFunc(reduced, arr[i], i, arr);
-        }
-      }
-      return reduced;
-    };
-    function identity(x) {
-      return x;
-    }
-    return when;
-  });
-})(typeof define == 'function' && define.amd ? define : function(factory) {
-  typeof exports === 'object' ? (module.exports = factory()) : (this.when = factory());
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("5a", [], function() {
-  "use strict";
-  function parseResponseHeaders(headerString) {
-    var headers = {};
-    if (!headerString) {
-      return headers;
-    }
-    var headerPairs = headerString.split('\u000d\u000a');
-    for (var i = 0; i < headerPairs.length; ++i) {
-      var headerPair = headerPairs[i];
-      var index = headerPair.indexOf('\u003a\u0020');
-      if (index > 0) {
-        var key = headerPair.substring(0, index);
-        var val = headerPair.substring(index + 2);
-        headers[key] = val;
-      }
-    }
-    return headers;
-  }
-  return parseResponseHeaders;
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("5b", ["12", "5a"], function(defined, parseResponseHeaders) {
-  "use strict";
-  function RequestErrorEvent(statusCode, response, responseHeaders) {
-    this.statusCode = statusCode;
-    this.response = response;
-    this.responseHeaders = responseHeaders;
-    if (typeof this.responseHeaders === 'string') {
-      this.responseHeaders = parseResponseHeaders(this.responseHeaders);
-    }
-  }
-  RequestErrorEvent.prototype.toString = function() {
-    var str = 'Request has failed.';
-    if (defined(this.statusCode)) {
-      str += ' Status Code: ' + this.statusCode;
-    }
-    return str;
-  };
-  return RequestErrorEvent;
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("5c", ["52", "1b", "12", "14", "5b", "31"], function(when, defaultValue, defined, DeveloperError, RequestErrorEvent, RuntimeError) {
-  "use strict";
-  function loadWithXhr(options) {
-    options = defaultValue(options, defaultValue.EMPTY_OBJECT);
-    if (!defined(options.url)) {
-      throw new DeveloperError('options.url is required.');
-    }
-    var responseType = options.responseType;
-    var method = defaultValue(options.method, 'GET');
-    var data = options.data;
-    var headers = options.headers;
-    var overrideMimeType = options.overrideMimeType;
-    return when(options.url, function(url) {
-      var deferred = when.defer();
-      loadWithXhr.load(url, responseType, method, data, headers, deferred, overrideMimeType);
-      return deferred.promise;
-    });
-  }
-  var dataUriRegex = /^data:(.*?)(;base64)?,(.*)$/;
-  function decodeDataUriText(isBase64, data) {
-    var result = decodeURIComponent(data);
-    if (isBase64) {
-      return atob(result);
-    }
-    return result;
-  }
-  function decodeDataUriArrayBuffer(isBase64, data) {
-    var byteString = decodeDataUriText(isBase64, data);
-    var buffer = new ArrayBuffer(byteString.length);
-    var view = new Uint8Array(buffer);
-    for (var i = 0; i < byteString.length; i++) {
-      view[i] = byteString.charCodeAt(i);
-    }
-    return buffer;
-  }
-  function decodeDataUri(dataUriRegexResult, responseType) {
-    responseType = defaultValue(responseType, '');
-    var mimeType = dataUriRegexResult[1];
-    var isBase64 = !!dataUriRegexResult[2];
-    var data = dataUriRegexResult[3];
-    switch (responseType) {
-      case '':
-      case 'text':
-        return decodeDataUriText(isBase64, data);
-      case 'arraybuffer':
-        return decodeDataUriArrayBuffer(isBase64, data);
-      case 'blob':
-        var buffer = decodeDataUriArrayBuffer(isBase64, data);
-        return new Blob([buffer], {type: mimeType});
-      case 'document':
-        var parser = new DOMParser();
-        return parser.parseFromString(decodeDataUriText(isBase64, data), mimeType);
-      case 'json':
-        return JSON.parse(decodeDataUriText(isBase64, data));
-      default:
-        throw new DeveloperError('Unhandled responseType: ' + responseType);
-    }
-  }
-  loadWithXhr.load = function(url, responseType, method, data, headers, deferred, overrideMimeType) {
-    var dataUriRegexResult = dataUriRegex.exec(url);
-    if (dataUriRegexResult !== null) {
-      deferred.resolve(decodeDataUri(dataUriRegexResult, responseType));
-      return;
-    }
-    var xhr = new XMLHttpRequest();
-    if (defined(overrideMimeType) && defined(xhr.overrideMimeType)) {
-      xhr.overrideMimeType(overrideMimeType);
-    }
-    xhr.open(method, url, true);
-    if (defined(headers)) {
-      for (var key in headers) {
-        if (headers.hasOwnProperty(key)) {
-          xhr.setRequestHeader(key, headers[key]);
-        }
-      }
-    }
-    if (defined(responseType)) {
-      xhr.responseType = responseType;
-    }
-    xhr.onload = function() {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        if (defined(xhr.response)) {
-          deferred.resolve(xhr.response);
-        } else {
-          if (defined(xhr.responseXML) && xhr.responseXML.hasChildNodes()) {
-            deferred.resolve(xhr.responseXML);
-          } else if (defined(xhr.responseText)) {
-            deferred.resolve(xhr.responseText);
-          } else {
-            deferred.reject(new RuntimeError('unknown XMLHttpRequest response type.'));
-          }
-        }
-      } else {
-        deferred.reject(new RequestErrorEvent(xhr.status, xhr.response, xhr.getAllResponseHeaders()));
-      }
-    };
-    xhr.onerror = function(e) {
-      deferred.reject(new RequestErrorEvent());
-    };
-    xhr.send(data);
-  };
-  loadWithXhr.defaultLoad = loadWithXhr.load;
-  return loadWithXhr;
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("5d", ["5c"], function(loadWithXhr) {
-  "use strict";
-  function loadText(url, headers) {
-    return loadWithXhr({
-      url: url,
-      headers: headers
-    });
-  }
-  return loadText;
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("55", ["59", "12", "14", "5d"], function(clone, defined, DeveloperError, loadText) {
-  "use strict";
-  var defaultHeaders = {Accept: 'application/json,*/*;q=0.01'};
-  function loadJson(url, headers) {
-    if (!defined(url)) {
-      throw new DeveloperError('url is required.');
-    }
-    if (!defined(headers)) {
-      headers = defaultHeaders;
-    } else if (!defined(headers.Accept)) {
-      headers = clone(headers);
-      headers.Accept = defaultHeaders.Accept;
-    }
-    return loadText(url, headers).then(function(value) {
-      return JSON.parse(value);
-    });
-  }
-  return loadJson;
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("5e", ["52", "58", "1b", "12", "5f", "1c", "55", "48"], function(when, buildModuleUrl, defaultValue, defined, Iau2006XysSample, JulianDate, loadJson, TimeStandard) {
-  "use strict";
-  function Iau2006XysData(options) {
-    options = defaultValue(options, defaultValue.EMPTY_OBJECT);
-    this._xysFileUrlTemplate = options.xysFileUrlTemplate;
-    this._interpolationOrder = defaultValue(options.interpolationOrder, 9);
-    this._sampleZeroJulianEphemerisDate = defaultValue(options.sampleZeroJulianEphemerisDate, 2442396.5);
-    this._sampleZeroDateTT = new JulianDate(this._sampleZeroJulianEphemerisDate, 0.0, TimeStandard.TAI);
-    this._stepSizeDays = defaultValue(options.stepSizeDays, 1.0);
-    this._samplesPerXysFile = defaultValue(options.samplesPerXysFile, 1000);
-    this._totalSamples = defaultValue(options.totalSamples, 27426);
-    this._samples = new Array(this._totalSamples * 3);
-    this._chunkDownloadsInProgress = [];
-    var order = this._interpolationOrder;
-    var denom = this._denominators = new Array(order + 1);
-    var xTable = this._xTable = new Array(order + 1);
-    var stepN = Math.pow(this._stepSizeDays, order);
-    for (var i = 0; i <= order; ++i) {
-      denom[i] = stepN;
-      xTable[i] = i * this._stepSizeDays;
-      for (var j = 0; j <= order; ++j) {
-        if (j !== i) {
-          denom[i] *= (i - j);
-        }
-      }
-      denom[i] = 1.0 / denom[i];
-    }
-    this._work = new Array(order + 1);
-    this._coef = new Array(order + 1);
-  }
-  var julianDateScratch = new JulianDate(0, 0.0, TimeStandard.TAI);
-  function getDaysSinceEpoch(xys, dayTT, secondTT) {
-    var dateTT = julianDateScratch;
-    dateTT.dayNumber = dayTT;
-    dateTT.secondsOfDay = secondTT;
-    return JulianDate.daysDifference(dateTT, xys._sampleZeroDateTT);
-  }
-  Iau2006XysData.prototype.preload = function(startDayTT, startSecondTT, stopDayTT, stopSecondTT) {
-    var startDaysSinceEpoch = getDaysSinceEpoch(this, startDayTT, startSecondTT);
-    var stopDaysSinceEpoch = getDaysSinceEpoch(this, stopDayTT, stopSecondTT);
-    var startIndex = (startDaysSinceEpoch / this._stepSizeDays - this._interpolationOrder / 2) | 0;
-    if (startIndex < 0) {
-      startIndex = 0;
-    }
-    var stopIndex = (stopDaysSinceEpoch / this._stepSizeDays - this._interpolationOrder / 2) | 0 + this._interpolationOrder;
-    if (stopIndex >= this._totalSamples) {
-      stopIndex = this._totalSamples - 1;
-    }
-    var startChunk = (startIndex / this._samplesPerXysFile) | 0;
-    var stopChunk = (stopIndex / this._samplesPerXysFile) | 0;
-    var promises = [];
-    for (var i = startChunk; i <= stopChunk; ++i) {
-      promises.push(requestXysChunk(this, i));
-    }
-    return when.all(promises);
-  };
-  Iau2006XysData.prototype.computeXysRadians = function(dayTT, secondTT, result) {
-    var daysSinceEpoch = getDaysSinceEpoch(this, dayTT, secondTT);
-    if (daysSinceEpoch < 0.0) {
-      return undefined;
-    }
-    var centerIndex = (daysSinceEpoch / this._stepSizeDays) | 0;
-    if (centerIndex >= this._totalSamples) {
-      return undefined;
-    }
-    var degree = this._interpolationOrder;
-    var firstIndex = centerIndex - ((degree / 2) | 0);
-    if (firstIndex < 0) {
-      firstIndex = 0;
-    }
-    var lastIndex = firstIndex + degree;
-    if (lastIndex >= this._totalSamples) {
-      lastIndex = this._totalSamples - 1;
-      firstIndex = lastIndex - degree;
-      if (firstIndex < 0) {
-        firstIndex = 0;
-      }
-    }
-    var isDataMissing = false;
-    var samples = this._samples;
-    if (!defined(samples[firstIndex * 3])) {
-      requestXysChunk(this, (firstIndex / this._samplesPerXysFile) | 0);
-      isDataMissing = true;
-    }
-    if (!defined(samples[lastIndex * 3])) {
-      requestXysChunk(this, (lastIndex / this._samplesPerXysFile) | 0);
-      isDataMissing = true;
-    }
-    if (isDataMissing) {
-      return undefined;
-    }
-    if (!defined(result)) {
-      result = new Iau2006XysSample(0.0, 0.0, 0.0);
-    } else {
-      result.x = 0.0;
-      result.y = 0.0;
-      result.s = 0.0;
-    }
-    var x = daysSinceEpoch - firstIndex * this._stepSizeDays;
-    var work = this._work;
-    var denom = this._denominators;
-    var coef = this._coef;
-    var xTable = this._xTable;
-    var i,
-        j;
-    for (i = 0; i <= degree; ++i) {
-      work[i] = x - xTable[i];
-    }
-    for (i = 0; i <= degree; ++i) {
-      coef[i] = 1.0;
-      for (j = 0; j <= degree; ++j) {
-        if (j !== i) {
-          coef[i] *= work[j];
-        }
-      }
-      coef[i] *= denom[i];
-      var sampleIndex = (firstIndex + i) * 3;
-      result.x += coef[i] * samples[sampleIndex++];
-      result.y += coef[i] * samples[sampleIndex++];
-      result.s += coef[i] * samples[sampleIndex];
-    }
-    return result;
-  };
-  function requestXysChunk(xysData, chunkIndex) {
-    if (xysData._chunkDownloadsInProgress[chunkIndex]) {
-      return xysData._chunkDownloadsInProgress[chunkIndex];
-    }
-    var deferred = when.defer();
-    xysData._chunkDownloadsInProgress[chunkIndex] = deferred;
-    var chunkUrl;
-    var xysFileUrlTemplate = xysData._xysFileUrlTemplate;
-    if (defined(xysFileUrlTemplate)) {
-      chunkUrl = xysFileUrlTemplate.replace('{0}', chunkIndex);
-    } else {
-      chunkUrl = buildModuleUrl('Assets/IAU2006_XYS/IAU2006_XYS_' + chunkIndex + '.json');
-    }
-    when(loadJson(chunkUrl), function(chunk) {
-      xysData._chunkDownloadsInProgress[chunkIndex] = false;
-      var samples = xysData._samples;
-      var newSamples = chunk.samples;
-      var startIndex = chunkIndex * xysData._samplesPerXysFile * 3;
-      for (var i = 0,
-          len = newSamples.length; i < len; ++i) {
-        samples[startIndex + i] = newSamples[i];
-      }
-      deferred.resolve();
-    });
-    return deferred.promise;
-  }
-  return Iau2006XysData;
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("5f", [], function() {
-  "use strict";
-  function Iau2006XysSample(x, y, s) {
-    this.x = x;
-    this.y = y;
-    this.s = s;
-  }
-  return Iau2006XysSample;
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("60", [], function() {
-  function sprintf() {
-    var regex = /%%|%(\d+\$)?([-+\'#0 ]*)(\*\d+\$|\*|\d+)?(\.(\*\d+\$|\*|\d+))?([scboxXuideEfFgG])/g;
-    var a = arguments,
-        i = 0,
-        format = a[i++];
-    var pad = function(str, len, chr, leftJustify) {
-      if (!chr) {
-        chr = ' ';
-      }
-      var padding = (str.length >= len) ? '' : Array(1 + len - str.length >>> 0).join(chr);
-      return leftJustify ? str + padding : padding + str;
-    };
-    var justify = function(value, prefix, leftJustify, minWidth, zeroPad, customPadChar) {
-      var diff = minWidth - value.length;
-      if (diff > 0) {
-        if (leftJustify || !zeroPad) {
-          value = pad(value, minWidth, customPadChar, leftJustify);
-        } else {
-          value = value.slice(0, prefix.length) + pad('', diff, '0', true) + value.slice(prefix.length);
-        }
-      }
-      return value;
-    };
-    var formatBaseX = function(value, base, prefix, leftJustify, minWidth, precision, zeroPad) {
-      var number = value >>> 0;
-      prefix = prefix && number && {
-        '2': '0b',
-        '8': '0',
-        '16': '0x'
-      }[base] || '';
-      value = prefix + pad(number.toString(base), precision || 0, '0', false);
-      return justify(value, prefix, leftJustify, minWidth, zeroPad);
-    };
-    var formatString = function(value, leftJustify, minWidth, precision, zeroPad, customPadChar) {
-      if (precision != null) {
-        value = value.slice(0, precision);
-      }
-      return justify(value, '', leftJustify, minWidth, zeroPad, customPadChar);
-    };
-    var doFormat = function(substring, valueIndex, flags, minWidth, _, precision, type) {
-      var number;
-      var prefix;
-      var method;
-      var textTransform;
-      var value;
-      if (substring == '%%') {
-        return '%';
-      }
-      var leftJustify = false,
-          positivePrefix = '',
-          zeroPad = false,
-          prefixBaseX = false,
-          customPadChar = ' ';
-      var flagsl = flags.length;
-      for (var j = 0; flags && j < flagsl; j++) {
-        switch (flags.charAt(j)) {
-          case ' ':
-            positivePrefix = ' ';
-            break;
-          case '+':
-            positivePrefix = '+';
-            break;
-          case '-':
-            leftJustify = true;
-            break;
-          case "'":
-            customPadChar = flags.charAt(j + 1);
-            break;
-          case '0':
-            zeroPad = true;
-            break;
-          case '#':
-            prefixBaseX = true;
-            break;
-        }
-      }
-      if (!minWidth) {
-        minWidth = 0;
-      } else if (minWidth == '*') {
-        minWidth = +a[i++];
-      } else if (minWidth.charAt(0) == '*') {
-        minWidth = +a[minWidth.slice(1, -1)];
-      } else {
-        minWidth = +minWidth;
-      }
-      if (minWidth < 0) {
-        minWidth = -minWidth;
-        leftJustify = true;
-      }
-      if (!isFinite(minWidth)) {
-        throw new Error('sprintf: (minimum-)width must be finite');
-      }
-      if (!precision) {
-        precision = 'fFeE'.indexOf(type) > -1 ? 6 : (type == 'd') ? 0 : undefined;
-      } else if (precision == '*') {
-        precision = +a[i++];
-      } else if (precision.charAt(0) == '*') {
-        precision = +a[precision.slice(1, -1)];
-      } else {
-        precision = +precision;
-      }
-      value = valueIndex ? a[valueIndex.slice(0, -1)] : a[i++];
-      switch (type) {
-        case 's':
-          return formatString(String(value), leftJustify, minWidth, precision, zeroPad, customPadChar);
-        case 'c':
-          return formatString(String.fromCharCode(+value), leftJustify, minWidth, precision, zeroPad);
-        case 'b':
-          return formatBaseX(value, 2, prefixBaseX, leftJustify, minWidth, precision, zeroPad);
-        case 'o':
-          return formatBaseX(value, 8, prefixBaseX, leftJustify, minWidth, precision, zeroPad);
-        case 'x':
-          return formatBaseX(value, 16, prefixBaseX, leftJustify, minWidth, precision, zeroPad);
-        case 'X':
-          return formatBaseX(value, 16, prefixBaseX, leftJustify, minWidth, precision, zeroPad).toUpperCase();
-        case 'u':
-          return formatBaseX(value, 10, prefixBaseX, leftJustify, minWidth, precision, zeroPad);
-        case 'i':
-        case 'd':
-          number = +value || 0;
-          number = Math.round(number - number % 1);
-          prefix = number < 0 ? '-' : positivePrefix;
-          value = prefix + pad(String(Math.abs(number)), precision, '0', false);
-          return justify(value, prefix, leftJustify, minWidth, zeroPad);
-        case 'e':
-        case 'E':
-        case 'f':
-        case 'F':
-        case 'g':
-        case 'G':
-          number = +value;
-          prefix = number < 0 ? '-' : positivePrefix;
-          method = ['toExponential', 'toFixed', 'toPrecision']['efg'.indexOf(type.toLowerCase())];
-          textTransform = ['toString', 'toUpperCase']['eEfFgG'.indexOf(type) % 2];
-          value = prefix + Math.abs(number)[method](precision);
-          return justify(value, prefix, leftJustify, minWidth, zeroPad)[textTransform]();
-        default:
-          return substring;
-      }
-    };
-    return format.replace(regex, doFormat);
-  }
-  return sprintf;
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("45", ["12", "14"], function(defined, DeveloperError) {
-  "use strict";
-  function binarySearch(array, itemToFind, comparator) {
-    if (!defined(array)) {
-      throw new DeveloperError('array is required.');
-    }
-    if (!defined(itemToFind)) {
-      throw new DeveloperError('itemToFind is required.');
-    }
-    if (!defined(comparator)) {
-      throw new DeveloperError('comparator is required.');
-    }
-    var low = 0;
-    var high = array.length - 1;
-    var i;
-    var comparison;
-    while (low <= high) {
-      i = ~~((low + high) / 2);
-      comparison = comparator(array[i], itemToFind);
-      if (comparison < 0) {
-        low = i + 1;
-        continue;
-      }
-      if (comparison > 0) {
-        high = i - 1;
-        continue;
-      }
-      return i;
-    }
-    return ~(high + 1);
-  }
-  return binarySearch;
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("61", [], function() {
-  "use strict";
-  function GregorianDate(year, month, day, hour, minute, second, millisecond, isLeapSecond) {
-    this.year = year;
-    this.month = month;
-    this.day = day;
-    this.hour = hour;
-    this.minute = minute;
-    this.second = second;
-    this.millisecond = millisecond;
-    this.isLeapSecond = isLeapSecond;
-  }
-  return GregorianDate;
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("62", ["14"], function(DeveloperError) {
-  "use strict";
-  function isLeapYear(year) {
-    if (year === null || isNaN(year)) {
-      throw new DeveloperError('year is required and must be a number.');
-    }
-    return ((year % 4 === 0) && (year % 100 !== 0)) || (year % 400 === 0);
-  }
-  return isLeapYear;
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("54", [], function() {
-  "use strict";
-  function LeapSecond(date, offset) {
-    this.julianDate = date;
-    this.offset = offset;
-  }
-  return LeapSecond;
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("48", ["17"], function(freezeObject) {
-  "use strict";
-  var TimeStandard = {
-    UTC: 0,
-    TAI: 1
-  };
-  return freezeObject(TimeStandard);
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("1c", ["60", "45", "1b", "12", "14", "61", "62", "54", "47", "48"], function(sprintf, binarySearch, defaultValue, defined, DeveloperError, GregorianDate, isLeapYear, LeapSecond, TimeConstants, TimeStandard) {
-  "use strict";
-  var gregorianDateScratch = new GregorianDate();
-  var daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-  var daysInLeapFeburary = 29;
-  function compareLeapSecondDates(leapSecond, dateToFind) {
-    return JulianDate.compare(leapSecond.julianDate, dateToFind.julianDate);
-  }
-  var binarySearchScratchLeapSecond = new LeapSecond();
-  function convertUtcToTai(julianDate) {
-    binarySearchScratchLeapSecond.julianDate = julianDate;
-    var leapSeconds = JulianDate.leapSeconds;
-    var index = binarySearch(leapSeconds, binarySearchScratchLeapSecond, compareLeapSecondDates);
-    if (index < 0) {
-      index = ~index;
-    }
-    if (index >= leapSeconds.length) {
-      index = leapSeconds.length - 1;
-    }
-    var offset = leapSeconds[index].offset;
-    if (index > 0) {
-      var difference = JulianDate.secondsDifference(leapSeconds[index].julianDate, julianDate);
-      if (difference > offset) {
-        index--;
-        offset = leapSeconds[index].offset;
-      }
-    }
-    JulianDate.addSeconds(julianDate, offset, julianDate);
-  }
-  function convertTaiToUtc(julianDate, result) {
-    binarySearchScratchLeapSecond.julianDate = julianDate;
-    var leapSeconds = JulianDate.leapSeconds;
-    var index = binarySearch(leapSeconds, binarySearchScratchLeapSecond, compareLeapSecondDates);
-    if (index < 0) {
-      index = ~index;
-    }
-    if (index === 0) {
-      return JulianDate.addSeconds(julianDate, -leapSeconds[0].offset, result);
-    }
-    if (index >= leapSeconds.length) {
-      return JulianDate.addSeconds(julianDate, -leapSeconds[index - 1].offset, result);
-    }
-    var difference = JulianDate.secondsDifference(leapSeconds[index].julianDate, julianDate);
-    if (difference === 0) {
-      return JulianDate.addSeconds(julianDate, -leapSeconds[index].offset, result);
-    }
-    if (difference <= 1.0) {
-      return undefined;
-    }
-    return JulianDate.addSeconds(julianDate, -leapSeconds[--index].offset, result);
-  }
-  function setComponents(wholeDays, secondsOfDay, julianDate) {
-    var extraDays = (secondsOfDay / TimeConstants.SECONDS_PER_DAY) | 0;
-    wholeDays += extraDays;
-    secondsOfDay -= TimeConstants.SECONDS_PER_DAY * extraDays;
-    if (secondsOfDay < 0) {
-      wholeDays--;
-      secondsOfDay += TimeConstants.SECONDS_PER_DAY;
-    }
-    julianDate.dayNumber = wholeDays;
-    julianDate.secondsOfDay = secondsOfDay;
-    return julianDate;
-  }
-  function computeJulianDateComponents(year, month, day, hour, minute, second, millisecond) {
-    var a = ((month - 14) / 12) | 0;
-    var b = year + 4800 + a;
-    var dayNumber = (((1461 * b) / 4) | 0) + (((367 * (month - 2 - 12 * a)) / 12) | 0) - (((3 * (((b + 100) / 100) | 0)) / 4) | 0) + day - 32075;
-    hour = hour - 12;
-    if (hour < 0) {
-      hour += 24;
-    }
-    var secondsOfDay = second + ((hour * TimeConstants.SECONDS_PER_HOUR) + (minute * TimeConstants.SECONDS_PER_MINUTE) + (millisecond * TimeConstants.SECONDS_PER_MILLISECOND));
-    if (secondsOfDay >= 43200.0) {
-      dayNumber -= 1;
-    }
-    return [dayNumber, secondsOfDay];
-  }
-  var matchCalendarYear = /^(\d{4})$/;
-  var matchCalendarMonth = /^(\d{4})-(\d{2})$/;
-  var matchOrdinalDate = /^(\d{4})-?(\d{3})$/;
-  var matchWeekDate = /^(\d{4})-?W(\d{2})-?(\d{1})?$/;
-  var matchCalendarDate = /^(\d{4})-?(\d{2})-?(\d{2})$/;
-  var utcOffset = /([Z+\-])?(\d{2})?:?(\d{2})?$/;
-  var matchHours = /^(\d{2})(\.\d+)?/.source + utcOffset.source;
-  var matchHoursMinutes = /^(\d{2}):?(\d{2})(\.\d+)?/.source + utcOffset.source;
-  var matchHoursMinutesSeconds = /^(\d{2}):?(\d{2}):?(\d{2})(\.\d+)?/.source + utcOffset.source;
-  var iso8601ErrorMessage = 'Invalid ISO 8601 date.';
-  function JulianDate(julianDayNumber, secondsOfDay, timeStandard) {
-    this.dayNumber = undefined;
-    this.secondsOfDay = undefined;
-    julianDayNumber = defaultValue(julianDayNumber, 0.0);
-    secondsOfDay = defaultValue(secondsOfDay, 0.0);
-    timeStandard = defaultValue(timeStandard, TimeStandard.UTC);
-    var wholeDays = julianDayNumber | 0;
-    secondsOfDay = secondsOfDay + (julianDayNumber - wholeDays) * TimeConstants.SECONDS_PER_DAY;
-    setComponents(wholeDays, secondsOfDay, this);
-    if (timeStandard === TimeStandard.UTC) {
-      convertUtcToTai(this);
-    }
-  }
-  JulianDate.fromDate = function(date, result) {
-    if (!(date instanceof Date) || isNaN(date.getTime())) {
-      throw new DeveloperError('date must be a valid JavaScript Date.');
-    }
-    var components = computeJulianDateComponents(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds(), date.getUTCMilliseconds());
-    if (!defined(result)) {
-      return new JulianDate(components[0], components[1], TimeStandard.UTC);
-    }
-    setComponents(components[0], components[1], result);
-    convertUtcToTai(result);
-    return result;
-  };
-  JulianDate.fromIso8601 = function(iso8601String, result) {
-    if (typeof iso8601String !== 'string') {
-      throw new DeveloperError(iso8601ErrorMessage);
-    }
-    iso8601String = iso8601String.replace(',', '.');
-    var tokens = iso8601String.split('T');
-    var year;
-    var month = 1;
-    var day = 1;
-    var hour = 0;
-    var minute = 0;
-    var second = 0;
-    var millisecond = 0;
-    var date = tokens[0];
-    var time = tokens[1];
-    var tmp;
-    var inLeapYear;
-    if (!defined(date)) {
-      throw new DeveloperError(iso8601ErrorMessage);
-    }
-    var dashCount;
-    tokens = date.match(matchCalendarDate);
-    if (tokens !== null) {
-      dashCount = date.split('-').length - 1;
-      if (dashCount > 0 && dashCount !== 2) {
-        throw new DeveloperError(iso8601ErrorMessage);
-      }
-      year = +tokens[1];
-      month = +tokens[2];
-      day = +tokens[3];
-    } else {
-      tokens = date.match(matchCalendarMonth);
-      if (tokens !== null) {
-        year = +tokens[1];
-        month = +tokens[2];
-      } else {
-        tokens = date.match(matchCalendarYear);
-        if (tokens !== null) {
-          year = +tokens[1];
-        } else {
-          var dayOfYear;
-          tokens = date.match(matchOrdinalDate);
-          if (tokens !== null) {
-            year = +tokens[1];
-            dayOfYear = +tokens[2];
-            inLeapYear = isLeapYear(year);
-            if (dayOfYear < 1 || (inLeapYear && dayOfYear > 366) || (!inLeapYear && dayOfYear > 365)) {
-              throw new DeveloperError(iso8601ErrorMessage);
-            }
-          } else {
-            tokens = date.match(matchWeekDate);
-            if (tokens !== null) {
-              year = +tokens[1];
-              var weekNumber = +tokens[2];
-              var dayOfWeek = +tokens[3] || 0;
-              dashCount = date.split('-').length - 1;
-              if (dashCount > 0 && ((!defined(tokens[3]) && dashCount !== 1) || (defined(tokens[3]) && dashCount !== 2))) {
-                throw new DeveloperError(iso8601ErrorMessage);
-              }
-              var january4 = new Date(Date.UTC(year, 0, 4));
-              dayOfYear = (weekNumber * 7) + dayOfWeek - january4.getUTCDay() - 3;
-            } else {
-              throw new DeveloperError(iso8601ErrorMessage);
-            }
-          }
-          tmp = new Date(Date.UTC(year, 0, 1));
-          tmp.setUTCDate(dayOfYear);
-          month = tmp.getUTCMonth() + 1;
-          day = tmp.getUTCDate();
-        }
-      }
-    }
-    inLeapYear = isLeapYear(year);
-    if (month < 1 || month > 12 || day < 1 || ((month !== 2 || !inLeapYear) && day > daysInMonth[month - 1]) || (inLeapYear && month === 2 && day > daysInLeapFeburary)) {
-      throw new DeveloperError(iso8601ErrorMessage);
-    }
-    var offsetIndex;
-    if (defined(time)) {
-      tokens = time.match(matchHoursMinutesSeconds);
-      if (tokens !== null) {
-        dashCount = time.split(':').length - 1;
-        if (dashCount > 0 && dashCount !== 2 && dashCount !== 3) {
-          throw new DeveloperError(iso8601ErrorMessage);
-        }
-        hour = +tokens[1];
-        minute = +tokens[2];
-        second = +tokens[3];
-        millisecond = +(tokens[4] || 0) * 1000.0;
-        offsetIndex = 5;
-      } else {
-        tokens = time.match(matchHoursMinutes);
-        if (tokens !== null) {
-          dashCount = time.split(':').length - 1;
-          if (dashCount > 2) {
-            throw new DeveloperError(iso8601ErrorMessage);
-          }
-          hour = +tokens[1];
-          minute = +tokens[2];
-          second = +(tokens[3] || 0) * 60.0;
-          offsetIndex = 4;
-        } else {
-          tokens = time.match(matchHours);
-          if (tokens !== null) {
-            hour = +tokens[1];
-            minute = +(tokens[2] || 0) * 60.0;
-            offsetIndex = 3;
-          } else {
-            throw new DeveloperError(iso8601ErrorMessage);
-          }
-        }
-      }
-      if (minute >= 60 || second >= 61 || hour > 24 || (hour === 24 && (minute > 0 || second > 0 || millisecond > 0))) {
-        throw new DeveloperError(iso8601ErrorMessage);
-      }
-      var offset = tokens[offsetIndex];
-      var offsetHours = +(tokens[offsetIndex + 1]);
-      var offsetMinutes = +(tokens[offsetIndex + 2] || 0);
-      switch (offset) {
-        case '+':
-          hour = hour - offsetHours;
-          minute = minute - offsetMinutes;
-          break;
-        case '-':
-          hour = hour + offsetHours;
-          minute = minute + offsetMinutes;
-          break;
-        case 'Z':
-          break;
-        default:
-          minute = minute + new Date(Date.UTC(year, month - 1, day, hour, minute)).getTimezoneOffset();
-          break;
-      }
-    } else {
-      minute = minute + new Date(year, month - 1, day).getTimezoneOffset();
-    }
-    var isLeapSecond = second === 60;
-    if (isLeapSecond) {
-      second--;
-    }
-    while (minute >= 60) {
-      minute -= 60;
-      hour++;
-    }
-    while (hour >= 24) {
-      hour -= 24;
-      day++;
-    }
-    tmp = (inLeapYear && month === 2) ? daysInLeapFeburary : daysInMonth[month - 1];
-    while (day > tmp) {
-      day -= tmp;
-      month++;
-      if (month > 12) {
-        month -= 12;
-        year++;
-      }
-      tmp = (inLeapYear && month === 2) ? daysInLeapFeburary : daysInMonth[month - 1];
-    }
-    while (minute < 0) {
-      minute += 60;
-      hour--;
-    }
-    while (hour < 0) {
-      hour += 24;
-      day--;
-    }
-    while (day < 1) {
-      month--;
-      if (month < 1) {
-        month += 12;
-        year--;
-      }
-      tmp = (inLeapYear && month === 2) ? daysInLeapFeburary : daysInMonth[month - 1];
-      day += tmp;
-    }
-    var components = computeJulianDateComponents(year, month, day, hour, minute, second, millisecond);
-    if (!defined(result)) {
-      result = new JulianDate(components[0], components[1], TimeStandard.UTC);
-    } else {
-      setComponents(components[0], components[1], result);
-      convertUtcToTai(result);
-    }
-    if (isLeapSecond) {
-      JulianDate.addSeconds(result, 1, result);
-    }
-    return result;
-  };
-  JulianDate.now = function(result) {
-    return JulianDate.fromDate(new Date(), result);
-  };
-  var toGregorianDateScratch = new JulianDate(0, 0, TimeStandard.TAI);
-  JulianDate.toGregorianDate = function(julianDate, result) {
-    if (!defined(julianDate)) {
-      throw new DeveloperError('julianDate is required.');
-    }
-    var isLeapSecond = false;
-    var thisUtc = convertTaiToUtc(julianDate, toGregorianDateScratch);
-    if (!defined(thisUtc)) {
-      JulianDate.addSeconds(julianDate, -1, toGregorianDateScratch);
-      thisUtc = convertTaiToUtc(toGregorianDateScratch, toGregorianDateScratch);
-      isLeapSecond = true;
-    }
-    var julianDayNumber = thisUtc.dayNumber;
-    var secondsOfDay = thisUtc.secondsOfDay;
-    if (secondsOfDay >= 43200.0) {
-      julianDayNumber += 1;
-    }
-    var L = (julianDayNumber + 68569) | 0;
-    var N = (4 * L / 146097) | 0;
-    L = (L - (((146097 * N + 3) / 4) | 0)) | 0;
-    var I = ((4000 * (L + 1)) / 1461001) | 0;
-    L = (L - (((1461 * I) / 4) | 0) + 31) | 0;
-    var J = ((80 * L) / 2447) | 0;
-    var day = (L - (((2447 * J) / 80) | 0)) | 0;
-    L = (J / 11) | 0;
-    var month = (J + 2 - 12 * L) | 0;
-    var year = (100 * (N - 49) + I + L) | 0;
-    var hour = (secondsOfDay / TimeConstants.SECONDS_PER_HOUR) | 0;
-    var remainingSeconds = secondsOfDay - (hour * TimeConstants.SECONDS_PER_HOUR);
-    var minute = (remainingSeconds / TimeConstants.SECONDS_PER_MINUTE) | 0;
-    remainingSeconds = remainingSeconds - (minute * TimeConstants.SECONDS_PER_MINUTE);
-    var second = remainingSeconds | 0;
-    var millisecond = ((remainingSeconds - second) / TimeConstants.SECONDS_PER_MILLISECOND);
-    hour += 12;
-    if (hour > 23) {
-      hour -= 24;
-    }
-    if (isLeapSecond) {
-      second += 1;
-    }
-    if (!defined(result)) {
-      return new GregorianDate(year, month, day, hour, minute, second, millisecond, isLeapSecond);
-    }
-    result.year = year;
-    result.month = month;
-    result.day = day;
-    result.hour = hour;
-    result.minute = minute;
-    result.second = second;
-    result.millisecond = millisecond;
-    result.isLeapSecond = isLeapSecond;
-    return result;
-  };
-  JulianDate.toDate = function(julianDate) {
-    if (!defined(julianDate)) {
-      throw new DeveloperError('julianDate is required.');
-    }
-    var gDate = JulianDate.toGregorianDate(julianDate, gregorianDateScratch);
-    var second = gDate.second;
-    if (gDate.isLeapSecond) {
-      second -= 1;
-    }
-    return new Date(Date.UTC(gDate.year, gDate.month - 1, gDate.day, gDate.hour, gDate.minute, second, gDate.millisecond));
-  };
-  JulianDate.toIso8601 = function(julianDate, precision) {
-    if (!defined(julianDate)) {
-      throw new DeveloperError('julianDate is required.');
-    }
-    var gDate = JulianDate.toGregorianDate(julianDate, gDate);
-    var millisecondStr;
-    if (!defined(precision) && gDate.millisecond !== 0) {
-      millisecondStr = (gDate.millisecond * 0.01).toString().replace('.', '');
-      return sprintf("%04d-%02d-%02dT%02d:%02d:%02d.%sZ", gDate.year, gDate.month, gDate.day, gDate.hour, gDate.minute, gDate.second, millisecondStr);
-    }
-    if (!defined(precision) || precision === 0) {
-      return sprintf("%04d-%02d-%02dT%02d:%02d:%02dZ", gDate.year, gDate.month, gDate.day, gDate.hour, gDate.minute, gDate.second);
-    }
-    millisecondStr = (gDate.millisecond * 0.01).toFixed(precision).replace('.', '').slice(0, precision);
-    return sprintf("%04d-%02d-%02dT%02d:%02d:%02d.%sZ", gDate.year, gDate.month, gDate.day, gDate.hour, gDate.minute, gDate.second, millisecondStr);
-  };
-  JulianDate.clone = function(julianDate, result) {
-    if (!defined(julianDate)) {
-      return undefined;
-    }
-    if (!defined(result)) {
-      return new JulianDate(julianDate.dayNumber, julianDate.secondsOfDay, TimeStandard.TAI);
-    }
-    result.dayNumber = julianDate.dayNumber;
-    result.secondsOfDay = julianDate.secondsOfDay;
-    return result;
-  };
-  JulianDate.compare = function(left, right) {
-    if (!defined(left)) {
-      throw new DeveloperError('left is required.');
-    }
-    if (!defined(right)) {
-      throw new DeveloperError('right is required.');
-    }
-    var julianDayNumberDifference = left.dayNumber - right.dayNumber;
-    if (julianDayNumberDifference !== 0) {
-      return julianDayNumberDifference;
-    }
-    return left.secondsOfDay - right.secondsOfDay;
-  };
-  JulianDate.equals = function(left, right) {
-    return (left === right) || (defined(left) && defined(right) && left.dayNumber === right.dayNumber && left.secondsOfDay === right.secondsOfDay);
-  };
-  JulianDate.equalsEpsilon = function(left, right, epsilon) {
-    if (!defined(epsilon)) {
-      throw new DeveloperError('epsilon is required.');
-    }
-    return (left === right) || (defined(left) && defined(right) && Math.abs(JulianDate.secondsDifference(left, right)) <= epsilon);
-  };
-  JulianDate.totalDays = function(julianDate) {
-    if (!defined(julianDate)) {
-      throw new DeveloperError('julianDate is required.');
-    }
-    return julianDate.dayNumber + (julianDate.secondsOfDay / TimeConstants.SECONDS_PER_DAY);
-  };
-  JulianDate.secondsDifference = function(left, right) {
-    if (!defined(left)) {
-      throw new DeveloperError('left is required.');
-    }
-    if (!defined(right)) {
-      throw new DeveloperError('right is required.');
-    }
-    var dayDifference = (left.dayNumber - right.dayNumber) * TimeConstants.SECONDS_PER_DAY;
-    return (dayDifference + (left.secondsOfDay - right.secondsOfDay));
-  };
-  JulianDate.daysDifference = function(left, right) {
-    if (!defined(left)) {
-      throw new DeveloperError('left is required.');
-    }
-    if (!defined(right)) {
-      throw new DeveloperError('right is required.');
-    }
-    var dayDifference = (left.dayNumber - right.dayNumber);
-    var secondDifference = (left.secondsOfDay - right.secondsOfDay) / TimeConstants.SECONDS_PER_DAY;
-    return dayDifference + secondDifference;
-  };
-  JulianDate.computeTaiMinusUtc = function(julianDate) {
-    binarySearchScratchLeapSecond.julianDate = julianDate;
-    var leapSeconds = JulianDate.leapSeconds;
-    var index = binarySearch(leapSeconds, binarySearchScratchLeapSecond, compareLeapSecondDates);
-    if (index < 0) {
-      index = ~index;
-      --index;
-      if (index < 0) {
-        index = 0;
-      }
-    }
-    return leapSeconds[index].offset;
-  };
-  JulianDate.addSeconds = function(julianDate, seconds, result) {
-    if (!defined(julianDate)) {
-      throw new DeveloperError('julianDate is required.');
-    }
-    if (!defined(seconds)) {
-      throw new DeveloperError('seconds is required.');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required.');
-    }
-    return setComponents(julianDate.dayNumber, julianDate.secondsOfDay + seconds, result);
-  };
-  JulianDate.addMinutes = function(julianDate, minutes, result) {
-    if (!defined(julianDate)) {
-      throw new DeveloperError('julianDate is required.');
-    }
-    if (!defined(minutes)) {
-      throw new DeveloperError('minutes is required.');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required.');
-    }
-    var newSecondsOfDay = julianDate.secondsOfDay + (minutes * TimeConstants.SECONDS_PER_MINUTE);
-    return setComponents(julianDate.dayNumber, newSecondsOfDay, result);
-  };
-  JulianDate.addHours = function(julianDate, hours, result) {
-    if (!defined(julianDate)) {
-      throw new DeveloperError('julianDate is required.');
-    }
-    if (!defined(hours)) {
-      throw new DeveloperError('hours is required.');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required.');
-    }
-    var newSecondsOfDay = julianDate.secondsOfDay + (hours * TimeConstants.SECONDS_PER_HOUR);
-    return setComponents(julianDate.dayNumber, newSecondsOfDay, result);
-  };
-  JulianDate.addDays = function(julianDate, days, result) {
-    if (!defined(julianDate)) {
-      throw new DeveloperError('julianDate is required.');
-    }
-    if (!defined(days)) {
-      throw new DeveloperError('days is required.');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required.');
-    }
-    var newJulianDayNumber = julianDate.dayNumber + days;
-    return setComponents(newJulianDayNumber, julianDate.secondsOfDay, result);
-  };
-  JulianDate.lessThan = function(left, right) {
-    return JulianDate.compare(left, right) < 0;
-  };
-  JulianDate.lessThanOrEquals = function(left, right) {
-    return JulianDate.compare(left, right) <= 0;
-  };
-  JulianDate.greaterThan = function(left, right) {
-    return JulianDate.compare(left, right) > 0;
-  };
-  JulianDate.greaterThanOrEquals = function(left, right) {
-    return JulianDate.compare(left, right) >= 0;
-  };
-  JulianDate.prototype.clone = function(result) {
-    return JulianDate.clone(this, result);
-  };
-  JulianDate.prototype.equals = function(right) {
-    return JulianDate.equals(this, right);
-  };
-  JulianDate.prototype.equalsEpsilon = function(right, epsilon) {
-    return JulianDate.equalsEpsilon(this, right, epsilon);
-  };
-  JulianDate.prototype.toString = function() {
-    return JulianDate.toIso8601(this);
-  };
-  JulianDate.leapSeconds = [new LeapSecond(new JulianDate(2441317, 43210.0, TimeStandard.TAI), 10), new LeapSecond(new JulianDate(2441499, 43211.0, TimeStandard.TAI), 11), new LeapSecond(new JulianDate(2441683, 43212.0, TimeStandard.TAI), 12), new LeapSecond(new JulianDate(2442048, 43213.0, TimeStandard.TAI), 13), new LeapSecond(new JulianDate(2442413, 43214.0, TimeStandard.TAI), 14), new LeapSecond(new JulianDate(2442778, 43215.0, TimeStandard.TAI), 15), new LeapSecond(new JulianDate(2443144, 43216.0, TimeStandard.TAI), 16), new LeapSecond(new JulianDate(2443509, 43217.0, TimeStandard.TAI), 17), new LeapSecond(new JulianDate(2443874, 43218.0, TimeStandard.TAI), 18), new LeapSecond(new JulianDate(2444239, 43219.0, TimeStandard.TAI), 19), new LeapSecond(new JulianDate(2444786, 43220.0, TimeStandard.TAI), 20), new LeapSecond(new JulianDate(2445151, 43221.0, TimeStandard.TAI), 21), new LeapSecond(new JulianDate(2445516, 43222.0, TimeStandard.TAI), 22), new LeapSecond(new JulianDate(2446247, 43223.0, TimeStandard.TAI), 23), new LeapSecond(new JulianDate(2447161, 43224.0, TimeStandard.TAI), 24), new LeapSecond(new JulianDate(2447892, 43225.0, TimeStandard.TAI), 25), new LeapSecond(new JulianDate(2448257, 43226.0, TimeStandard.TAI), 26), new LeapSecond(new JulianDate(2448804, 43227.0, TimeStandard.TAI), 27), new LeapSecond(new JulianDate(2449169, 43228.0, TimeStandard.TAI), 28), new LeapSecond(new JulianDate(2449534, 43229.0, TimeStandard.TAI), 29), new LeapSecond(new JulianDate(2450083, 43230.0, TimeStandard.TAI), 30), new LeapSecond(new JulianDate(2450630, 43231.0, TimeStandard.TAI), 31), new LeapSecond(new JulianDate(2451179, 43232.0, TimeStandard.TAI), 32), new LeapSecond(new JulianDate(2453736, 43233.0, TimeStandard.TAI), 33), new LeapSecond(new JulianDate(2454832, 43234.0, TimeStandard.TAI), 34), new LeapSecond(new JulianDate(2456109, 43235.0, TimeStandard.TAI), 35), new LeapSecond(new JulianDate(2457204, 43236.0, TimeStandard.TAI), 36)];
-  return JulianDate;
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("3d", ["1b", "12", "14", "17", "1f"], function(defaultValue, defined, DeveloperError, freezeObject, CesiumMath) {
+define("40", ["1e", "15", "17", "1a", "22"], function(defaultValue, defined, DeveloperError, freezeObject, CesiumMath) {
   "use strict";
   function Cartesian4(x, y, z, w) {
     this.x = defaultValue(x, 0.0);
@@ -11342,7 +13217,759 @@ define("3d", ["1b", "12", "14", "17", "1f"], function(defaultValue, defined, Dev
 })();
 (function() {
 var define = $__System.amdDefine;
-define("31", ["12"], function(defined) {
+define("2e", ["29", "1e", "15", "17", "1a", "22"], function(Cartesian3, defaultValue, defined, DeveloperError, freezeObject, CesiumMath) {
+  "use strict";
+  function Matrix3(column0Row0, column1Row0, column2Row0, column0Row1, column1Row1, column2Row1, column0Row2, column1Row2, column2Row2) {
+    this[0] = defaultValue(column0Row0, 0.0);
+    this[1] = defaultValue(column0Row1, 0.0);
+    this[2] = defaultValue(column0Row2, 0.0);
+    this[3] = defaultValue(column1Row0, 0.0);
+    this[4] = defaultValue(column1Row1, 0.0);
+    this[5] = defaultValue(column1Row2, 0.0);
+    this[6] = defaultValue(column2Row0, 0.0);
+    this[7] = defaultValue(column2Row1, 0.0);
+    this[8] = defaultValue(column2Row2, 0.0);
+  }
+  Matrix3.packedLength = 9;
+  Matrix3.pack = function(value, array, startingIndex) {
+    if (!defined(value)) {
+      throw new DeveloperError('value is required');
+    }
+    if (!defined(array)) {
+      throw new DeveloperError('array is required');
+    }
+    startingIndex = defaultValue(startingIndex, 0);
+    array[startingIndex++] = value[0];
+    array[startingIndex++] = value[1];
+    array[startingIndex++] = value[2];
+    array[startingIndex++] = value[3];
+    array[startingIndex++] = value[4];
+    array[startingIndex++] = value[5];
+    array[startingIndex++] = value[6];
+    array[startingIndex++] = value[7];
+    array[startingIndex++] = value[8];
+  };
+  Matrix3.unpack = function(array, startingIndex, result) {
+    if (!defined(array)) {
+      throw new DeveloperError('array is required');
+    }
+    startingIndex = defaultValue(startingIndex, 0);
+    if (!defined(result)) {
+      result = new Matrix3();
+    }
+    result[0] = array[startingIndex++];
+    result[1] = array[startingIndex++];
+    result[2] = array[startingIndex++];
+    result[3] = array[startingIndex++];
+    result[4] = array[startingIndex++];
+    result[5] = array[startingIndex++];
+    result[6] = array[startingIndex++];
+    result[7] = array[startingIndex++];
+    result[8] = array[startingIndex++];
+    return result;
+  };
+  Matrix3.clone = function(values, result) {
+    if (!defined(values)) {
+      return undefined;
+    }
+    if (!defined(result)) {
+      return new Matrix3(values[0], values[3], values[6], values[1], values[4], values[7], values[2], values[5], values[8]);
+    }
+    result[0] = values[0];
+    result[1] = values[1];
+    result[2] = values[2];
+    result[3] = values[3];
+    result[4] = values[4];
+    result[5] = values[5];
+    result[6] = values[6];
+    result[7] = values[7];
+    result[8] = values[8];
+    return result;
+  };
+  Matrix3.fromArray = function(array, startingIndex, result) {
+    if (!defined(array)) {
+      throw new DeveloperError('array is required');
+    }
+    startingIndex = defaultValue(startingIndex, 0);
+    if (!defined(result)) {
+      result = new Matrix3();
+    }
+    result[0] = array[startingIndex];
+    result[1] = array[startingIndex + 1];
+    result[2] = array[startingIndex + 2];
+    result[3] = array[startingIndex + 3];
+    result[4] = array[startingIndex + 4];
+    result[5] = array[startingIndex + 5];
+    result[6] = array[startingIndex + 6];
+    result[7] = array[startingIndex + 7];
+    result[8] = array[startingIndex + 8];
+    return result;
+  };
+  Matrix3.fromColumnMajorArray = function(values, result) {
+    if (!defined(values)) {
+      throw new DeveloperError('values parameter is required');
+    }
+    return Matrix3.clone(values, result);
+  };
+  Matrix3.fromRowMajorArray = function(values, result) {
+    if (!defined(values)) {
+      throw new DeveloperError('values is required.');
+    }
+    if (!defined(result)) {
+      return new Matrix3(values[0], values[1], values[2], values[3], values[4], values[5], values[6], values[7], values[8]);
+    }
+    result[0] = values[0];
+    result[1] = values[3];
+    result[2] = values[6];
+    result[3] = values[1];
+    result[4] = values[4];
+    result[5] = values[7];
+    result[6] = values[2];
+    result[7] = values[5];
+    result[8] = values[8];
+    return result;
+  };
+  Matrix3.fromQuaternion = function(quaternion, result) {
+    if (!defined(quaternion)) {
+      throw new DeveloperError('quaternion is required');
+    }
+    var x2 = quaternion.x * quaternion.x;
+    var xy = quaternion.x * quaternion.y;
+    var xz = quaternion.x * quaternion.z;
+    var xw = quaternion.x * quaternion.w;
+    var y2 = quaternion.y * quaternion.y;
+    var yz = quaternion.y * quaternion.z;
+    var yw = quaternion.y * quaternion.w;
+    var z2 = quaternion.z * quaternion.z;
+    var zw = quaternion.z * quaternion.w;
+    var w2 = quaternion.w * quaternion.w;
+    var m00 = x2 - y2 - z2 + w2;
+    var m01 = 2.0 * (xy - zw);
+    var m02 = 2.0 * (xz + yw);
+    var m10 = 2.0 * (xy + zw);
+    var m11 = -x2 + y2 - z2 + w2;
+    var m12 = 2.0 * (yz - xw);
+    var m20 = 2.0 * (xz - yw);
+    var m21 = 2.0 * (yz + xw);
+    var m22 = -x2 - y2 + z2 + w2;
+    if (!defined(result)) {
+      return new Matrix3(m00, m01, m02, m10, m11, m12, m20, m21, m22);
+    }
+    result[0] = m00;
+    result[1] = m10;
+    result[2] = m20;
+    result[3] = m01;
+    result[4] = m11;
+    result[5] = m21;
+    result[6] = m02;
+    result[7] = m12;
+    result[8] = m22;
+    return result;
+  };
+  Matrix3.fromScale = function(scale, result) {
+    if (!defined(scale)) {
+      throw new DeveloperError('scale is required.');
+    }
+    if (!defined(result)) {
+      return new Matrix3(scale.x, 0.0, 0.0, 0.0, scale.y, 0.0, 0.0, 0.0, scale.z);
+    }
+    result[0] = scale.x;
+    result[1] = 0.0;
+    result[2] = 0.0;
+    result[3] = 0.0;
+    result[4] = scale.y;
+    result[5] = 0.0;
+    result[6] = 0.0;
+    result[7] = 0.0;
+    result[8] = scale.z;
+    return result;
+  };
+  Matrix3.fromUniformScale = function(scale, result) {
+    if (typeof scale !== 'number') {
+      throw new DeveloperError('scale is required.');
+    }
+    if (!defined(result)) {
+      return new Matrix3(scale, 0.0, 0.0, 0.0, scale, 0.0, 0.0, 0.0, scale);
+    }
+    result[0] = scale;
+    result[1] = 0.0;
+    result[2] = 0.0;
+    result[3] = 0.0;
+    result[4] = scale;
+    result[5] = 0.0;
+    result[6] = 0.0;
+    result[7] = 0.0;
+    result[8] = scale;
+    return result;
+  };
+  Matrix3.fromCrossProduct = function(vector, result) {
+    if (!defined(vector)) {
+      throw new DeveloperError('vector is required.');
+    }
+    if (!defined(result)) {
+      return new Matrix3(0.0, -vector.z, vector.y, vector.z, 0.0, -vector.x, -vector.y, vector.x, 0.0);
+    }
+    result[0] = 0.0;
+    result[1] = vector.z;
+    result[2] = -vector.y;
+    result[3] = -vector.z;
+    result[4] = 0.0;
+    result[5] = vector.x;
+    result[6] = vector.y;
+    result[7] = -vector.x;
+    result[8] = 0.0;
+    return result;
+  };
+  Matrix3.fromRotationX = function(angle, result) {
+    if (!defined(angle)) {
+      throw new DeveloperError('angle is required.');
+    }
+    var cosAngle = Math.cos(angle);
+    var sinAngle = Math.sin(angle);
+    if (!defined(result)) {
+      return new Matrix3(1.0, 0.0, 0.0, 0.0, cosAngle, -sinAngle, 0.0, sinAngle, cosAngle);
+    }
+    result[0] = 1.0;
+    result[1] = 0.0;
+    result[2] = 0.0;
+    result[3] = 0.0;
+    result[4] = cosAngle;
+    result[5] = sinAngle;
+    result[6] = 0.0;
+    result[7] = -sinAngle;
+    result[8] = cosAngle;
+    return result;
+  };
+  Matrix3.fromRotationY = function(angle, result) {
+    if (!defined(angle)) {
+      throw new DeveloperError('angle is required.');
+    }
+    var cosAngle = Math.cos(angle);
+    var sinAngle = Math.sin(angle);
+    if (!defined(result)) {
+      return new Matrix3(cosAngle, 0.0, sinAngle, 0.0, 1.0, 0.0, -sinAngle, 0.0, cosAngle);
+    }
+    result[0] = cosAngle;
+    result[1] = 0.0;
+    result[2] = -sinAngle;
+    result[3] = 0.0;
+    result[4] = 1.0;
+    result[5] = 0.0;
+    result[6] = sinAngle;
+    result[7] = 0.0;
+    result[8] = cosAngle;
+    return result;
+  };
+  Matrix3.fromRotationZ = function(angle, result) {
+    if (!defined(angle)) {
+      throw new DeveloperError('angle is required.');
+    }
+    var cosAngle = Math.cos(angle);
+    var sinAngle = Math.sin(angle);
+    if (!defined(result)) {
+      return new Matrix3(cosAngle, -sinAngle, 0.0, sinAngle, cosAngle, 0.0, 0.0, 0.0, 1.0);
+    }
+    result[0] = cosAngle;
+    result[1] = sinAngle;
+    result[2] = 0.0;
+    result[3] = -sinAngle;
+    result[4] = cosAngle;
+    result[5] = 0.0;
+    result[6] = 0.0;
+    result[7] = 0.0;
+    result[8] = 1.0;
+    return result;
+  };
+  Matrix3.toArray = function(matrix, result) {
+    if (!defined(matrix)) {
+      throw new DeveloperError('matrix is required');
+    }
+    if (!defined(result)) {
+      return [matrix[0], matrix[1], matrix[2], matrix[3], matrix[4], matrix[5], matrix[6], matrix[7], matrix[8]];
+    }
+    result[0] = matrix[0];
+    result[1] = matrix[1];
+    result[2] = matrix[2];
+    result[3] = matrix[3];
+    result[4] = matrix[4];
+    result[5] = matrix[5];
+    result[6] = matrix[6];
+    result[7] = matrix[7];
+    result[8] = matrix[8];
+    return result;
+  };
+  Matrix3.getElementIndex = function(column, row) {
+    if (typeof row !== 'number' || row < 0 || row > 2) {
+      throw new DeveloperError('row must be 0, 1, or 2.');
+    }
+    if (typeof column !== 'number' || column < 0 || column > 2) {
+      throw new DeveloperError('column must be 0, 1, or 2.');
+    }
+    return column * 3 + row;
+  };
+  Matrix3.getColumn = function(matrix, index, result) {
+    if (!defined(matrix)) {
+      throw new DeveloperError('matrix is required.');
+    }
+    if (typeof index !== 'number' || index < 0 || index > 2) {
+      throw new DeveloperError('index must be 0, 1, or 2.');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    var startIndex = index * 3;
+    var x = matrix[startIndex];
+    var y = matrix[startIndex + 1];
+    var z = matrix[startIndex + 2];
+    result.x = x;
+    result.y = y;
+    result.z = z;
+    return result;
+  };
+  Matrix3.setColumn = function(matrix, index, cartesian, result) {
+    if (!defined(matrix)) {
+      throw new DeveloperError('matrix is required');
+    }
+    if (!defined(cartesian)) {
+      throw new DeveloperError('cartesian is required');
+    }
+    if (typeof index !== 'number' || index < 0 || index > 2) {
+      throw new DeveloperError('index must be 0, 1, or 2.');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    result = Matrix3.clone(matrix, result);
+    var startIndex = index * 3;
+    result[startIndex] = cartesian.x;
+    result[startIndex + 1] = cartesian.y;
+    result[startIndex + 2] = cartesian.z;
+    return result;
+  };
+  Matrix3.getRow = function(matrix, index, result) {
+    if (!defined(matrix)) {
+      throw new DeveloperError('matrix is required.');
+    }
+    if (typeof index !== 'number' || index < 0 || index > 2) {
+      throw new DeveloperError('index must be 0, 1, or 2.');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    var x = matrix[index];
+    var y = matrix[index + 3];
+    var z = matrix[index + 6];
+    result.x = x;
+    result.y = y;
+    result.z = z;
+    return result;
+  };
+  Matrix3.setRow = function(matrix, index, cartesian, result) {
+    if (!defined(matrix)) {
+      throw new DeveloperError('matrix is required');
+    }
+    if (!defined(cartesian)) {
+      throw new DeveloperError('cartesian is required');
+    }
+    if (typeof index !== 'number' || index < 0 || index > 2) {
+      throw new DeveloperError('index must be 0, 1, or 2.');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    result = Matrix3.clone(matrix, result);
+    result[index] = cartesian.x;
+    result[index + 3] = cartesian.y;
+    result[index + 6] = cartesian.z;
+    return result;
+  };
+  var scratchColumn = new Cartesian3();
+  Matrix3.getScale = function(matrix, result) {
+    if (!defined(matrix)) {
+      throw new DeveloperError('matrix is required.');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    result.x = Cartesian3.magnitude(Cartesian3.fromElements(matrix[0], matrix[1], matrix[2], scratchColumn));
+    result.y = Cartesian3.magnitude(Cartesian3.fromElements(matrix[3], matrix[4], matrix[5], scratchColumn));
+    result.z = Cartesian3.magnitude(Cartesian3.fromElements(matrix[6], matrix[7], matrix[8], scratchColumn));
+    return result;
+  };
+  var scratchScale = new Cartesian3();
+  Matrix3.getMaximumScale = function(matrix) {
+    Matrix3.getScale(matrix, scratchScale);
+    return Cartesian3.maximumComponent(scratchScale);
+  };
+  Matrix3.multiply = function(left, right, result) {
+    if (!defined(left)) {
+      throw new DeveloperError('left is required');
+    }
+    if (!defined(right)) {
+      throw new DeveloperError('right is required');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    var column0Row0 = left[0] * right[0] + left[3] * right[1] + left[6] * right[2];
+    var column0Row1 = left[1] * right[0] + left[4] * right[1] + left[7] * right[2];
+    var column0Row2 = left[2] * right[0] + left[5] * right[1] + left[8] * right[2];
+    var column1Row0 = left[0] * right[3] + left[3] * right[4] + left[6] * right[5];
+    var column1Row1 = left[1] * right[3] + left[4] * right[4] + left[7] * right[5];
+    var column1Row2 = left[2] * right[3] + left[5] * right[4] + left[8] * right[5];
+    var column2Row0 = left[0] * right[6] + left[3] * right[7] + left[6] * right[8];
+    var column2Row1 = left[1] * right[6] + left[4] * right[7] + left[7] * right[8];
+    var column2Row2 = left[2] * right[6] + left[5] * right[7] + left[8] * right[8];
+    result[0] = column0Row0;
+    result[1] = column0Row1;
+    result[2] = column0Row2;
+    result[3] = column1Row0;
+    result[4] = column1Row1;
+    result[5] = column1Row2;
+    result[6] = column2Row0;
+    result[7] = column2Row1;
+    result[8] = column2Row2;
+    return result;
+  };
+  Matrix3.add = function(left, right, result) {
+    if (!defined(left)) {
+      throw new DeveloperError('left is required');
+    }
+    if (!defined(right)) {
+      throw new DeveloperError('right is required');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    result[0] = left[0] + right[0];
+    result[1] = left[1] + right[1];
+    result[2] = left[2] + right[2];
+    result[3] = left[3] + right[3];
+    result[4] = left[4] + right[4];
+    result[5] = left[5] + right[5];
+    result[6] = left[6] + right[6];
+    result[7] = left[7] + right[7];
+    result[8] = left[8] + right[8];
+    return result;
+  };
+  Matrix3.subtract = function(left, right, result) {
+    if (!defined(left)) {
+      throw new DeveloperError('left is required');
+    }
+    if (!defined(right)) {
+      throw new DeveloperError('right is required');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    result[0] = left[0] - right[0];
+    result[1] = left[1] - right[1];
+    result[2] = left[2] - right[2];
+    result[3] = left[3] - right[3];
+    result[4] = left[4] - right[4];
+    result[5] = left[5] - right[5];
+    result[6] = left[6] - right[6];
+    result[7] = left[7] - right[7];
+    result[8] = left[8] - right[8];
+    return result;
+  };
+  Matrix3.multiplyByVector = function(matrix, cartesian, result) {
+    if (!defined(matrix)) {
+      throw new DeveloperError('matrix is required');
+    }
+    if (!defined(cartesian)) {
+      throw new DeveloperError('cartesian is required');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    var vX = cartesian.x;
+    var vY = cartesian.y;
+    var vZ = cartesian.z;
+    var x = matrix[0] * vX + matrix[3] * vY + matrix[6] * vZ;
+    var y = matrix[1] * vX + matrix[4] * vY + matrix[7] * vZ;
+    var z = matrix[2] * vX + matrix[5] * vY + matrix[8] * vZ;
+    result.x = x;
+    result.y = y;
+    result.z = z;
+    return result;
+  };
+  Matrix3.multiplyByScalar = function(matrix, scalar, result) {
+    if (!defined(matrix)) {
+      throw new DeveloperError('matrix is required');
+    }
+    if (typeof scalar !== 'number') {
+      throw new DeveloperError('scalar must be a number');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    result[0] = matrix[0] * scalar;
+    result[1] = matrix[1] * scalar;
+    result[2] = matrix[2] * scalar;
+    result[3] = matrix[3] * scalar;
+    result[4] = matrix[4] * scalar;
+    result[5] = matrix[5] * scalar;
+    result[6] = matrix[6] * scalar;
+    result[7] = matrix[7] * scalar;
+    result[8] = matrix[8] * scalar;
+    return result;
+  };
+  Matrix3.multiplyByScale = function(matrix, scale, result) {
+    if (!defined(matrix)) {
+      throw new DeveloperError('matrix is required');
+    }
+    if (!defined(scale)) {
+      throw new DeveloperError('scale is required');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    result[0] = matrix[0] * scale.x;
+    result[1] = matrix[1] * scale.x;
+    result[2] = matrix[2] * scale.x;
+    result[3] = matrix[3] * scale.y;
+    result[4] = matrix[4] * scale.y;
+    result[5] = matrix[5] * scale.y;
+    result[6] = matrix[6] * scale.z;
+    result[7] = matrix[7] * scale.z;
+    result[8] = matrix[8] * scale.z;
+    return result;
+  };
+  Matrix3.negate = function(matrix, result) {
+    if (!defined(matrix)) {
+      throw new DeveloperError('matrix is required');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    result[0] = -matrix[0];
+    result[1] = -matrix[1];
+    result[2] = -matrix[2];
+    result[3] = -matrix[3];
+    result[4] = -matrix[4];
+    result[5] = -matrix[5];
+    result[6] = -matrix[6];
+    result[7] = -matrix[7];
+    result[8] = -matrix[8];
+    return result;
+  };
+  Matrix3.transpose = function(matrix, result) {
+    if (!defined(matrix)) {
+      throw new DeveloperError('matrix is required');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    var column0Row0 = matrix[0];
+    var column0Row1 = matrix[3];
+    var column0Row2 = matrix[6];
+    var column1Row0 = matrix[1];
+    var column1Row1 = matrix[4];
+    var column1Row2 = matrix[7];
+    var column2Row0 = matrix[2];
+    var column2Row1 = matrix[5];
+    var column2Row2 = matrix[8];
+    result[0] = column0Row0;
+    result[1] = column0Row1;
+    result[2] = column0Row2;
+    result[3] = column1Row0;
+    result[4] = column1Row1;
+    result[5] = column1Row2;
+    result[6] = column2Row0;
+    result[7] = column2Row1;
+    result[8] = column2Row2;
+    return result;
+  };
+  function computeFrobeniusNorm(matrix) {
+    var norm = 0.0;
+    for (var i = 0; i < 9; ++i) {
+      var temp = matrix[i];
+      norm += temp * temp;
+    }
+    return Math.sqrt(norm);
+  }
+  var rowVal = [1, 0, 0];
+  var colVal = [2, 2, 1];
+  function offDiagonalFrobeniusNorm(matrix) {
+    var norm = 0.0;
+    for (var i = 0; i < 3; ++i) {
+      var temp = matrix[Matrix3.getElementIndex(colVal[i], rowVal[i])];
+      norm += 2.0 * temp * temp;
+    }
+    return Math.sqrt(norm);
+  }
+  function shurDecomposition(matrix, result) {
+    var tolerance = CesiumMath.EPSILON15;
+    var maxDiagonal = 0.0;
+    var rotAxis = 1;
+    for (var i = 0; i < 3; ++i) {
+      var temp = Math.abs(matrix[Matrix3.getElementIndex(colVal[i], rowVal[i])]);
+      if (temp > maxDiagonal) {
+        rotAxis = i;
+        maxDiagonal = temp;
+      }
+    }
+    var c = 1.0;
+    var s = 0.0;
+    var p = rowVal[rotAxis];
+    var q = colVal[rotAxis];
+    if (Math.abs(matrix[Matrix3.getElementIndex(q, p)]) > tolerance) {
+      var qq = matrix[Matrix3.getElementIndex(q, q)];
+      var pp = matrix[Matrix3.getElementIndex(p, p)];
+      var qp = matrix[Matrix3.getElementIndex(q, p)];
+      var tau = (qq - pp) / 2.0 / qp;
+      var t;
+      if (tau < 0.0) {
+        t = -1.0 / (-tau + Math.sqrt(1.0 + tau * tau));
+      } else {
+        t = 1.0 / (tau + Math.sqrt(1.0 + tau * tau));
+      }
+      c = 1.0 / Math.sqrt(1.0 + t * t);
+      s = t * c;
+    }
+    result = Matrix3.clone(Matrix3.IDENTITY, result);
+    result[Matrix3.getElementIndex(p, p)] = result[Matrix3.getElementIndex(q, q)] = c;
+    result[Matrix3.getElementIndex(q, p)] = s;
+    result[Matrix3.getElementIndex(p, q)] = -s;
+    return result;
+  }
+  var jMatrix = new Matrix3();
+  var jMatrixTranspose = new Matrix3();
+  Matrix3.computeEigenDecomposition = function(matrix, result) {
+    if (!defined(matrix)) {
+      throw new DeveloperError('matrix is required.');
+    }
+    var tolerance = CesiumMath.EPSILON20;
+    var maxSweeps = 10;
+    var count = 0;
+    var sweep = 0;
+    if (!defined(result)) {
+      result = {};
+    }
+    var unitaryMatrix = result.unitary = Matrix3.clone(Matrix3.IDENTITY, result.unitary);
+    var diagMatrix = result.diagonal = Matrix3.clone(matrix, result.diagonal);
+    var epsilon = tolerance * computeFrobeniusNorm(diagMatrix);
+    while (sweep < maxSweeps && offDiagonalFrobeniusNorm(diagMatrix) > epsilon) {
+      shurDecomposition(diagMatrix, jMatrix);
+      Matrix3.transpose(jMatrix, jMatrixTranspose);
+      Matrix3.multiply(diagMatrix, jMatrix, diagMatrix);
+      Matrix3.multiply(jMatrixTranspose, diagMatrix, diagMatrix);
+      Matrix3.multiply(unitaryMatrix, jMatrix, unitaryMatrix);
+      if (++count > 2) {
+        ++sweep;
+        count = 0;
+      }
+    }
+    return result;
+  };
+  Matrix3.abs = function(matrix, result) {
+    if (!defined(matrix)) {
+      throw new DeveloperError('matrix is required');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    result[0] = Math.abs(matrix[0]);
+    result[1] = Math.abs(matrix[1]);
+    result[2] = Math.abs(matrix[2]);
+    result[3] = Math.abs(matrix[3]);
+    result[4] = Math.abs(matrix[4]);
+    result[5] = Math.abs(matrix[5]);
+    result[6] = Math.abs(matrix[6]);
+    result[7] = Math.abs(matrix[7]);
+    result[8] = Math.abs(matrix[8]);
+    return result;
+  };
+  Matrix3.determinant = function(matrix) {
+    if (!defined(matrix)) {
+      throw new DeveloperError('matrix is required');
+    }
+    var m11 = matrix[0];
+    var m21 = matrix[3];
+    var m31 = matrix[6];
+    var m12 = matrix[1];
+    var m22 = matrix[4];
+    var m32 = matrix[7];
+    var m13 = matrix[2];
+    var m23 = matrix[5];
+    var m33 = matrix[8];
+    return m11 * (m22 * m33 - m23 * m32) + m12 * (m23 * m31 - m21 * m33) + m13 * (m21 * m32 - m22 * m31);
+  };
+  Matrix3.inverse = function(matrix, result) {
+    if (!defined(matrix)) {
+      throw new DeveloperError('matrix is required');
+    }
+    if (!defined(result)) {
+      throw new DeveloperError('result is required');
+    }
+    var m11 = matrix[0];
+    var m21 = matrix[1];
+    var m31 = matrix[2];
+    var m12 = matrix[3];
+    var m22 = matrix[4];
+    var m32 = matrix[5];
+    var m13 = matrix[6];
+    var m23 = matrix[7];
+    var m33 = matrix[8];
+    var determinant = Matrix3.determinant(matrix);
+    if (Math.abs(determinant) <= CesiumMath.EPSILON15) {
+      throw new DeveloperError('matrix is not invertible');
+    }
+    result[0] = m22 * m33 - m23 * m32;
+    result[1] = m23 * m31 - m21 * m33;
+    result[2] = m21 * m32 - m22 * m31;
+    result[3] = m13 * m32 - m12 * m33;
+    result[4] = m11 * m33 - m13 * m31;
+    result[5] = m12 * m31 - m11 * m32;
+    result[6] = m12 * m23 - m13 * m22;
+    result[7] = m13 * m21 - m11 * m23;
+    result[8] = m11 * m22 - m12 * m21;
+    var scale = 1.0 / determinant;
+    return Matrix3.multiplyByScalar(result, scale, result);
+  };
+  Matrix3.equals = function(left, right) {
+    return (left === right) || (defined(left) && defined(right) && left[0] === right[0] && left[1] === right[1] && left[2] === right[2] && left[3] === right[3] && left[4] === right[4] && left[5] === right[5] && left[6] === right[6] && left[7] === right[7] && left[8] === right[8]);
+  };
+  Matrix3.equalsEpsilon = function(left, right, epsilon) {
+    if (typeof epsilon !== 'number') {
+      throw new DeveloperError('epsilon must be a number');
+    }
+    return (left === right) || (defined(left) && defined(right) && Math.abs(left[0] - right[0]) <= epsilon && Math.abs(left[1] - right[1]) <= epsilon && Math.abs(left[2] - right[2]) <= epsilon && Math.abs(left[3] - right[3]) <= epsilon && Math.abs(left[4] - right[4]) <= epsilon && Math.abs(left[5] - right[5]) <= epsilon && Math.abs(left[6] - right[6]) <= epsilon && Math.abs(left[7] - right[7]) <= epsilon && Math.abs(left[8] - right[8]) <= epsilon);
+  };
+  Matrix3.IDENTITY = freezeObject(new Matrix3(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0));
+  Matrix3.ZERO = freezeObject(new Matrix3(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0));
+  Matrix3.COLUMN0ROW0 = 0;
+  Matrix3.COLUMN0ROW1 = 1;
+  Matrix3.COLUMN0ROW2 = 2;
+  Matrix3.COLUMN1ROW0 = 3;
+  Matrix3.COLUMN1ROW1 = 4;
+  Matrix3.COLUMN1ROW2 = 5;
+  Matrix3.COLUMN2ROW0 = 6;
+  Matrix3.COLUMN2ROW1 = 7;
+  Matrix3.COLUMN2ROW2 = 8;
+  Matrix3.prototype.clone = function(result) {
+    return Matrix3.clone(this, result);
+  };
+  Matrix3.prototype.equals = function(right) {
+    return Matrix3.equals(this, right);
+  };
+  Matrix3.equalsArray = function(matrix, array, offset) {
+    return matrix[0] === array[offset] && matrix[1] === array[offset + 1] && matrix[2] === array[offset + 2] && matrix[3] === array[offset + 3] && matrix[4] === array[offset + 4] && matrix[5] === array[offset + 5] && matrix[6] === array[offset + 6] && matrix[7] === array[offset + 7] && matrix[8] === array[offset + 8];
+  };
+  Matrix3.prototype.equalsEpsilon = function(right, epsilon) {
+    return Matrix3.equalsEpsilon(this, right, epsilon);
+  };
+  Matrix3.prototype.toString = function() {
+    return '(' + this[0] + ', ' + this[3] + ', ' + this[6] + ')\n' + '(' + this[1] + ', ' + this[4] + ', ' + this[7] + ')\n' + '(' + this[2] + ', ' + this[5] + ', ' + this[8] + ')';
+  };
+  return Matrix3;
+});
+
+})();
+(function() {
+var define = $__System.amdDefine;
+define("34", ["15"], function(defined) {
   "use strict";
   function RuntimeError(message) {
     this.name = 'RuntimeError';
@@ -11368,7 +13995,7 @@ define("31", ["12"], function(defined) {
 })();
 (function() {
 var define = $__System.amdDefine;
-define("2c", ["26", "3d", "1b", "12", "14", "17", "1f", "2b", "31"], function(Cartesian3, Cartesian4, defaultValue, defined, DeveloperError, freezeObject, CesiumMath, Matrix3, RuntimeError) {
+define("2f", ["29", "40", "1e", "15", "17", "1a", "22", "2e", "34"], function(Cartesian3, Cartesian4, defaultValue, defined, DeveloperError, freezeObject, CesiumMath, Matrix3, RuntimeError) {
   "use strict";
   function Matrix4(column0Row0, column1Row0, column2Row0, column3Row0, column0Row1, column1Row1, column2Row1, column3Row1, column0Row2, column1Row2, column2Row2, column3Row2, column0Row3, column1Row3, column2Row3, column3Row3) {
     this[0] = defaultValue(column0Row0, 0.0);
@@ -12813,318 +15440,314 @@ define("2c", ["26", "3d", "1b", "12", "14", "17", "1f", "2b", "31"], function(Ca
 })();
 (function() {
 var define = $__System.amdDefine;
-define("13", ["12"], function(defined) {
-  "use strict";
-  var definePropertyWorks = (function() {
-    try {
-      return 'x' in Object.defineProperty({}, 'x', {});
-    } catch (e) {
-      return false;
+define("67", [], function() {
+  var MersenneTwister = function(seed) {
+    if (seed == undefined) {
+      seed = new Date().getTime();
     }
-  })();
-  var defineProperties = Object.defineProperties;
-  if (!definePropertyWorks || !defined(defineProperties)) {
-    defineProperties = function(o) {
-      return o;
-    };
-  }
-  return defineProperties;
+    this.N = 624;
+    this.M = 397;
+    this.MATRIX_A = 0x9908b0df;
+    this.UPPER_MASK = 0x80000000;
+    this.LOWER_MASK = 0x7fffffff;
+    this.mt = new Array(this.N);
+    this.mti = this.N + 1;
+    this.init_genrand(seed);
+  };
+  MersenneTwister.prototype.init_genrand = function(s) {
+    this.mt[0] = s >>> 0;
+    for (this.mti = 1; this.mti < this.N; this.mti++) {
+      var s = this.mt[this.mti - 1] ^ (this.mt[this.mti - 1] >>> 30);
+      this.mt[this.mti] = (((((s & 0xffff0000) >>> 16) * 1812433253) << 16) + (s & 0x0000ffff) * 1812433253) + this.mti;
+      this.mt[this.mti] >>>= 0;
+    }
+  };
+  MersenneTwister.prototype.genrand_int32 = function() {
+    var y;
+    var mag01 = new Array(0x0, this.MATRIX_A);
+    if (this.mti >= this.N) {
+      var kk;
+      if (this.mti == this.N + 1)
+        this.init_genrand(5489);
+      for (kk = 0; kk < this.N - this.M; kk++) {
+        y = (this.mt[kk] & this.UPPER_MASK) | (this.mt[kk + 1] & this.LOWER_MASK);
+        this.mt[kk] = this.mt[kk + this.M] ^ (y >>> 1) ^ mag01[y & 0x1];
+      }
+      for (; kk < this.N - 1; kk++) {
+        y = (this.mt[kk] & this.UPPER_MASK) | (this.mt[kk + 1] & this.LOWER_MASK);
+        this.mt[kk] = this.mt[kk + (this.M - this.N)] ^ (y >>> 1) ^ mag01[y & 0x1];
+      }
+      y = (this.mt[this.N - 1] & this.UPPER_MASK) | (this.mt[0] & this.LOWER_MASK);
+      this.mt[this.N - 1] = this.mt[this.M - 1] ^ (y >>> 1) ^ mag01[y & 0x1];
+      this.mti = 0;
+    }
+    y = this.mt[this.mti++];
+    y ^= (y >>> 11);
+    y ^= (y << 7) & 0x9d2c5680;
+    y ^= (y << 15) & 0xefc60000;
+    y ^= (y >>> 18);
+    return y >>> 0;
+  };
+  MersenneTwister.prototype.random = function() {
+    return this.genrand_int32() * (1.0 / 4294967296.0);
+  };
+  return MersenneTwister;
 });
 
 })();
 (function() {
 var define = $__System.amdDefine;
-define("63", ["12", "13"], function(defined, defineProperties) {
+define("1e", ["1a"], function(freezeObject) {
   "use strict";
-  var _supportsFullscreen;
-  var _names = {
-    requestFullscreen: undefined,
-    exitFullscreen: undefined,
-    fullscreenEnabled: undefined,
-    fullscreenElement: undefined,
-    fullscreenchange: undefined,
-    fullscreenerror: undefined
-  };
-  var Fullscreen = {};
-  defineProperties(Fullscreen, {
-    element: {get: function() {
-        if (!Fullscreen.supportsFullscreen()) {
-          return undefined;
-        }
-        return document[_names.fullscreenElement];
-      }},
-    changeEventName: {get: function() {
-        if (!Fullscreen.supportsFullscreen()) {
-          return undefined;
-        }
-        return _names.fullscreenchange;
-      }},
-    errorEventName: {get: function() {
-        if (!Fullscreen.supportsFullscreen()) {
-          return undefined;
-        }
-        return _names.fullscreenerror;
-      }},
-    enabled: {get: function() {
-        if (!Fullscreen.supportsFullscreen()) {
-          return undefined;
-        }
-        return document[_names.fullscreenEnabled];
-      }},
-    fullscreen: {get: function() {
-        if (!Fullscreen.supportsFullscreen()) {
-          return undefined;
-        }
-        return Fullscreen.element !== null;
-      }}
-  });
-  Fullscreen.supportsFullscreen = function() {
-    if (defined(_supportsFullscreen)) {
-      return _supportsFullscreen;
+  function defaultValue(a, b) {
+    if (a !== undefined) {
+      return a;
     }
-    _supportsFullscreen = false;
-    var body = document.body;
-    if (typeof body.requestFullscreen === 'function') {
-      _names.requestFullscreen = 'requestFullscreen';
-      _names.exitFullscreen = 'exitFullscreen';
-      _names.fullscreenEnabled = 'fullscreenEnabled';
-      _names.fullscreenElement = 'fullscreenElement';
-      _names.fullscreenchange = 'fullscreenchange';
-      _names.fullscreenerror = 'fullscreenerror';
-      _supportsFullscreen = true;
-      return _supportsFullscreen;
-    }
-    var prefixes = ['webkit', 'moz', 'o', 'ms', 'khtml'];
-    var name;
-    for (var i = 0,
-        len = prefixes.length; i < len; ++i) {
-      var prefix = prefixes[i];
-      name = prefix + 'RequestFullscreen';
-      if (typeof body[name] === 'function') {
-        _names.requestFullscreen = name;
-        _supportsFullscreen = true;
-      } else {
-        name = prefix + 'RequestFullScreen';
-        if (typeof body[name] === 'function') {
-          _names.requestFullscreen = name;
-          _supportsFullscreen = true;
-        }
-      }
-      name = prefix + 'ExitFullscreen';
-      if (typeof document[name] === 'function') {
-        _names.exitFullscreen = name;
-      } else {
-        name = prefix + 'CancelFullScreen';
-        if (typeof document[name] === 'function') {
-          _names.exitFullscreen = name;
-        }
-      }
-      name = prefix + 'FullscreenEnabled';
-      if (defined(document[name])) {
-        _names.fullscreenEnabled = name;
-      } else {
-        name = prefix + 'FullScreenEnabled';
-        if (defined(document[name])) {
-          _names.fullscreenEnabled = name;
-        }
-      }
-      name = prefix + 'FullscreenElement';
-      if (defined(document[name])) {
-        _names.fullscreenElement = name;
-      } else {
-        name = prefix + 'FullScreenElement';
-        if (defined(document[name])) {
-          _names.fullscreenElement = name;
-        }
-      }
-      name = prefix + 'fullscreenchange';
-      if (defined(document['on' + name])) {
-        if (prefix === 'ms') {
-          name = 'MSFullscreenChange';
-        }
-        _names.fullscreenchange = name;
-      }
-      name = prefix + 'fullscreenerror';
-      if (defined(document['on' + name])) {
-        if (prefix === 'ms') {
-          name = 'MSFullscreenError';
-        }
-        _names.fullscreenerror = name;
-      }
-    }
-    return _supportsFullscreen;
-  };
-  Fullscreen.requestFullscreen = function(element) {
-    if (!Fullscreen.supportsFullscreen()) {
-      return;
-    }
-    element[_names.requestFullscreen]();
-  };
-  Fullscreen.exitFullscreen = function() {
-    if (!Fullscreen.supportsFullscreen()) {
-      return;
-    }
-    document[_names.exitFullscreen]();
-  };
-  return Fullscreen;
+    return b;
+  }
+  defaultValue.EMPTY_OBJECT = freezeObject({});
+  return defaultValue;
 });
 
 })();
 (function() {
 var define = $__System.amdDefine;
-define("64", ["1b", "12", "63"], function(defaultValue, defined, Fullscreen) {
+define("22", ["67", "1e", "15", "17"], function(MersenneTwister, defaultValue, defined, DeveloperError) {
   "use strict";
-  var theNavigator;
-  if (typeof navigator !== 'undefined') {
-    theNavigator = navigator;
-  } else {
-    theNavigator = {};
-  }
-  function extractVersion(versionString) {
-    var parts = versionString.split('.');
-    for (var i = 0,
-        len = parts.length; i < len; ++i) {
-      parts[i] = parseInt(parts[i], 10);
+  var CesiumMath = {};
+  CesiumMath.EPSILON1 = 0.1;
+  CesiumMath.EPSILON2 = 0.01;
+  CesiumMath.EPSILON3 = 0.001;
+  CesiumMath.EPSILON4 = 0.0001;
+  CesiumMath.EPSILON5 = 0.00001;
+  CesiumMath.EPSILON6 = 0.000001;
+  CesiumMath.EPSILON7 = 0.0000001;
+  CesiumMath.EPSILON8 = 0.00000001;
+  CesiumMath.EPSILON9 = 0.000000001;
+  CesiumMath.EPSILON10 = 0.0000000001;
+  CesiumMath.EPSILON11 = 0.00000000001;
+  CesiumMath.EPSILON12 = 0.000000000001;
+  CesiumMath.EPSILON13 = 0.0000000000001;
+  CesiumMath.EPSILON14 = 0.00000000000001;
+  CesiumMath.EPSILON15 = 0.000000000000001;
+  CesiumMath.EPSILON16 = 0.0000000000000001;
+  CesiumMath.EPSILON17 = 0.00000000000000001;
+  CesiumMath.EPSILON18 = 0.000000000000000001;
+  CesiumMath.EPSILON19 = 0.0000000000000000001;
+  CesiumMath.EPSILON20 = 0.00000000000000000001;
+  CesiumMath.GRAVITATIONALPARAMETER = 3.986004418e14;
+  CesiumMath.SOLAR_RADIUS = 6.955e8;
+  CesiumMath.LUNAR_RADIUS = 1737400.0;
+  CesiumMath.SIXTY_FOUR_KILOBYTES = 64 * 1024;
+  CesiumMath.sign = function(value) {
+    if (value > 0) {
+      return 1;
     }
-    return parts;
-  }
-  var isChromeResult;
-  var chromeVersionResult;
-  function isChrome() {
-    if (!defined(isChromeResult)) {
-      isChromeResult = false;
-      var fields = (/ Chrome\/([\.0-9]+)/).exec(theNavigator.userAgent);
-      if (fields !== null) {
-        isChromeResult = true;
-        chromeVersionResult = extractVersion(fields[1]);
-      }
+    if (value < 0) {
+      return -1;
     }
-    return isChromeResult;
-  }
-  function chromeVersion() {
-    return isChrome() && chromeVersionResult;
-  }
-  var isSafariResult;
-  var safariVersionResult;
-  function isSafari() {
-    if (!defined(isSafariResult)) {
-      isSafariResult = false;
-      if (!isChrome() && (/ Safari\/[\.0-9]+/).test(theNavigator.userAgent)) {
-        var fields = (/ Version\/([\.0-9]+)/).exec(theNavigator.userAgent);
-        if (fields !== null) {
-          isSafariResult = true;
-          safariVersionResult = extractVersion(fields[1]);
-        }
-      }
-    }
-    return isSafariResult;
-  }
-  function safariVersion() {
-    return isSafari() && safariVersionResult;
-  }
-  var isWebkitResult;
-  var webkitVersionResult;
-  function isWebkit() {
-    if (!defined(isWebkitResult)) {
-      isWebkitResult = false;
-      var fields = (/ AppleWebKit\/([\.0-9]+)(\+?)/).exec(theNavigator.userAgent);
-      if (fields !== null) {
-        isWebkitResult = true;
-        webkitVersionResult = extractVersion(fields[1]);
-        webkitVersionResult.isNightly = !!fields[2];
-      }
-    }
-    return isWebkitResult;
-  }
-  function webkitVersion() {
-    return isWebkit() && webkitVersionResult;
-  }
-  var isInternetExplorerResult;
-  var internetExplorerVersionResult;
-  function isInternetExplorer() {
-    if (!defined(isInternetExplorerResult)) {
-      isInternetExplorerResult = false;
-      var fields;
-      if (theNavigator.appName === 'Microsoft Internet Explorer') {
-        fields = /MSIE ([0-9]{1,}[\.0-9]{0,})/.exec(theNavigator.userAgent);
-        if (fields !== null) {
-          isInternetExplorerResult = true;
-          internetExplorerVersionResult = extractVersion(fields[1]);
-        }
-      } else if (theNavigator.appName === 'Netscape') {
-        fields = /Trident\/.*rv:([0-9]{1,}[\.0-9]{0,})/.exec(theNavigator.userAgent);
-        if (fields !== null) {
-          isInternetExplorerResult = true;
-          internetExplorerVersionResult = extractVersion(fields[1]);
-        }
-      }
-    }
-    return isInternetExplorerResult;
-  }
-  function internetExplorerVersion() {
-    return isInternetExplorer() && internetExplorerVersionResult;
-  }
-  var isFirefoxResult;
-  var firefoxVersionResult;
-  function isFirefox() {
-    if (!defined(isFirefoxResult)) {
-      isFirefoxResult = false;
-      var fields = /Firefox\/([\.0-9]+)/.exec(theNavigator.userAgent);
-      if (fields !== null) {
-        isFirefoxResult = true;
-        firefoxVersionResult = extractVersion(fields[1]);
-      }
-    }
-    return isFirefoxResult;
-  }
-  var isWindowsResult;
-  function isWindows() {
-    if (!defined(isWindowsResult)) {
-      isWindowsResult = /Windows/i.test(theNavigator.appVersion);
-    }
-    return isWindowsResult;
-  }
-  function firefoxVersion() {
-    return isFirefox() && firefoxVersionResult;
-  }
-  var hasPointerEvents;
-  function supportsPointerEvents() {
-    if (!defined(hasPointerEvents)) {
-      hasPointerEvents = typeof PointerEvent !== 'undefined' && (!defined(theNavigator.pointerEnabled) || theNavigator.pointerEnabled);
-    }
-    return hasPointerEvents;
-  }
-  var FeatureDetection = {
-    isChrome: isChrome,
-    chromeVersion: chromeVersion,
-    isSafari: isSafari,
-    safariVersion: safariVersion,
-    isWebkit: isWebkit,
-    webkitVersion: webkitVersion,
-    isInternetExplorer: isInternetExplorer,
-    internetExplorerVersion: internetExplorerVersion,
-    isFirefox: isFirefox,
-    firefoxVersion: firefoxVersion,
-    isWindows: isWindows,
-    hardwareConcurrency: defaultValue(theNavigator.hardwareConcurrency, 3),
-    supportsPointerEvents: supportsPointerEvents
+    return 0;
   };
-  FeatureDetection.supportsFullscreen = function() {
-    return Fullscreen.supportsFullscreen();
+  CesiumMath.signNotZero = function(value) {
+    return value < 0.0 ? -1.0 : 1.0;
   };
-  FeatureDetection.supportsTypedArrays = function() {
-    return typeof ArrayBuffer !== 'undefined';
+  CesiumMath.toSNorm = function(value) {
+    return Math.round((CesiumMath.clamp(value, -1.0, 1.0) * 0.5 + 0.5) * 255.0);
   };
-  FeatureDetection.supportsWebWorkers = function() {
-    return typeof Worker !== 'undefined';
+  CesiumMath.fromSNorm = function(value) {
+    return CesiumMath.clamp(value, 0.0, 255.0) / 255.0 * 2.0 - 1.0;
   };
-  return FeatureDetection;
+  CesiumMath.sinh = function(value) {
+    var part1 = Math.pow(Math.E, value);
+    var part2 = Math.pow(Math.E, -1.0 * value);
+    return (part1 - part2) * 0.5;
+  };
+  CesiumMath.cosh = function(value) {
+    var part1 = Math.pow(Math.E, value);
+    var part2 = Math.pow(Math.E, -1.0 * value);
+    return (part1 + part2) * 0.5;
+  };
+  CesiumMath.lerp = function(p, q, time) {
+    return ((1.0 - time) * p) + (time * q);
+  };
+  CesiumMath.PI = Math.PI;
+  CesiumMath.ONE_OVER_PI = 1.0 / Math.PI;
+  CesiumMath.PI_OVER_TWO = Math.PI * 0.5;
+  CesiumMath.PI_OVER_THREE = Math.PI / 3.0;
+  CesiumMath.PI_OVER_FOUR = Math.PI / 4.0;
+  CesiumMath.PI_OVER_SIX = Math.PI / 6.0;
+  CesiumMath.THREE_PI_OVER_TWO = (3.0 * Math.PI) * 0.5;
+  CesiumMath.TWO_PI = 2.0 * Math.PI;
+  CesiumMath.ONE_OVER_TWO_PI = 1.0 / (2.0 * Math.PI);
+  CesiumMath.RADIANS_PER_DEGREE = Math.PI / 180.0;
+  CesiumMath.DEGREES_PER_RADIAN = 180.0 / Math.PI;
+  CesiumMath.RADIANS_PER_ARCSECOND = CesiumMath.RADIANS_PER_DEGREE / 3600.0;
+  CesiumMath.toRadians = function(degrees) {
+    if (!defined(degrees)) {
+      throw new DeveloperError('degrees is required.');
+    }
+    return degrees * CesiumMath.RADIANS_PER_DEGREE;
+  };
+  CesiumMath.toDegrees = function(radians) {
+    if (!defined(radians)) {
+      throw new DeveloperError('radians is required.');
+    }
+    return radians * CesiumMath.DEGREES_PER_RADIAN;
+  };
+  CesiumMath.convertLongitudeRange = function(angle) {
+    if (!defined(angle)) {
+      throw new DeveloperError('angle is required.');
+    }
+    var twoPi = CesiumMath.TWO_PI;
+    var simplified = angle - Math.floor(angle / twoPi) * twoPi;
+    if (simplified < -Math.PI) {
+      return simplified + twoPi;
+    }
+    if (simplified >= Math.PI) {
+      return simplified - twoPi;
+    }
+    return simplified;
+  };
+  CesiumMath.negativePiToPi = function(x) {
+    if (!defined(x)) {
+      throw new DeveloperError('x is required.');
+    }
+    return CesiumMath.zeroToTwoPi(x + CesiumMath.PI) - CesiumMath.PI;
+  };
+  CesiumMath.zeroToTwoPi = function(x) {
+    if (!defined(x)) {
+      throw new DeveloperError('x is required.');
+    }
+    var mod = CesiumMath.mod(x, CesiumMath.TWO_PI);
+    if (Math.abs(mod) < CesiumMath.EPSILON14 && Math.abs(x) > CesiumMath.EPSILON14) {
+      return CesiumMath.TWO_PI;
+    }
+    return mod;
+  };
+  CesiumMath.mod = function(m, n) {
+    if (!defined(m)) {
+      throw new DeveloperError('m is required.');
+    }
+    if (!defined(n)) {
+      throw new DeveloperError('n is required.');
+    }
+    return ((m % n) + n) % n;
+  };
+  CesiumMath.equalsEpsilon = function(left, right, relativeEpsilon, absoluteEpsilon) {
+    if (!defined(left)) {
+      throw new DeveloperError('left is required.');
+    }
+    if (!defined(right)) {
+      throw new DeveloperError('right is required.');
+    }
+    if (!defined(relativeEpsilon)) {
+      throw new DeveloperError('relativeEpsilon is required.');
+    }
+    absoluteEpsilon = defaultValue(absoluteEpsilon, relativeEpsilon);
+    var absDiff = Math.abs(left - right);
+    return absDiff <= absoluteEpsilon || absDiff <= relativeEpsilon * Math.max(Math.abs(left), Math.abs(right));
+  };
+  var factorials = [1];
+  CesiumMath.factorial = function(n) {
+    if (typeof n !== 'number' || n < 0) {
+      throw new DeveloperError('A number greater than or equal to 0 is required.');
+    }
+    var length = factorials.length;
+    if (n >= length) {
+      var sum = factorials[length - 1];
+      for (var i = length; i <= n; i++) {
+        factorials.push(sum * i);
+      }
+    }
+    return factorials[n];
+  };
+  CesiumMath.incrementWrap = function(n, maximumValue, minimumValue) {
+    minimumValue = defaultValue(minimumValue, 0.0);
+    if (!defined(n)) {
+      throw new DeveloperError('n is required.');
+    }
+    if (maximumValue <= minimumValue) {
+      throw new DeveloperError('maximumValue must be greater than minimumValue.');
+    }
+    ++n;
+    if (n > maximumValue) {
+      n = minimumValue;
+    }
+    return n;
+  };
+  CesiumMath.isPowerOfTwo = function(n) {
+    if (typeof n !== 'number' || n < 0) {
+      throw new DeveloperError('A number greater than or equal to 0 is required.');
+    }
+    return (n !== 0) && ((n & (n - 1)) === 0);
+  };
+  CesiumMath.nextPowerOfTwo = function(n) {
+    if (typeof n !== 'number' || n < 0) {
+      throw new DeveloperError('A number greater than or equal to 0 is required.');
+    }
+    --n;
+    n |= n >> 1;
+    n |= n >> 2;
+    n |= n >> 4;
+    n |= n >> 8;
+    n |= n >> 16;
+    ++n;
+    return n;
+  };
+  CesiumMath.clamp = function(value, min, max) {
+    if (!defined(value)) {
+      throw new DeveloperError('value is required');
+    }
+    if (!defined(min)) {
+      throw new DeveloperError('min is required.');
+    }
+    if (!defined(max)) {
+      throw new DeveloperError('max is required.');
+    }
+    return value < min ? min : value > max ? max : value;
+  };
+  var randomNumberGenerator = new MersenneTwister();
+  CesiumMath.setRandomNumberSeed = function(seed) {
+    if (!defined(seed)) {
+      throw new DeveloperError('seed is required.');
+    }
+    randomNumberGenerator = new MersenneTwister(seed);
+  };
+  CesiumMath.nextRandomNumber = function() {
+    return randomNumberGenerator.random();
+  };
+  CesiumMath.acosClamped = function(value) {
+    if (!defined(value)) {
+      throw new DeveloperError('value is required.');
+    }
+    return Math.acos(CesiumMath.clamp(value, -1.0, 1.0));
+  };
+  CesiumMath.asinClamped = function(value) {
+    if (!defined(value)) {
+      throw new DeveloperError('value is required.');
+    }
+    return Math.asin(CesiumMath.clamp(value, -1.0, 1.0));
+  };
+  CesiumMath.chordLength = function(angle, radius) {
+    if (!defined(angle)) {
+      throw new DeveloperError('angle is required.');
+    }
+    if (!defined(radius)) {
+      throw new DeveloperError('radius is required.');
+    }
+    return 2.0 * radius * Math.sin(angle * 0.5);
+  };
+  CesiumMath.fog = function(distanceToCamera, density) {
+    var scalar = distanceToCamera * density;
+    return 1.0 - Math.exp(-(scalar * scalar));
+  };
+  return CesiumMath;
 });
 
 })();
 (function() {
 var define = $__System.amdDefine;
-define("26", ["1b", "12", "14", "17", "1f"], function(defaultValue, defined, DeveloperError, freezeObject, CesiumMath) {
+define("29", ["1e", "15", "17", "1a", "22"], function(defaultValue, defined, DeveloperError, freezeObject, CesiumMath) {
   "use strict";
   function Cartesian3(x, y, z) {
     this.x = defaultValue(x, 0.0);
@@ -13608,79 +16231,7 @@ define("26", ["1b", "12", "14", "17", "1f"], function(defaultValue, defined, Dev
 })();
 (function() {
 var define = $__System.amdDefine;
-define("65", [], function() {
-  var MersenneTwister = function(seed) {
-    if (seed == undefined) {
-      seed = new Date().getTime();
-    }
-    this.N = 624;
-    this.M = 397;
-    this.MATRIX_A = 0x9908b0df;
-    this.UPPER_MASK = 0x80000000;
-    this.LOWER_MASK = 0x7fffffff;
-    this.mt = new Array(this.N);
-    this.mti = this.N + 1;
-    this.init_genrand(seed);
-  };
-  MersenneTwister.prototype.init_genrand = function(s) {
-    this.mt[0] = s >>> 0;
-    for (this.mti = 1; this.mti < this.N; this.mti++) {
-      var s = this.mt[this.mti - 1] ^ (this.mt[this.mti - 1] >>> 30);
-      this.mt[this.mti] = (((((s & 0xffff0000) >>> 16) * 1812433253) << 16) + (s & 0x0000ffff) * 1812433253) + this.mti;
-      this.mt[this.mti] >>>= 0;
-    }
-  };
-  MersenneTwister.prototype.genrand_int32 = function() {
-    var y;
-    var mag01 = new Array(0x0, this.MATRIX_A);
-    if (this.mti >= this.N) {
-      var kk;
-      if (this.mti == this.N + 1)
-        this.init_genrand(5489);
-      for (kk = 0; kk < this.N - this.M; kk++) {
-        y = (this.mt[kk] & this.UPPER_MASK) | (this.mt[kk + 1] & this.LOWER_MASK);
-        this.mt[kk] = this.mt[kk + this.M] ^ (y >>> 1) ^ mag01[y & 0x1];
-      }
-      for (; kk < this.N - 1; kk++) {
-        y = (this.mt[kk] & this.UPPER_MASK) | (this.mt[kk + 1] & this.LOWER_MASK);
-        this.mt[kk] = this.mt[kk + (this.M - this.N)] ^ (y >>> 1) ^ mag01[y & 0x1];
-      }
-      y = (this.mt[this.N - 1] & this.UPPER_MASK) | (this.mt[0] & this.LOWER_MASK);
-      this.mt[this.N - 1] = this.mt[this.M - 1] ^ (y >>> 1) ^ mag01[y & 0x1];
-      this.mti = 0;
-    }
-    y = this.mt[this.mti++];
-    y ^= (y >>> 11);
-    y ^= (y << 7) & 0x9d2c5680;
-    y ^= (y << 15) & 0xefc60000;
-    y ^= (y >>> 18);
-    return y >>> 0;
-  };
-  MersenneTwister.prototype.random = function() {
-    return this.genrand_int32() * (1.0 / 4294967296.0);
-  };
-  return MersenneTwister;
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("1b", ["17"], function(freezeObject) {
-  "use strict";
-  function defaultValue(a, b) {
-    if (a !== undefined) {
-      return a;
-    }
-    return b;
-  }
-  defaultValue.EMPTY_OBJECT = freezeObject({});
-  return defaultValue;
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("14", ["12"], function(defined) {
+define("17", ["15"], function(defined) {
   "use strict";
   function DeveloperError(message) {
     this.name = 'DeveloperError';
@@ -13709,1570 +16260,7 @@ define("14", ["12"], function(defined) {
 })();
 (function() {
 var define = $__System.amdDefine;
-define("1f", ["65", "1b", "12", "14"], function(MersenneTwister, defaultValue, defined, DeveloperError) {
-  "use strict";
-  var CesiumMath = {};
-  CesiumMath.EPSILON1 = 0.1;
-  CesiumMath.EPSILON2 = 0.01;
-  CesiumMath.EPSILON3 = 0.001;
-  CesiumMath.EPSILON4 = 0.0001;
-  CesiumMath.EPSILON5 = 0.00001;
-  CesiumMath.EPSILON6 = 0.000001;
-  CesiumMath.EPSILON7 = 0.0000001;
-  CesiumMath.EPSILON8 = 0.00000001;
-  CesiumMath.EPSILON9 = 0.000000001;
-  CesiumMath.EPSILON10 = 0.0000000001;
-  CesiumMath.EPSILON11 = 0.00000000001;
-  CesiumMath.EPSILON12 = 0.000000000001;
-  CesiumMath.EPSILON13 = 0.0000000000001;
-  CesiumMath.EPSILON14 = 0.00000000000001;
-  CesiumMath.EPSILON15 = 0.000000000000001;
-  CesiumMath.EPSILON16 = 0.0000000000000001;
-  CesiumMath.EPSILON17 = 0.00000000000000001;
-  CesiumMath.EPSILON18 = 0.000000000000000001;
-  CesiumMath.EPSILON19 = 0.0000000000000000001;
-  CesiumMath.EPSILON20 = 0.00000000000000000001;
-  CesiumMath.GRAVITATIONALPARAMETER = 3.986004418e14;
-  CesiumMath.SOLAR_RADIUS = 6.955e8;
-  CesiumMath.LUNAR_RADIUS = 1737400.0;
-  CesiumMath.SIXTY_FOUR_KILOBYTES = 64 * 1024;
-  CesiumMath.sign = function(value) {
-    if (value > 0) {
-      return 1;
-    }
-    if (value < 0) {
-      return -1;
-    }
-    return 0;
-  };
-  CesiumMath.signNotZero = function(value) {
-    return value < 0.0 ? -1.0 : 1.0;
-  };
-  CesiumMath.toSNorm = function(value) {
-    return Math.round((CesiumMath.clamp(value, -1.0, 1.0) * 0.5 + 0.5) * 255.0);
-  };
-  CesiumMath.fromSNorm = function(value) {
-    return CesiumMath.clamp(value, 0.0, 255.0) / 255.0 * 2.0 - 1.0;
-  };
-  CesiumMath.sinh = function(value) {
-    var part1 = Math.pow(Math.E, value);
-    var part2 = Math.pow(Math.E, -1.0 * value);
-    return (part1 - part2) * 0.5;
-  };
-  CesiumMath.cosh = function(value) {
-    var part1 = Math.pow(Math.E, value);
-    var part2 = Math.pow(Math.E, -1.0 * value);
-    return (part1 + part2) * 0.5;
-  };
-  CesiumMath.lerp = function(p, q, time) {
-    return ((1.0 - time) * p) + (time * q);
-  };
-  CesiumMath.PI = Math.PI;
-  CesiumMath.ONE_OVER_PI = 1.0 / Math.PI;
-  CesiumMath.PI_OVER_TWO = Math.PI * 0.5;
-  CesiumMath.PI_OVER_THREE = Math.PI / 3.0;
-  CesiumMath.PI_OVER_FOUR = Math.PI / 4.0;
-  CesiumMath.PI_OVER_SIX = Math.PI / 6.0;
-  CesiumMath.THREE_PI_OVER_TWO = (3.0 * Math.PI) * 0.5;
-  CesiumMath.TWO_PI = 2.0 * Math.PI;
-  CesiumMath.ONE_OVER_TWO_PI = 1.0 / (2.0 * Math.PI);
-  CesiumMath.RADIANS_PER_DEGREE = Math.PI / 180.0;
-  CesiumMath.DEGREES_PER_RADIAN = 180.0 / Math.PI;
-  CesiumMath.RADIANS_PER_ARCSECOND = CesiumMath.RADIANS_PER_DEGREE / 3600.0;
-  CesiumMath.toRadians = function(degrees) {
-    if (!defined(degrees)) {
-      throw new DeveloperError('degrees is required.');
-    }
-    return degrees * CesiumMath.RADIANS_PER_DEGREE;
-  };
-  CesiumMath.toDegrees = function(radians) {
-    if (!defined(radians)) {
-      throw new DeveloperError('radians is required.');
-    }
-    return radians * CesiumMath.DEGREES_PER_RADIAN;
-  };
-  CesiumMath.convertLongitudeRange = function(angle) {
-    if (!defined(angle)) {
-      throw new DeveloperError('angle is required.');
-    }
-    var twoPi = CesiumMath.TWO_PI;
-    var simplified = angle - Math.floor(angle / twoPi) * twoPi;
-    if (simplified < -Math.PI) {
-      return simplified + twoPi;
-    }
-    if (simplified >= Math.PI) {
-      return simplified - twoPi;
-    }
-    return simplified;
-  };
-  CesiumMath.negativePiToPi = function(x) {
-    if (!defined(x)) {
-      throw new DeveloperError('x is required.');
-    }
-    return CesiumMath.zeroToTwoPi(x + CesiumMath.PI) - CesiumMath.PI;
-  };
-  CesiumMath.zeroToTwoPi = function(x) {
-    if (!defined(x)) {
-      throw new DeveloperError('x is required.');
-    }
-    var mod = CesiumMath.mod(x, CesiumMath.TWO_PI);
-    if (Math.abs(mod) < CesiumMath.EPSILON14 && Math.abs(x) > CesiumMath.EPSILON14) {
-      return CesiumMath.TWO_PI;
-    }
-    return mod;
-  };
-  CesiumMath.mod = function(m, n) {
-    if (!defined(m)) {
-      throw new DeveloperError('m is required.');
-    }
-    if (!defined(n)) {
-      throw new DeveloperError('n is required.');
-    }
-    return ((m % n) + n) % n;
-  };
-  CesiumMath.equalsEpsilon = function(left, right, relativeEpsilon, absoluteEpsilon) {
-    if (!defined(left)) {
-      throw new DeveloperError('left is required.');
-    }
-    if (!defined(right)) {
-      throw new DeveloperError('right is required.');
-    }
-    if (!defined(relativeEpsilon)) {
-      throw new DeveloperError('relativeEpsilon is required.');
-    }
-    absoluteEpsilon = defaultValue(absoluteEpsilon, relativeEpsilon);
-    var absDiff = Math.abs(left - right);
-    return absDiff <= absoluteEpsilon || absDiff <= relativeEpsilon * Math.max(Math.abs(left), Math.abs(right));
-  };
-  var factorials = [1];
-  CesiumMath.factorial = function(n) {
-    if (typeof n !== 'number' || n < 0) {
-      throw new DeveloperError('A number greater than or equal to 0 is required.');
-    }
-    var length = factorials.length;
-    if (n >= length) {
-      var sum = factorials[length - 1];
-      for (var i = length; i <= n; i++) {
-        factorials.push(sum * i);
-      }
-    }
-    return factorials[n];
-  };
-  CesiumMath.incrementWrap = function(n, maximumValue, minimumValue) {
-    minimumValue = defaultValue(minimumValue, 0.0);
-    if (!defined(n)) {
-      throw new DeveloperError('n is required.');
-    }
-    if (maximumValue <= minimumValue) {
-      throw new DeveloperError('maximumValue must be greater than minimumValue.');
-    }
-    ++n;
-    if (n > maximumValue) {
-      n = minimumValue;
-    }
-    return n;
-  };
-  CesiumMath.isPowerOfTwo = function(n) {
-    if (typeof n !== 'number' || n < 0) {
-      throw new DeveloperError('A number greater than or equal to 0 is required.');
-    }
-    return (n !== 0) && ((n & (n - 1)) === 0);
-  };
-  CesiumMath.nextPowerOfTwo = function(n) {
-    if (typeof n !== 'number' || n < 0) {
-      throw new DeveloperError('A number greater than or equal to 0 is required.');
-    }
-    --n;
-    n |= n >> 1;
-    n |= n >> 2;
-    n |= n >> 4;
-    n |= n >> 8;
-    n |= n >> 16;
-    ++n;
-    return n;
-  };
-  CesiumMath.clamp = function(value, min, max) {
-    if (!defined(value)) {
-      throw new DeveloperError('value is required');
-    }
-    if (!defined(min)) {
-      throw new DeveloperError('min is required.');
-    }
-    if (!defined(max)) {
-      throw new DeveloperError('max is required.');
-    }
-    return value < min ? min : value > max ? max : value;
-  };
-  var randomNumberGenerator = new MersenneTwister();
-  CesiumMath.setRandomNumberSeed = function(seed) {
-    if (!defined(seed)) {
-      throw new DeveloperError('seed is required.');
-    }
-    randomNumberGenerator = new MersenneTwister(seed);
-  };
-  CesiumMath.nextRandomNumber = function() {
-    return randomNumberGenerator.random();
-  };
-  CesiumMath.acosClamped = function(value) {
-    if (!defined(value)) {
-      throw new DeveloperError('value is required.');
-    }
-    return Math.acos(CesiumMath.clamp(value, -1.0, 1.0));
-  };
-  CesiumMath.asinClamped = function(value) {
-    if (!defined(value)) {
-      throw new DeveloperError('value is required.');
-    }
-    return Math.asin(CesiumMath.clamp(value, -1.0, 1.0));
-  };
-  CesiumMath.chordLength = function(angle, radius) {
-    if (!defined(angle)) {
-      throw new DeveloperError('angle is required.');
-    }
-    if (!defined(radius)) {
-      throw new DeveloperError('radius is required.');
-    }
-    return 2.0 * radius * Math.sin(angle * 0.5);
-  };
-  CesiumMath.fog = function(distanceToCamera, density) {
-    var scalar = distanceToCamera * density;
-    return 1.0 - Math.exp(-(scalar * scalar));
-  };
-  return CesiumMath;
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("2b", ["26", "1b", "12", "14", "17", "1f"], function(Cartesian3, defaultValue, defined, DeveloperError, freezeObject, CesiumMath) {
-  "use strict";
-  function Matrix3(column0Row0, column1Row0, column2Row0, column0Row1, column1Row1, column2Row1, column0Row2, column1Row2, column2Row2) {
-    this[0] = defaultValue(column0Row0, 0.0);
-    this[1] = defaultValue(column0Row1, 0.0);
-    this[2] = defaultValue(column0Row2, 0.0);
-    this[3] = defaultValue(column1Row0, 0.0);
-    this[4] = defaultValue(column1Row1, 0.0);
-    this[5] = defaultValue(column1Row2, 0.0);
-    this[6] = defaultValue(column2Row0, 0.0);
-    this[7] = defaultValue(column2Row1, 0.0);
-    this[8] = defaultValue(column2Row2, 0.0);
-  }
-  Matrix3.packedLength = 9;
-  Matrix3.pack = function(value, array, startingIndex) {
-    if (!defined(value)) {
-      throw new DeveloperError('value is required');
-    }
-    if (!defined(array)) {
-      throw new DeveloperError('array is required');
-    }
-    startingIndex = defaultValue(startingIndex, 0);
-    array[startingIndex++] = value[0];
-    array[startingIndex++] = value[1];
-    array[startingIndex++] = value[2];
-    array[startingIndex++] = value[3];
-    array[startingIndex++] = value[4];
-    array[startingIndex++] = value[5];
-    array[startingIndex++] = value[6];
-    array[startingIndex++] = value[7];
-    array[startingIndex++] = value[8];
-  };
-  Matrix3.unpack = function(array, startingIndex, result) {
-    if (!defined(array)) {
-      throw new DeveloperError('array is required');
-    }
-    startingIndex = defaultValue(startingIndex, 0);
-    if (!defined(result)) {
-      result = new Matrix3();
-    }
-    result[0] = array[startingIndex++];
-    result[1] = array[startingIndex++];
-    result[2] = array[startingIndex++];
-    result[3] = array[startingIndex++];
-    result[4] = array[startingIndex++];
-    result[5] = array[startingIndex++];
-    result[6] = array[startingIndex++];
-    result[7] = array[startingIndex++];
-    result[8] = array[startingIndex++];
-    return result;
-  };
-  Matrix3.clone = function(values, result) {
-    if (!defined(values)) {
-      return undefined;
-    }
-    if (!defined(result)) {
-      return new Matrix3(values[0], values[3], values[6], values[1], values[4], values[7], values[2], values[5], values[8]);
-    }
-    result[0] = values[0];
-    result[1] = values[1];
-    result[2] = values[2];
-    result[3] = values[3];
-    result[4] = values[4];
-    result[5] = values[5];
-    result[6] = values[6];
-    result[7] = values[7];
-    result[8] = values[8];
-    return result;
-  };
-  Matrix3.fromArray = function(array, startingIndex, result) {
-    if (!defined(array)) {
-      throw new DeveloperError('array is required');
-    }
-    startingIndex = defaultValue(startingIndex, 0);
-    if (!defined(result)) {
-      result = new Matrix3();
-    }
-    result[0] = array[startingIndex];
-    result[1] = array[startingIndex + 1];
-    result[2] = array[startingIndex + 2];
-    result[3] = array[startingIndex + 3];
-    result[4] = array[startingIndex + 4];
-    result[5] = array[startingIndex + 5];
-    result[6] = array[startingIndex + 6];
-    result[7] = array[startingIndex + 7];
-    result[8] = array[startingIndex + 8];
-    return result;
-  };
-  Matrix3.fromColumnMajorArray = function(values, result) {
-    if (!defined(values)) {
-      throw new DeveloperError('values parameter is required');
-    }
-    return Matrix3.clone(values, result);
-  };
-  Matrix3.fromRowMajorArray = function(values, result) {
-    if (!defined(values)) {
-      throw new DeveloperError('values is required.');
-    }
-    if (!defined(result)) {
-      return new Matrix3(values[0], values[1], values[2], values[3], values[4], values[5], values[6], values[7], values[8]);
-    }
-    result[0] = values[0];
-    result[1] = values[3];
-    result[2] = values[6];
-    result[3] = values[1];
-    result[4] = values[4];
-    result[5] = values[7];
-    result[6] = values[2];
-    result[7] = values[5];
-    result[8] = values[8];
-    return result;
-  };
-  Matrix3.fromQuaternion = function(quaternion, result) {
-    if (!defined(quaternion)) {
-      throw new DeveloperError('quaternion is required');
-    }
-    var x2 = quaternion.x * quaternion.x;
-    var xy = quaternion.x * quaternion.y;
-    var xz = quaternion.x * quaternion.z;
-    var xw = quaternion.x * quaternion.w;
-    var y2 = quaternion.y * quaternion.y;
-    var yz = quaternion.y * quaternion.z;
-    var yw = quaternion.y * quaternion.w;
-    var z2 = quaternion.z * quaternion.z;
-    var zw = quaternion.z * quaternion.w;
-    var w2 = quaternion.w * quaternion.w;
-    var m00 = x2 - y2 - z2 + w2;
-    var m01 = 2.0 * (xy - zw);
-    var m02 = 2.0 * (xz + yw);
-    var m10 = 2.0 * (xy + zw);
-    var m11 = -x2 + y2 - z2 + w2;
-    var m12 = 2.0 * (yz - xw);
-    var m20 = 2.0 * (xz - yw);
-    var m21 = 2.0 * (yz + xw);
-    var m22 = -x2 - y2 + z2 + w2;
-    if (!defined(result)) {
-      return new Matrix3(m00, m01, m02, m10, m11, m12, m20, m21, m22);
-    }
-    result[0] = m00;
-    result[1] = m10;
-    result[2] = m20;
-    result[3] = m01;
-    result[4] = m11;
-    result[5] = m21;
-    result[6] = m02;
-    result[7] = m12;
-    result[8] = m22;
-    return result;
-  };
-  Matrix3.fromScale = function(scale, result) {
-    if (!defined(scale)) {
-      throw new DeveloperError('scale is required.');
-    }
-    if (!defined(result)) {
-      return new Matrix3(scale.x, 0.0, 0.0, 0.0, scale.y, 0.0, 0.0, 0.0, scale.z);
-    }
-    result[0] = scale.x;
-    result[1] = 0.0;
-    result[2] = 0.0;
-    result[3] = 0.0;
-    result[4] = scale.y;
-    result[5] = 0.0;
-    result[6] = 0.0;
-    result[7] = 0.0;
-    result[8] = scale.z;
-    return result;
-  };
-  Matrix3.fromUniformScale = function(scale, result) {
-    if (typeof scale !== 'number') {
-      throw new DeveloperError('scale is required.');
-    }
-    if (!defined(result)) {
-      return new Matrix3(scale, 0.0, 0.0, 0.0, scale, 0.0, 0.0, 0.0, scale);
-    }
-    result[0] = scale;
-    result[1] = 0.0;
-    result[2] = 0.0;
-    result[3] = 0.0;
-    result[4] = scale;
-    result[5] = 0.0;
-    result[6] = 0.0;
-    result[7] = 0.0;
-    result[8] = scale;
-    return result;
-  };
-  Matrix3.fromCrossProduct = function(vector, result) {
-    if (!defined(vector)) {
-      throw new DeveloperError('vector is required.');
-    }
-    if (!defined(result)) {
-      return new Matrix3(0.0, -vector.z, vector.y, vector.z, 0.0, -vector.x, -vector.y, vector.x, 0.0);
-    }
-    result[0] = 0.0;
-    result[1] = vector.z;
-    result[2] = -vector.y;
-    result[3] = -vector.z;
-    result[4] = 0.0;
-    result[5] = vector.x;
-    result[6] = vector.y;
-    result[7] = -vector.x;
-    result[8] = 0.0;
-    return result;
-  };
-  Matrix3.fromRotationX = function(angle, result) {
-    if (!defined(angle)) {
-      throw new DeveloperError('angle is required.');
-    }
-    var cosAngle = Math.cos(angle);
-    var sinAngle = Math.sin(angle);
-    if (!defined(result)) {
-      return new Matrix3(1.0, 0.0, 0.0, 0.0, cosAngle, -sinAngle, 0.0, sinAngle, cosAngle);
-    }
-    result[0] = 1.0;
-    result[1] = 0.0;
-    result[2] = 0.0;
-    result[3] = 0.0;
-    result[4] = cosAngle;
-    result[5] = sinAngle;
-    result[6] = 0.0;
-    result[7] = -sinAngle;
-    result[8] = cosAngle;
-    return result;
-  };
-  Matrix3.fromRotationY = function(angle, result) {
-    if (!defined(angle)) {
-      throw new DeveloperError('angle is required.');
-    }
-    var cosAngle = Math.cos(angle);
-    var sinAngle = Math.sin(angle);
-    if (!defined(result)) {
-      return new Matrix3(cosAngle, 0.0, sinAngle, 0.0, 1.0, 0.0, -sinAngle, 0.0, cosAngle);
-    }
-    result[0] = cosAngle;
-    result[1] = 0.0;
-    result[2] = -sinAngle;
-    result[3] = 0.0;
-    result[4] = 1.0;
-    result[5] = 0.0;
-    result[6] = sinAngle;
-    result[7] = 0.0;
-    result[8] = cosAngle;
-    return result;
-  };
-  Matrix3.fromRotationZ = function(angle, result) {
-    if (!defined(angle)) {
-      throw new DeveloperError('angle is required.');
-    }
-    var cosAngle = Math.cos(angle);
-    var sinAngle = Math.sin(angle);
-    if (!defined(result)) {
-      return new Matrix3(cosAngle, -sinAngle, 0.0, sinAngle, cosAngle, 0.0, 0.0, 0.0, 1.0);
-    }
-    result[0] = cosAngle;
-    result[1] = sinAngle;
-    result[2] = 0.0;
-    result[3] = -sinAngle;
-    result[4] = cosAngle;
-    result[5] = 0.0;
-    result[6] = 0.0;
-    result[7] = 0.0;
-    result[8] = 1.0;
-    return result;
-  };
-  Matrix3.toArray = function(matrix, result) {
-    if (!defined(matrix)) {
-      throw new DeveloperError('matrix is required');
-    }
-    if (!defined(result)) {
-      return [matrix[0], matrix[1], matrix[2], matrix[3], matrix[4], matrix[5], matrix[6], matrix[7], matrix[8]];
-    }
-    result[0] = matrix[0];
-    result[1] = matrix[1];
-    result[2] = matrix[2];
-    result[3] = matrix[3];
-    result[4] = matrix[4];
-    result[5] = matrix[5];
-    result[6] = matrix[6];
-    result[7] = matrix[7];
-    result[8] = matrix[8];
-    return result;
-  };
-  Matrix3.getElementIndex = function(column, row) {
-    if (typeof row !== 'number' || row < 0 || row > 2) {
-      throw new DeveloperError('row must be 0, 1, or 2.');
-    }
-    if (typeof column !== 'number' || column < 0 || column > 2) {
-      throw new DeveloperError('column must be 0, 1, or 2.');
-    }
-    return column * 3 + row;
-  };
-  Matrix3.getColumn = function(matrix, index, result) {
-    if (!defined(matrix)) {
-      throw new DeveloperError('matrix is required.');
-    }
-    if (typeof index !== 'number' || index < 0 || index > 2) {
-      throw new DeveloperError('index must be 0, 1, or 2.');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    var startIndex = index * 3;
-    var x = matrix[startIndex];
-    var y = matrix[startIndex + 1];
-    var z = matrix[startIndex + 2];
-    result.x = x;
-    result.y = y;
-    result.z = z;
-    return result;
-  };
-  Matrix3.setColumn = function(matrix, index, cartesian, result) {
-    if (!defined(matrix)) {
-      throw new DeveloperError('matrix is required');
-    }
-    if (!defined(cartesian)) {
-      throw new DeveloperError('cartesian is required');
-    }
-    if (typeof index !== 'number' || index < 0 || index > 2) {
-      throw new DeveloperError('index must be 0, 1, or 2.');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    result = Matrix3.clone(matrix, result);
-    var startIndex = index * 3;
-    result[startIndex] = cartesian.x;
-    result[startIndex + 1] = cartesian.y;
-    result[startIndex + 2] = cartesian.z;
-    return result;
-  };
-  Matrix3.getRow = function(matrix, index, result) {
-    if (!defined(matrix)) {
-      throw new DeveloperError('matrix is required.');
-    }
-    if (typeof index !== 'number' || index < 0 || index > 2) {
-      throw new DeveloperError('index must be 0, 1, or 2.');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    var x = matrix[index];
-    var y = matrix[index + 3];
-    var z = matrix[index + 6];
-    result.x = x;
-    result.y = y;
-    result.z = z;
-    return result;
-  };
-  Matrix3.setRow = function(matrix, index, cartesian, result) {
-    if (!defined(matrix)) {
-      throw new DeveloperError('matrix is required');
-    }
-    if (!defined(cartesian)) {
-      throw new DeveloperError('cartesian is required');
-    }
-    if (typeof index !== 'number' || index < 0 || index > 2) {
-      throw new DeveloperError('index must be 0, 1, or 2.');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    result = Matrix3.clone(matrix, result);
-    result[index] = cartesian.x;
-    result[index + 3] = cartesian.y;
-    result[index + 6] = cartesian.z;
-    return result;
-  };
-  var scratchColumn = new Cartesian3();
-  Matrix3.getScale = function(matrix, result) {
-    if (!defined(matrix)) {
-      throw new DeveloperError('matrix is required.');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    result.x = Cartesian3.magnitude(Cartesian3.fromElements(matrix[0], matrix[1], matrix[2], scratchColumn));
-    result.y = Cartesian3.magnitude(Cartesian3.fromElements(matrix[3], matrix[4], matrix[5], scratchColumn));
-    result.z = Cartesian3.magnitude(Cartesian3.fromElements(matrix[6], matrix[7], matrix[8], scratchColumn));
-    return result;
-  };
-  var scratchScale = new Cartesian3();
-  Matrix3.getMaximumScale = function(matrix) {
-    Matrix3.getScale(matrix, scratchScale);
-    return Cartesian3.maximumComponent(scratchScale);
-  };
-  Matrix3.multiply = function(left, right, result) {
-    if (!defined(left)) {
-      throw new DeveloperError('left is required');
-    }
-    if (!defined(right)) {
-      throw new DeveloperError('right is required');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    var column0Row0 = left[0] * right[0] + left[3] * right[1] + left[6] * right[2];
-    var column0Row1 = left[1] * right[0] + left[4] * right[1] + left[7] * right[2];
-    var column0Row2 = left[2] * right[0] + left[5] * right[1] + left[8] * right[2];
-    var column1Row0 = left[0] * right[3] + left[3] * right[4] + left[6] * right[5];
-    var column1Row1 = left[1] * right[3] + left[4] * right[4] + left[7] * right[5];
-    var column1Row2 = left[2] * right[3] + left[5] * right[4] + left[8] * right[5];
-    var column2Row0 = left[0] * right[6] + left[3] * right[7] + left[6] * right[8];
-    var column2Row1 = left[1] * right[6] + left[4] * right[7] + left[7] * right[8];
-    var column2Row2 = left[2] * right[6] + left[5] * right[7] + left[8] * right[8];
-    result[0] = column0Row0;
-    result[1] = column0Row1;
-    result[2] = column0Row2;
-    result[3] = column1Row0;
-    result[4] = column1Row1;
-    result[5] = column1Row2;
-    result[6] = column2Row0;
-    result[7] = column2Row1;
-    result[8] = column2Row2;
-    return result;
-  };
-  Matrix3.add = function(left, right, result) {
-    if (!defined(left)) {
-      throw new DeveloperError('left is required');
-    }
-    if (!defined(right)) {
-      throw new DeveloperError('right is required');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    result[0] = left[0] + right[0];
-    result[1] = left[1] + right[1];
-    result[2] = left[2] + right[2];
-    result[3] = left[3] + right[3];
-    result[4] = left[4] + right[4];
-    result[5] = left[5] + right[5];
-    result[6] = left[6] + right[6];
-    result[7] = left[7] + right[7];
-    result[8] = left[8] + right[8];
-    return result;
-  };
-  Matrix3.subtract = function(left, right, result) {
-    if (!defined(left)) {
-      throw new DeveloperError('left is required');
-    }
-    if (!defined(right)) {
-      throw new DeveloperError('right is required');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    result[0] = left[0] - right[0];
-    result[1] = left[1] - right[1];
-    result[2] = left[2] - right[2];
-    result[3] = left[3] - right[3];
-    result[4] = left[4] - right[4];
-    result[5] = left[5] - right[5];
-    result[6] = left[6] - right[6];
-    result[7] = left[7] - right[7];
-    result[8] = left[8] - right[8];
-    return result;
-  };
-  Matrix3.multiplyByVector = function(matrix, cartesian, result) {
-    if (!defined(matrix)) {
-      throw new DeveloperError('matrix is required');
-    }
-    if (!defined(cartesian)) {
-      throw new DeveloperError('cartesian is required');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    var vX = cartesian.x;
-    var vY = cartesian.y;
-    var vZ = cartesian.z;
-    var x = matrix[0] * vX + matrix[3] * vY + matrix[6] * vZ;
-    var y = matrix[1] * vX + matrix[4] * vY + matrix[7] * vZ;
-    var z = matrix[2] * vX + matrix[5] * vY + matrix[8] * vZ;
-    result.x = x;
-    result.y = y;
-    result.z = z;
-    return result;
-  };
-  Matrix3.multiplyByScalar = function(matrix, scalar, result) {
-    if (!defined(matrix)) {
-      throw new DeveloperError('matrix is required');
-    }
-    if (typeof scalar !== 'number') {
-      throw new DeveloperError('scalar must be a number');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    result[0] = matrix[0] * scalar;
-    result[1] = matrix[1] * scalar;
-    result[2] = matrix[2] * scalar;
-    result[3] = matrix[3] * scalar;
-    result[4] = matrix[4] * scalar;
-    result[5] = matrix[5] * scalar;
-    result[6] = matrix[6] * scalar;
-    result[7] = matrix[7] * scalar;
-    result[8] = matrix[8] * scalar;
-    return result;
-  };
-  Matrix3.multiplyByScale = function(matrix, scale, result) {
-    if (!defined(matrix)) {
-      throw new DeveloperError('matrix is required');
-    }
-    if (!defined(scale)) {
-      throw new DeveloperError('scale is required');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    result[0] = matrix[0] * scale.x;
-    result[1] = matrix[1] * scale.x;
-    result[2] = matrix[2] * scale.x;
-    result[3] = matrix[3] * scale.y;
-    result[4] = matrix[4] * scale.y;
-    result[5] = matrix[5] * scale.y;
-    result[6] = matrix[6] * scale.z;
-    result[7] = matrix[7] * scale.z;
-    result[8] = matrix[8] * scale.z;
-    return result;
-  };
-  Matrix3.negate = function(matrix, result) {
-    if (!defined(matrix)) {
-      throw new DeveloperError('matrix is required');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    result[0] = -matrix[0];
-    result[1] = -matrix[1];
-    result[2] = -matrix[2];
-    result[3] = -matrix[3];
-    result[4] = -matrix[4];
-    result[5] = -matrix[5];
-    result[6] = -matrix[6];
-    result[7] = -matrix[7];
-    result[8] = -matrix[8];
-    return result;
-  };
-  Matrix3.transpose = function(matrix, result) {
-    if (!defined(matrix)) {
-      throw new DeveloperError('matrix is required');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    var column0Row0 = matrix[0];
-    var column0Row1 = matrix[3];
-    var column0Row2 = matrix[6];
-    var column1Row0 = matrix[1];
-    var column1Row1 = matrix[4];
-    var column1Row2 = matrix[7];
-    var column2Row0 = matrix[2];
-    var column2Row1 = matrix[5];
-    var column2Row2 = matrix[8];
-    result[0] = column0Row0;
-    result[1] = column0Row1;
-    result[2] = column0Row2;
-    result[3] = column1Row0;
-    result[4] = column1Row1;
-    result[5] = column1Row2;
-    result[6] = column2Row0;
-    result[7] = column2Row1;
-    result[8] = column2Row2;
-    return result;
-  };
-  function computeFrobeniusNorm(matrix) {
-    var norm = 0.0;
-    for (var i = 0; i < 9; ++i) {
-      var temp = matrix[i];
-      norm += temp * temp;
-    }
-    return Math.sqrt(norm);
-  }
-  var rowVal = [1, 0, 0];
-  var colVal = [2, 2, 1];
-  function offDiagonalFrobeniusNorm(matrix) {
-    var norm = 0.0;
-    for (var i = 0; i < 3; ++i) {
-      var temp = matrix[Matrix3.getElementIndex(colVal[i], rowVal[i])];
-      norm += 2.0 * temp * temp;
-    }
-    return Math.sqrt(norm);
-  }
-  function shurDecomposition(matrix, result) {
-    var tolerance = CesiumMath.EPSILON15;
-    var maxDiagonal = 0.0;
-    var rotAxis = 1;
-    for (var i = 0; i < 3; ++i) {
-      var temp = Math.abs(matrix[Matrix3.getElementIndex(colVal[i], rowVal[i])]);
-      if (temp > maxDiagonal) {
-        rotAxis = i;
-        maxDiagonal = temp;
-      }
-    }
-    var c = 1.0;
-    var s = 0.0;
-    var p = rowVal[rotAxis];
-    var q = colVal[rotAxis];
-    if (Math.abs(matrix[Matrix3.getElementIndex(q, p)]) > tolerance) {
-      var qq = matrix[Matrix3.getElementIndex(q, q)];
-      var pp = matrix[Matrix3.getElementIndex(p, p)];
-      var qp = matrix[Matrix3.getElementIndex(q, p)];
-      var tau = (qq - pp) / 2.0 / qp;
-      var t;
-      if (tau < 0.0) {
-        t = -1.0 / (-tau + Math.sqrt(1.0 + tau * tau));
-      } else {
-        t = 1.0 / (tau + Math.sqrt(1.0 + tau * tau));
-      }
-      c = 1.0 / Math.sqrt(1.0 + t * t);
-      s = t * c;
-    }
-    result = Matrix3.clone(Matrix3.IDENTITY, result);
-    result[Matrix3.getElementIndex(p, p)] = result[Matrix3.getElementIndex(q, q)] = c;
-    result[Matrix3.getElementIndex(q, p)] = s;
-    result[Matrix3.getElementIndex(p, q)] = -s;
-    return result;
-  }
-  var jMatrix = new Matrix3();
-  var jMatrixTranspose = new Matrix3();
-  Matrix3.computeEigenDecomposition = function(matrix, result) {
-    if (!defined(matrix)) {
-      throw new DeveloperError('matrix is required.');
-    }
-    var tolerance = CesiumMath.EPSILON20;
-    var maxSweeps = 10;
-    var count = 0;
-    var sweep = 0;
-    if (!defined(result)) {
-      result = {};
-    }
-    var unitaryMatrix = result.unitary = Matrix3.clone(Matrix3.IDENTITY, result.unitary);
-    var diagMatrix = result.diagonal = Matrix3.clone(matrix, result.diagonal);
-    var epsilon = tolerance * computeFrobeniusNorm(diagMatrix);
-    while (sweep < maxSweeps && offDiagonalFrobeniusNorm(diagMatrix) > epsilon) {
-      shurDecomposition(diagMatrix, jMatrix);
-      Matrix3.transpose(jMatrix, jMatrixTranspose);
-      Matrix3.multiply(diagMatrix, jMatrix, diagMatrix);
-      Matrix3.multiply(jMatrixTranspose, diagMatrix, diagMatrix);
-      Matrix3.multiply(unitaryMatrix, jMatrix, unitaryMatrix);
-      if (++count > 2) {
-        ++sweep;
-        count = 0;
-      }
-    }
-    return result;
-  };
-  Matrix3.abs = function(matrix, result) {
-    if (!defined(matrix)) {
-      throw new DeveloperError('matrix is required');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    result[0] = Math.abs(matrix[0]);
-    result[1] = Math.abs(matrix[1]);
-    result[2] = Math.abs(matrix[2]);
-    result[3] = Math.abs(matrix[3]);
-    result[4] = Math.abs(matrix[4]);
-    result[5] = Math.abs(matrix[5]);
-    result[6] = Math.abs(matrix[6]);
-    result[7] = Math.abs(matrix[7]);
-    result[8] = Math.abs(matrix[8]);
-    return result;
-  };
-  Matrix3.determinant = function(matrix) {
-    if (!defined(matrix)) {
-      throw new DeveloperError('matrix is required');
-    }
-    var m11 = matrix[0];
-    var m21 = matrix[3];
-    var m31 = matrix[6];
-    var m12 = matrix[1];
-    var m22 = matrix[4];
-    var m32 = matrix[7];
-    var m13 = matrix[2];
-    var m23 = matrix[5];
-    var m33 = matrix[8];
-    return m11 * (m22 * m33 - m23 * m32) + m12 * (m23 * m31 - m21 * m33) + m13 * (m21 * m32 - m22 * m31);
-  };
-  Matrix3.inverse = function(matrix, result) {
-    if (!defined(matrix)) {
-      throw new DeveloperError('matrix is required');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    var m11 = matrix[0];
-    var m21 = matrix[1];
-    var m31 = matrix[2];
-    var m12 = matrix[3];
-    var m22 = matrix[4];
-    var m32 = matrix[5];
-    var m13 = matrix[6];
-    var m23 = matrix[7];
-    var m33 = matrix[8];
-    var determinant = Matrix3.determinant(matrix);
-    if (Math.abs(determinant) <= CesiumMath.EPSILON15) {
-      throw new DeveloperError('matrix is not invertible');
-    }
-    result[0] = m22 * m33 - m23 * m32;
-    result[1] = m23 * m31 - m21 * m33;
-    result[2] = m21 * m32 - m22 * m31;
-    result[3] = m13 * m32 - m12 * m33;
-    result[4] = m11 * m33 - m13 * m31;
-    result[5] = m12 * m31 - m11 * m32;
-    result[6] = m12 * m23 - m13 * m22;
-    result[7] = m13 * m21 - m11 * m23;
-    result[8] = m11 * m22 - m12 * m21;
-    var scale = 1.0 / determinant;
-    return Matrix3.multiplyByScalar(result, scale, result);
-  };
-  Matrix3.equals = function(left, right) {
-    return (left === right) || (defined(left) && defined(right) && left[0] === right[0] && left[1] === right[1] && left[2] === right[2] && left[3] === right[3] && left[4] === right[4] && left[5] === right[5] && left[6] === right[6] && left[7] === right[7] && left[8] === right[8]);
-  };
-  Matrix3.equalsEpsilon = function(left, right, epsilon) {
-    if (typeof epsilon !== 'number') {
-      throw new DeveloperError('epsilon must be a number');
-    }
-    return (left === right) || (defined(left) && defined(right) && Math.abs(left[0] - right[0]) <= epsilon && Math.abs(left[1] - right[1]) <= epsilon && Math.abs(left[2] - right[2]) <= epsilon && Math.abs(left[3] - right[3]) <= epsilon && Math.abs(left[4] - right[4]) <= epsilon && Math.abs(left[5] - right[5]) <= epsilon && Math.abs(left[6] - right[6]) <= epsilon && Math.abs(left[7] - right[7]) <= epsilon && Math.abs(left[8] - right[8]) <= epsilon);
-  };
-  Matrix3.IDENTITY = freezeObject(new Matrix3(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0));
-  Matrix3.ZERO = freezeObject(new Matrix3(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0));
-  Matrix3.COLUMN0ROW0 = 0;
-  Matrix3.COLUMN0ROW1 = 1;
-  Matrix3.COLUMN0ROW2 = 2;
-  Matrix3.COLUMN1ROW0 = 3;
-  Matrix3.COLUMN1ROW1 = 4;
-  Matrix3.COLUMN1ROW2 = 5;
-  Matrix3.COLUMN2ROW0 = 6;
-  Matrix3.COLUMN2ROW1 = 7;
-  Matrix3.COLUMN2ROW2 = 8;
-  Matrix3.prototype.clone = function(result) {
-    return Matrix3.clone(this, result);
-  };
-  Matrix3.prototype.equals = function(right) {
-    return Matrix3.equals(this, right);
-  };
-  Matrix3.equalsArray = function(matrix, array, offset) {
-    return matrix[0] === array[offset] && matrix[1] === array[offset + 1] && matrix[2] === array[offset + 2] && matrix[3] === array[offset + 3] && matrix[4] === array[offset + 4] && matrix[5] === array[offset + 5] && matrix[6] === array[offset + 6] && matrix[7] === array[offset + 7] && matrix[8] === array[offset + 8];
-  };
-  Matrix3.prototype.equalsEpsilon = function(right, epsilon) {
-    return Matrix3.equalsEpsilon(this, right, epsilon);
-  };
-  Matrix3.prototype.toString = function() {
-    return '(' + this[0] + ', ' + this[3] + ', ' + this[6] + ')\n' + '(' + this[1] + ', ' + this[4] + ', ' + this[7] + ')\n' + '(' + this[2] + ', ' + this[5] + ', ' + this[8] + ')';
-  };
-  return Matrix3;
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("2d", ["26", "1b", "12", "14", "64", "17", "1f", "2b"], function(Cartesian3, defaultValue, defined, DeveloperError, FeatureDetection, freezeObject, CesiumMath, Matrix3) {
-  "use strict";
-  function Quaternion(x, y, z, w) {
-    this.x = defaultValue(x, 0.0);
-    this.y = defaultValue(y, 0.0);
-    this.z = defaultValue(z, 0.0);
-    this.w = defaultValue(w, 0.0);
-  }
-  var fromAxisAngleScratch = new Cartesian3();
-  Quaternion.fromAxisAngle = function(axis, angle, result) {
-    if (!defined(axis)) {
-      throw new DeveloperError('axis is required.');
-    }
-    if (typeof angle !== 'number') {
-      throw new DeveloperError('angle is required and must be a number.');
-    }
-    var halfAngle = angle / 2.0;
-    var s = Math.sin(halfAngle);
-    fromAxisAngleScratch = Cartesian3.normalize(axis, fromAxisAngleScratch);
-    var x = fromAxisAngleScratch.x * s;
-    var y = fromAxisAngleScratch.y * s;
-    var z = fromAxisAngleScratch.z * s;
-    var w = Math.cos(halfAngle);
-    if (!defined(result)) {
-      return new Quaternion(x, y, z, w);
-    }
-    result.x = x;
-    result.y = y;
-    result.z = z;
-    result.w = w;
-    return result;
-  };
-  var fromRotationMatrixNext = [1, 2, 0];
-  var fromRotationMatrixQuat = new Array(3);
-  Quaternion.fromRotationMatrix = function(matrix, result) {
-    if (!defined(matrix)) {
-      throw new DeveloperError('matrix is required.');
-    }
-    var root;
-    var x;
-    var y;
-    var z;
-    var w;
-    var m00 = matrix[Matrix3.COLUMN0ROW0];
-    var m11 = matrix[Matrix3.COLUMN1ROW1];
-    var m22 = matrix[Matrix3.COLUMN2ROW2];
-    var trace = m00 + m11 + m22;
-    if (trace > 0.0) {
-      root = Math.sqrt(trace + 1.0);
-      w = 0.5 * root;
-      root = 0.5 / root;
-      x = (matrix[Matrix3.COLUMN1ROW2] - matrix[Matrix3.COLUMN2ROW1]) * root;
-      y = (matrix[Matrix3.COLUMN2ROW0] - matrix[Matrix3.COLUMN0ROW2]) * root;
-      z = (matrix[Matrix3.COLUMN0ROW1] - matrix[Matrix3.COLUMN1ROW0]) * root;
-    } else {
-      var next = fromRotationMatrixNext;
-      var i = 0;
-      if (m11 > m00) {
-        i = 1;
-      }
-      if (m22 > m00 && m22 > m11) {
-        i = 2;
-      }
-      var j = next[i];
-      var k = next[j];
-      root = Math.sqrt(matrix[Matrix3.getElementIndex(i, i)] - matrix[Matrix3.getElementIndex(j, j)] - matrix[Matrix3.getElementIndex(k, k)] + 1.0);
-      var quat = fromRotationMatrixQuat;
-      quat[i] = 0.5 * root;
-      root = 0.5 / root;
-      w = (matrix[Matrix3.getElementIndex(k, j)] - matrix[Matrix3.getElementIndex(j, k)]) * root;
-      quat[j] = (matrix[Matrix3.getElementIndex(j, i)] + matrix[Matrix3.getElementIndex(i, j)]) * root;
-      quat[k] = (matrix[Matrix3.getElementIndex(k, i)] + matrix[Matrix3.getElementIndex(i, k)]) * root;
-      x = -quat[0];
-      y = -quat[1];
-      z = -quat[2];
-    }
-    if (!defined(result)) {
-      return new Quaternion(x, y, z, w);
-    }
-    result.x = x;
-    result.y = y;
-    result.z = z;
-    result.w = w;
-    return result;
-  };
-  var scratchHPRQuaternion = new Quaternion();
-  Quaternion.fromHeadingPitchRoll = function(heading, pitch, roll, result) {
-    if (!defined(heading)) {
-      throw new DeveloperError('heading is required.');
-    }
-    if (!defined(pitch)) {
-      throw new DeveloperError('pitch is required.');
-    }
-    if (!defined(roll)) {
-      throw new DeveloperError('roll is required.');
-    }
-    var rollQuaternion = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, roll, scratchHPRQuaternion);
-    var pitchQuaternion = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, -pitch, result);
-    result = Quaternion.multiply(pitchQuaternion, rollQuaternion, pitchQuaternion);
-    var headingQuaternion = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, -heading, scratchHPRQuaternion);
-    return Quaternion.multiply(headingQuaternion, result, result);
-  };
-  var sampledQuaternionAxis = new Cartesian3();
-  var sampledQuaternionRotation = new Cartesian3();
-  var sampledQuaternionTempQuaternion = new Quaternion();
-  var sampledQuaternionQuaternion0 = new Quaternion();
-  var sampledQuaternionQuaternion0Conjugate = new Quaternion();
-  Quaternion.packedLength = 4;
-  Quaternion.pack = function(value, array, startingIndex) {
-    if (!defined(value)) {
-      throw new DeveloperError('value is required');
-    }
-    if (!defined(array)) {
-      throw new DeveloperError('array is required');
-    }
-    startingIndex = defaultValue(startingIndex, 0);
-    array[startingIndex++] = value.x;
-    array[startingIndex++] = value.y;
-    array[startingIndex++] = value.z;
-    array[startingIndex] = value.w;
-  };
-  Quaternion.unpack = function(array, startingIndex, result) {
-    if (!defined(array)) {
-      throw new DeveloperError('array is required');
-    }
-    startingIndex = defaultValue(startingIndex, 0);
-    if (!defined(result)) {
-      result = new Quaternion();
-    }
-    result.x = array[startingIndex];
-    result.y = array[startingIndex + 1];
-    result.z = array[startingIndex + 2];
-    result.w = array[startingIndex + 3];
-    return result;
-  };
-  Quaternion.packedInterpolationLength = 3;
-  Quaternion.convertPackedArrayForInterpolation = function(packedArray, startingIndex, lastIndex, result) {
-    Quaternion.unpack(packedArray, lastIndex * 4, sampledQuaternionQuaternion0Conjugate);
-    Quaternion.conjugate(sampledQuaternionQuaternion0Conjugate, sampledQuaternionQuaternion0Conjugate);
-    for (var i = 0,
-        len = lastIndex - startingIndex + 1; i < len; i++) {
-      var offset = i * 3;
-      Quaternion.unpack(packedArray, (startingIndex + i) * 4, sampledQuaternionTempQuaternion);
-      Quaternion.multiply(sampledQuaternionTempQuaternion, sampledQuaternionQuaternion0Conjugate, sampledQuaternionTempQuaternion);
-      if (sampledQuaternionTempQuaternion.w < 0) {
-        Quaternion.negate(sampledQuaternionTempQuaternion, sampledQuaternionTempQuaternion);
-      }
-      Quaternion.computeAxis(sampledQuaternionTempQuaternion, sampledQuaternionAxis);
-      var angle = Quaternion.computeAngle(sampledQuaternionTempQuaternion);
-      result[offset] = sampledQuaternionAxis.x * angle;
-      result[offset + 1] = sampledQuaternionAxis.y * angle;
-      result[offset + 2] = sampledQuaternionAxis.z * angle;
-    }
-  };
-  Quaternion.unpackInterpolationResult = function(array, sourceArray, firstIndex, lastIndex, result) {
-    if (!defined(result)) {
-      result = new Quaternion();
-    }
-    Cartesian3.fromArray(array, 0, sampledQuaternionRotation);
-    var magnitude = Cartesian3.magnitude(sampledQuaternionRotation);
-    Quaternion.unpack(sourceArray, lastIndex * 4, sampledQuaternionQuaternion0);
-    if (magnitude === 0) {
-      Quaternion.clone(Quaternion.IDENTITY, sampledQuaternionTempQuaternion);
-    } else {
-      Quaternion.fromAxisAngle(sampledQuaternionRotation, magnitude, sampledQuaternionTempQuaternion);
-    }
-    return Quaternion.multiply(sampledQuaternionTempQuaternion, sampledQuaternionQuaternion0, result);
-  };
-  Quaternion.clone = function(quaternion, result) {
-    if (!defined(quaternion)) {
-      return undefined;
-    }
-    if (!defined(result)) {
-      return new Quaternion(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
-    }
-    result.x = quaternion.x;
-    result.y = quaternion.y;
-    result.z = quaternion.z;
-    result.w = quaternion.w;
-    return result;
-  };
-  Quaternion.conjugate = function(quaternion, result) {
-    if (!defined(quaternion)) {
-      throw new DeveloperError('quaternion is required');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    result.x = -quaternion.x;
-    result.y = -quaternion.y;
-    result.z = -quaternion.z;
-    result.w = quaternion.w;
-    return result;
-  };
-  Quaternion.magnitudeSquared = function(quaternion) {
-    if (!defined(quaternion)) {
-      throw new DeveloperError('quaternion is required');
-    }
-    return quaternion.x * quaternion.x + quaternion.y * quaternion.y + quaternion.z * quaternion.z + quaternion.w * quaternion.w;
-  };
-  Quaternion.magnitude = function(quaternion) {
-    return Math.sqrt(Quaternion.magnitudeSquared(quaternion));
-  };
-  Quaternion.normalize = function(quaternion, result) {
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    var inverseMagnitude = 1.0 / Quaternion.magnitude(quaternion);
-    var x = quaternion.x * inverseMagnitude;
-    var y = quaternion.y * inverseMagnitude;
-    var z = quaternion.z * inverseMagnitude;
-    var w = quaternion.w * inverseMagnitude;
-    result.x = x;
-    result.y = y;
-    result.z = z;
-    result.w = w;
-    return result;
-  };
-  Quaternion.inverse = function(quaternion, result) {
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    var magnitudeSquared = Quaternion.magnitudeSquared(quaternion);
-    result = Quaternion.conjugate(quaternion, result);
-    return Quaternion.multiplyByScalar(result, 1.0 / magnitudeSquared, result);
-  };
-  Quaternion.add = function(left, right, result) {
-    if (!defined(left)) {
-      throw new DeveloperError('left is required');
-    }
-    if (!defined(right)) {
-      throw new DeveloperError('right is required');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    result.x = left.x + right.x;
-    result.y = left.y + right.y;
-    result.z = left.z + right.z;
-    result.w = left.w + right.w;
-    return result;
-  };
-  Quaternion.subtract = function(left, right, result) {
-    if (!defined(left)) {
-      throw new DeveloperError('left is required');
-    }
-    if (!defined(right)) {
-      throw new DeveloperError('right is required');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    result.x = left.x - right.x;
-    result.y = left.y - right.y;
-    result.z = left.z - right.z;
-    result.w = left.w - right.w;
-    return result;
-  };
-  Quaternion.negate = function(quaternion, result) {
-    if (!defined(quaternion)) {
-      throw new DeveloperError('quaternion is required');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    result.x = -quaternion.x;
-    result.y = -quaternion.y;
-    result.z = -quaternion.z;
-    result.w = -quaternion.w;
-    return result;
-  };
-  Quaternion.dot = function(left, right) {
-    if (!defined(left)) {
-      throw new DeveloperError('left is required');
-    }
-    if (!defined(right)) {
-      throw new DeveloperError('right is required');
-    }
-    return left.x * right.x + left.y * right.y + left.z * right.z + left.w * right.w;
-  };
-  Quaternion.multiply = function(left, right, result) {
-    if (!defined(left)) {
-      throw new DeveloperError('left is required');
-    }
-    if (!defined(right)) {
-      throw new DeveloperError('right is required');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    var leftX = left.x;
-    var leftY = left.y;
-    var leftZ = left.z;
-    var leftW = left.w;
-    var rightX = right.x;
-    var rightY = right.y;
-    var rightZ = right.z;
-    var rightW = right.w;
-    var x = leftW * rightX + leftX * rightW + leftY * rightZ - leftZ * rightY;
-    var y = leftW * rightY - leftX * rightZ + leftY * rightW + leftZ * rightX;
-    var z = leftW * rightZ + leftX * rightY - leftY * rightX + leftZ * rightW;
-    var w = leftW * rightW - leftX * rightX - leftY * rightY - leftZ * rightZ;
-    result.x = x;
-    result.y = y;
-    result.z = z;
-    result.w = w;
-    return result;
-  };
-  Quaternion.multiplyByScalar = function(quaternion, scalar, result) {
-    if (!defined(quaternion)) {
-      throw new DeveloperError('quaternion is required');
-    }
-    if (typeof scalar !== 'number') {
-      throw new DeveloperError('scalar is required and must be a number.');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    result.x = quaternion.x * scalar;
-    result.y = quaternion.y * scalar;
-    result.z = quaternion.z * scalar;
-    result.w = quaternion.w * scalar;
-    return result;
-  };
-  Quaternion.divideByScalar = function(quaternion, scalar, result) {
-    if (!defined(quaternion)) {
-      throw new DeveloperError('quaternion is required');
-    }
-    if (typeof scalar !== 'number') {
-      throw new DeveloperError('scalar is required and must be a number.');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    result.x = quaternion.x / scalar;
-    result.y = quaternion.y / scalar;
-    result.z = quaternion.z / scalar;
-    result.w = quaternion.w / scalar;
-    return result;
-  };
-  Quaternion.computeAxis = function(quaternion, result) {
-    if (!defined(quaternion)) {
-      throw new DeveloperError('quaternion is required');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    var w = quaternion.w;
-    if (Math.abs(w - 1.0) < CesiumMath.EPSILON6) {
-      result.x = result.y = result.z = 0;
-      return result;
-    }
-    var scalar = 1.0 / Math.sqrt(1.0 - (w * w));
-    result.x = quaternion.x * scalar;
-    result.y = quaternion.y * scalar;
-    result.z = quaternion.z * scalar;
-    return result;
-  };
-  Quaternion.computeAngle = function(quaternion) {
-    if (!defined(quaternion)) {
-      throw new DeveloperError('quaternion is required');
-    }
-    if (Math.abs(quaternion.w - 1.0) < CesiumMath.EPSILON6) {
-      return 0.0;
-    }
-    return 2.0 * Math.acos(quaternion.w);
-  };
-  var lerpScratch = new Quaternion();
-  Quaternion.lerp = function(start, end, t, result) {
-    if (!defined(start)) {
-      throw new DeveloperError('start is required.');
-    }
-    if (!defined(end)) {
-      throw new DeveloperError('end is required.');
-    }
-    if (typeof t !== 'number') {
-      throw new DeveloperError('t is required and must be a number.');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    lerpScratch = Quaternion.multiplyByScalar(end, t, lerpScratch);
-    result = Quaternion.multiplyByScalar(start, 1.0 - t, result);
-    return Quaternion.add(lerpScratch, result, result);
-  };
-  var slerpEndNegated = new Quaternion();
-  var slerpScaledP = new Quaternion();
-  var slerpScaledR = new Quaternion();
-  Quaternion.slerp = function(start, end, t, result) {
-    if (!defined(start)) {
-      throw new DeveloperError('start is required.');
-    }
-    if (!defined(end)) {
-      throw new DeveloperError('end is required.');
-    }
-    if (typeof t !== 'number') {
-      throw new DeveloperError('t is required and must be a number.');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    var dot = Quaternion.dot(start, end);
-    var r = end;
-    if (dot < 0.0) {
-      dot = -dot;
-      r = slerpEndNegated = Quaternion.negate(end, slerpEndNegated);
-    }
-    if (1.0 - dot < CesiumMath.EPSILON6) {
-      return Quaternion.lerp(start, r, t, result);
-    }
-    var theta = Math.acos(dot);
-    slerpScaledP = Quaternion.multiplyByScalar(start, Math.sin((1 - t) * theta), slerpScaledP);
-    slerpScaledR = Quaternion.multiplyByScalar(r, Math.sin(t * theta), slerpScaledR);
-    result = Quaternion.add(slerpScaledP, slerpScaledR, result);
-    return Quaternion.multiplyByScalar(result, 1.0 / Math.sin(theta), result);
-  };
-  Quaternion.log = function(quaternion, result) {
-    if (!defined(quaternion)) {
-      throw new DeveloperError('quaternion is required.');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    var theta = CesiumMath.acosClamped(quaternion.w);
-    var thetaOverSinTheta = 0.0;
-    if (theta !== 0.0) {
-      thetaOverSinTheta = theta / Math.sin(theta);
-    }
-    return Cartesian3.multiplyByScalar(quaternion, thetaOverSinTheta, result);
-  };
-  Quaternion.exp = function(cartesian, result) {
-    if (!defined(cartesian)) {
-      throw new DeveloperError('cartesian is required.');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    var theta = Cartesian3.magnitude(cartesian);
-    var sinThetaOverTheta = 0.0;
-    if (theta !== 0.0) {
-      sinThetaOverTheta = Math.sin(theta) / theta;
-    }
-    result.x = cartesian.x * sinThetaOverTheta;
-    result.y = cartesian.y * sinThetaOverTheta;
-    result.z = cartesian.z * sinThetaOverTheta;
-    result.w = Math.cos(theta);
-    return result;
-  };
-  var squadScratchCartesian0 = new Cartesian3();
-  var squadScratchCartesian1 = new Cartesian3();
-  var squadScratchQuaternion0 = new Quaternion();
-  var squadScratchQuaternion1 = new Quaternion();
-  Quaternion.computeInnerQuadrangle = function(q0, q1, q2, result) {
-    if (!defined(q0) || !defined(q1) || !defined(q2)) {
-      throw new DeveloperError('q0, q1, and q2 are required.');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    var qInv = Quaternion.conjugate(q1, squadScratchQuaternion0);
-    Quaternion.multiply(qInv, q2, squadScratchQuaternion1);
-    var cart0 = Quaternion.log(squadScratchQuaternion1, squadScratchCartesian0);
-    Quaternion.multiply(qInv, q0, squadScratchQuaternion1);
-    var cart1 = Quaternion.log(squadScratchQuaternion1, squadScratchCartesian1);
-    Cartesian3.add(cart0, cart1, cart0);
-    Cartesian3.multiplyByScalar(cart0, 0.25, cart0);
-    Cartesian3.negate(cart0, cart0);
-    Quaternion.exp(cart0, squadScratchQuaternion0);
-    return Quaternion.multiply(q1, squadScratchQuaternion0, result);
-  };
-  Quaternion.squad = function(q0, q1, s0, s1, t, result) {
-    if (!defined(q0) || !defined(q1) || !defined(s0) || !defined(s1)) {
-      throw new DeveloperError('q0, q1, s0, and s1 are required.');
-    }
-    if (typeof t !== 'number') {
-      throw new DeveloperError('t is required and must be a number.');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    var slerp0 = Quaternion.slerp(q0, q1, t, squadScratchQuaternion0);
-    var slerp1 = Quaternion.slerp(s0, s1, t, squadScratchQuaternion1);
-    return Quaternion.slerp(slerp0, slerp1, 2.0 * t * (1.0 - t), result);
-  };
-  var fastSlerpScratchQuaternion = new Quaternion();
-  var opmu = 1.90110745351730037;
-  var u = FeatureDetection.supportsTypedArrays() ? new Float32Array(8) : [];
-  var v = FeatureDetection.supportsTypedArrays() ? new Float32Array(8) : [];
-  var bT = FeatureDetection.supportsTypedArrays() ? new Float32Array(8) : [];
-  var bD = FeatureDetection.supportsTypedArrays() ? new Float32Array(8) : [];
-  for (var i = 0; i < 7; ++i) {
-    var s = i + 1.0;
-    var t = 2.0 * s + 1.0;
-    u[i] = 1.0 / (s * t);
-    v[i] = s / t;
-  }
-  u[7] = opmu / (8.0 * 17.0);
-  v[7] = opmu * 8.0 / 17.0;
-  Quaternion.fastSlerp = function(start, end, t, result) {
-    if (!defined(start)) {
-      throw new DeveloperError('start is required.');
-    }
-    if (!defined(end)) {
-      throw new DeveloperError('end is required.');
-    }
-    if (typeof t !== 'number') {
-      throw new DeveloperError('t is required and must be a number.');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    var x = Quaternion.dot(start, end);
-    var sign;
-    if (x >= 0) {
-      sign = 1.0;
-    } else {
-      sign = -1.0;
-      x = -x;
-    }
-    var xm1 = x - 1.0;
-    var d = 1.0 - t;
-    var sqrT = t * t;
-    var sqrD = d * d;
-    for (var i = 7; i >= 0; --i) {
-      bT[i] = (u[i] * sqrT - v[i]) * xm1;
-      bD[i] = (u[i] * sqrD - v[i]) * xm1;
-    }
-    var cT = sign * t * (1.0 + bT[0] * (1.0 + bT[1] * (1.0 + bT[2] * (1.0 + bT[3] * (1.0 + bT[4] * (1.0 + bT[5] * (1.0 + bT[6] * (1.0 + bT[7]))))))));
-    var cD = d * (1.0 + bD[0] * (1.0 + bD[1] * (1.0 + bD[2] * (1.0 + bD[3] * (1.0 + bD[4] * (1.0 + bD[5] * (1.0 + bD[6] * (1.0 + bD[7]))))))));
-    var temp = Quaternion.multiplyByScalar(start, cD, fastSlerpScratchQuaternion);
-    Quaternion.multiplyByScalar(end, cT, result);
-    return Quaternion.add(temp, result, result);
-  };
-  Quaternion.fastSquad = function(q0, q1, s0, s1, t, result) {
-    if (!defined(q0) || !defined(q1) || !defined(s0) || !defined(s1)) {
-      throw new DeveloperError('q0, q1, s0, and s1 are required.');
-    }
-    if (typeof t !== 'number') {
-      throw new DeveloperError('t is required and must be a number.');
-    }
-    if (!defined(result)) {
-      throw new DeveloperError('result is required');
-    }
-    var slerp0 = Quaternion.fastSlerp(q0, q1, t, squadScratchQuaternion0);
-    var slerp1 = Quaternion.fastSlerp(s0, s1, t, squadScratchQuaternion1);
-    return Quaternion.fastSlerp(slerp0, slerp1, 2.0 * t * (1.0 - t), result);
-  };
-  Quaternion.equals = function(left, right) {
-    return (left === right) || ((defined(left)) && (defined(right)) && (left.x === right.x) && (left.y === right.y) && (left.z === right.z) && (left.w === right.w));
-  };
-  Quaternion.equalsEpsilon = function(left, right, epsilon) {
-    if (typeof epsilon !== 'number') {
-      throw new DeveloperError('epsilon is required and must be a number.');
-    }
-    return (left === right) || ((defined(left)) && (defined(right)) && (Math.abs(left.x - right.x) <= epsilon) && (Math.abs(left.y - right.y) <= epsilon) && (Math.abs(left.z - right.z) <= epsilon) && (Math.abs(left.w - right.w) <= epsilon));
-  };
-  Quaternion.ZERO = freezeObject(new Quaternion(0.0, 0.0, 0.0, 0.0));
-  Quaternion.IDENTITY = freezeObject(new Quaternion(0.0, 0.0, 0.0, 1.0));
-  Quaternion.prototype.clone = function(result) {
-    return Quaternion.clone(this, result);
-  };
-  Quaternion.prototype.equals = function(right) {
-    return Quaternion.equals(this, right);
-  };
-  Quaternion.prototype.equalsEpsilon = function(right, epsilon) {
-    return Quaternion.equalsEpsilon(this, right, epsilon);
-  };
-  Quaternion.prototype.toString = function() {
-    return '(' + this.x + ', ' + this.y + ', ' + this.z + ', ' + this.w + ')';
-  };
-  return Quaternion;
-});
-
-})();
-(function() {
-var define = $__System.amdDefine;
-define("12", [], function() {
+define("15", [], function() {
   "use strict";
   function defined(value) {
     return value !== undefined;
@@ -15283,7 +16271,7 @@ define("12", [], function() {
 })();
 (function() {
 var define = $__System.amdDefine;
-define("17", ["12"], function(defined) {
+define("1a", ["15"], function(defined) {
   "use strict";
   var freezeObject = Object.freeze;
   if (!defined(freezeObject)) {
@@ -15297,421 +16285,278 @@ define("17", ["12"], function(defined) {
 })();
 (function() {
 var define = $__System.amdDefine;
-define("47", ["17"], function(freezeObject) {
+define("3d", ["29", "15", "17", "1a"], function(Cartesian3, defined, DeveloperError, freezeObject) {
   "use strict";
-  var TimeConstants = {
-    SECONDS_PER_MILLISECOND: 0.001,
-    SECONDS_PER_MINUTE: 60.0,
-    MINUTES_PER_HOUR: 60.0,
-    HOURS_PER_DAY: 24.0,
-    SECONDS_PER_HOUR: 3600.0,
-    MINUTES_PER_DAY: 1440.0,
-    SECONDS_PER_DAY: 86400.0,
-    DAYS_PER_JULIAN_CENTURY: 36525.0,
-    PICOSECOND: 0.000000001,
-    MODIFIED_JULIAN_DATE_DIFFERENCE: 2400000.5
+  function Plane(normal, distance) {
+    if (!defined(normal)) {
+      throw new DeveloperError('normal is required.');
+    }
+    if (!defined(distance)) {
+      throw new DeveloperError('distance is required.');
+    }
+    this.normal = Cartesian3.clone(normal);
+    this.distance = distance;
+  }
+  Plane.fromPointNormal = function(point, normal, result) {
+    if (!defined(point)) {
+      throw new DeveloperError('point is required.');
+    }
+    if (!defined(normal)) {
+      throw new DeveloperError('normal is required.');
+    }
+    var distance = -Cartesian3.dot(normal, point);
+    if (!defined(result)) {
+      return new Plane(normal, distance);
+    }
+    Cartesian3.clone(normal, result.normal);
+    result.distance = distance;
+    return result;
   };
-  return freezeObject(TimeConstants);
+  var scratchNormal = new Cartesian3();
+  Plane.fromCartesian4 = function(coefficients, result) {
+    if (!defined(coefficients)) {
+      throw new DeveloperError('coefficients is required.');
+    }
+    var normal = Cartesian3.fromCartesian4(coefficients, scratchNormal);
+    var distance = coefficients.w;
+    if (!defined(result)) {
+      return new Plane(normal, distance);
+    } else {
+      Cartesian3.clone(normal, result.normal);
+      result.distance = distance;
+      return result;
+    }
+  };
+  Plane.getPointDistance = function(plane, point) {
+    if (!defined(plane)) {
+      throw new DeveloperError('plane is required.');
+    }
+    if (!defined(point)) {
+      throw new DeveloperError('point is required.');
+    }
+    return Cartesian3.dot(plane.normal, point) + plane.distance;
+  };
+  Plane.ORIGIN_XY_PLANE = freezeObject(new Plane(Cartesian3.UNIT_Z, 0.0));
+  Plane.ORIGIN_YZ_PLANE = freezeObject(new Plane(Cartesian3.UNIT_X, 0.0));
+  Plane.ORIGIN_ZX_PLANE = freezeObject(new Plane(Cartesian3.UNIT_Y, 0.0));
+  return Plane;
 });
 
 })();
 (function() {
 var define = $__System.amdDefine;
-define("2e", ["52", "3c", "26", "3d", "1b", "12", "14", "51", "53", "35", "5e", "5f", "1c", "1f", "2b", "2c", "2d", "47"], function(when, Cartesian2, Cartesian3, Cartesian4, defaultValue, defined, DeveloperError, EarthOrientationParameters, EarthOrientationParametersSample, Ellipsoid, Iau2006XysData, Iau2006XysSample, JulianDate, CesiumMath, Matrix3, Matrix4, Quaternion, TimeConstants) {
+define("68", ["29", "37", "1e", "15", "17", "38", "60", "65", "66", "22", "2f", "3d"], function(Cartesian3, Cartographic, defaultValue, defined, DeveloperError, Ellipsoid, EllipsoidGeodesic, IntersectionTests, isArray, CesiumMath, Matrix4, Plane) {
   "use strict";
-  var Transforms = {};
-  var eastNorthUpToFixedFrameNormal = new Cartesian3();
-  var eastNorthUpToFixedFrameTangent = new Cartesian3();
-  var eastNorthUpToFixedFrameBitangent = new Cartesian3();
-  Transforms.eastNorthUpToFixedFrame = function(origin, ellipsoid, result) {
-    if (!defined(origin)) {
-      throw new DeveloperError('origin is required.');
+  var PolylinePipeline = {};
+  PolylinePipeline.numberOfPoints = function(p0, p1, minDistance) {
+    var distance = Cartesian3.distance(p0, p1);
+    return Math.ceil(distance / minDistance);
+  };
+  var cartoScratch = new Cartographic();
+  PolylinePipeline.extractHeights = function(positions, ellipsoid) {
+    var length = positions.length;
+    var heights = new Array(length);
+    for (var i = 0; i < length; i++) {
+      var p = positions[i];
+      heights[i] = ellipsoid.cartesianToCartographic(p, cartoScratch).height;
     }
-    if (CesiumMath.equalsEpsilon(origin.x, 0.0, CesiumMath.EPSILON14) && CesiumMath.equalsEpsilon(origin.y, 0.0, CesiumMath.EPSILON14)) {
-      var sign = CesiumMath.sign(origin.z);
-      if (!defined(result)) {
-        return new Matrix4(0.0, -sign, 0.0, origin.x, 1.0, 0.0, 0.0, origin.y, 0.0, 0.0, sign, origin.z, 0.0, 0.0, 0.0, 1.0);
+    return heights;
+  };
+  var wrapLongitudeInversMatrix = new Matrix4();
+  var wrapLongitudeOrigin = new Cartesian3();
+  var wrapLongitudeXZNormal = new Cartesian3();
+  var wrapLongitudeXZPlane = new Plane(Cartesian3.ZERO, 0.0);
+  var wrapLongitudeYZNormal = new Cartesian3();
+  var wrapLongitudeYZPlane = new Plane(Cartesian3.ZERO, 0.0);
+  var wrapLongitudeIntersection = new Cartesian3();
+  var wrapLongitudeOffset = new Cartesian3();
+  var subdivideHeightsScratchArray = [];
+  function subdivideHeights(numPoints, h0, h1) {
+    var heights = subdivideHeightsScratchArray;
+    heights.length = numPoints;
+    var i;
+    if (h0 === h1) {
+      for (i = 0; i < numPoints; i++) {
+        heights[i] = h0;
       }
-      result[0] = 0.0;
-      result[1] = 1.0;
-      result[2] = 0.0;
-      result[3] = 0.0;
-      result[4] = -sign;
-      result[5] = 0.0;
-      result[6] = 0.0;
-      result[7] = 0.0;
-      result[8] = 0.0;
-      result[9] = 0.0;
-      result[10] = sign;
-      result[11] = 0.0;
-      result[12] = origin.x;
-      result[13] = origin.y;
-      result[14] = origin.z;
-      result[15] = 1.0;
-      return result;
+      return heights;
     }
-    var normal = eastNorthUpToFixedFrameNormal;
-    var tangent = eastNorthUpToFixedFrameTangent;
-    var bitangent = eastNorthUpToFixedFrameBitangent;
-    ellipsoid = defaultValue(ellipsoid, Ellipsoid.WGS84);
-    ellipsoid.geodeticSurfaceNormal(origin, normal);
-    tangent.x = -origin.y;
-    tangent.y = origin.x;
-    tangent.z = 0.0;
-    Cartesian3.normalize(tangent, tangent);
-    Cartesian3.cross(normal, tangent, bitangent);
-    if (!defined(result)) {
-      return new Matrix4(tangent.x, bitangent.x, normal.x, origin.x, tangent.y, bitangent.y, normal.y, origin.y, tangent.z, bitangent.z, normal.z, origin.z, 0.0, 0.0, 0.0, 1.0);
+    var dHeight = h1 - h0;
+    var heightPerVertex = dHeight / numPoints;
+    for (i = 0; i < numPoints; i++) {
+      var h = h0 + i * heightPerVertex;
+      heights[i] = h;
     }
-    result[0] = tangent.x;
-    result[1] = tangent.y;
-    result[2] = tangent.z;
-    result[3] = 0.0;
-    result[4] = bitangent.x;
-    result[5] = bitangent.y;
-    result[6] = bitangent.z;
-    result[7] = 0.0;
-    result[8] = normal.x;
-    result[9] = normal.y;
-    result[10] = normal.z;
-    result[11] = 0.0;
-    result[12] = origin.x;
-    result[13] = origin.y;
-    result[14] = origin.z;
-    result[15] = 1.0;
-    return result;
-  };
-  var northEastDownToFixedFrameNormal = new Cartesian3();
-  var northEastDownToFixedFrameTangent = new Cartesian3();
-  var northEastDownToFixedFrameBitangent = new Cartesian3();
-  Transforms.northEastDownToFixedFrame = function(origin, ellipsoid, result) {
-    if (!defined(origin)) {
-      throw new DeveloperError('origin is required.');
+    return heights;
+  }
+  var carto1 = new Cartographic();
+  var carto2 = new Cartographic();
+  var cartesian = new Cartesian3();
+  var scaleFirst = new Cartesian3();
+  var scaleLast = new Cartesian3();
+  var ellipsoidGeodesic = new EllipsoidGeodesic();
+  function generateCartesianArc(p0, p1, minDistance, ellipsoid, h0, h1, array, offset) {
+    var first = ellipsoid.scaleToGeodeticSurface(p0, scaleFirst);
+    var last = ellipsoid.scaleToGeodeticSurface(p1, scaleLast);
+    var numPoints = PolylinePipeline.numberOfPoints(p0, p1, minDistance);
+    var start = ellipsoid.cartesianToCartographic(first, carto1);
+    var end = ellipsoid.cartesianToCartographic(last, carto2);
+    var heights = subdivideHeights(numPoints, h0, h1);
+    ellipsoidGeodesic.setEndPoints(start, end);
+    var surfaceDistanceBetweenPoints = ellipsoidGeodesic.surfaceDistance / numPoints;
+    var index = offset;
+    start.height = h0;
+    var cart = ellipsoid.cartographicToCartesian(start, cartesian);
+    Cartesian3.pack(cart, array, index);
+    index += 3;
+    for (var i = 1; i < numPoints; i++) {
+      var carto = ellipsoidGeodesic.interpolateUsingSurfaceDistance(i * surfaceDistanceBetweenPoints, carto2);
+      carto.height = heights[i];
+      cart = ellipsoid.cartographicToCartesian(carto, cartesian);
+      Cartesian3.pack(cart, array, index);
+      index += 3;
     }
-    if (CesiumMath.equalsEpsilon(origin.x, 0.0, CesiumMath.EPSILON14) && CesiumMath.equalsEpsilon(origin.y, 0.0, CesiumMath.EPSILON14)) {
-      var sign = CesiumMath.sign(origin.z);
-      if (!defined(result)) {
-        return new Matrix4(-sign, 0.0, 0.0, origin.x, 0.0, 1.0, 0.0, origin.y, 0.0, 0.0, -sign, origin.z, 0.0, 0.0, 0.0, 1.0);
+    return index;
+  }
+  PolylinePipeline.wrapLongitude = function(positions, modelMatrix) {
+    var cartesians = [];
+    var segments = [];
+    if (defined(positions) && positions.length > 0) {
+      modelMatrix = defaultValue(modelMatrix, Matrix4.IDENTITY);
+      var inverseModelMatrix = Matrix4.inverseTransformation(modelMatrix, wrapLongitudeInversMatrix);
+      var origin = Matrix4.multiplyByPoint(inverseModelMatrix, Cartesian3.ZERO, wrapLongitudeOrigin);
+      var xzNormal = Matrix4.multiplyByPointAsVector(inverseModelMatrix, Cartesian3.UNIT_Y, wrapLongitudeXZNormal);
+      var xzPlane = Plane.fromPointNormal(origin, xzNormal, wrapLongitudeXZPlane);
+      var yzNormal = Matrix4.multiplyByPointAsVector(inverseModelMatrix, Cartesian3.UNIT_X, wrapLongitudeYZNormal);
+      var yzPlane = Plane.fromPointNormal(origin, yzNormal, wrapLongitudeYZPlane);
+      var count = 1;
+      cartesians.push(Cartesian3.clone(positions[0]));
+      var prev = cartesians[0];
+      var length = positions.length;
+      for (var i = 1; i < length; ++i) {
+        var cur = positions[i];
+        if (Plane.getPointDistance(yzPlane, prev) < 0.0 || Plane.getPointDistance(yzPlane, cur) < 0.0) {
+          var intersection = IntersectionTests.lineSegmentPlane(prev, cur, xzPlane, wrapLongitudeIntersection);
+          if (defined(intersection)) {
+            var offset = Cartesian3.multiplyByScalar(xzNormal, 5.0e-9, wrapLongitudeOffset);
+            if (Plane.getPointDistance(xzPlane, prev) < 0.0) {
+              Cartesian3.negate(offset, offset);
+            }
+            cartesians.push(Cartesian3.add(intersection, offset, new Cartesian3()));
+            segments.push(count + 1);
+            Cartesian3.negate(offset, offset);
+            cartesians.push(Cartesian3.add(intersection, offset, new Cartesian3()));
+            count = 1;
+          }
+        }
+        cartesians.push(Cartesian3.clone(positions[i]));
+        count++;
+        prev = cur;
       }
-      result[0] = -sign;
-      result[1] = 0.0;
-      result[2] = 0.0;
-      result[3] = 0.0;
-      result[4] = 0.0;
-      result[5] = 1.0;
-      result[6] = 0.0;
-      result[7] = 0.0;
-      result[8] = 0.0;
-      result[9] = 0.0;
-      result[10] = -sign;
-      result[11] = 0.0;
-      result[12] = origin.x;
-      result[13] = origin.y;
-      result[14] = origin.z;
-      result[15] = 1.0;
-      return result;
+      segments.push(count);
     }
-    var normal = northEastDownToFixedFrameNormal;
-    var tangent = northEastDownToFixedFrameTangent;
-    var bitangent = northEastDownToFixedFrameBitangent;
-    ellipsoid = defaultValue(ellipsoid, Ellipsoid.WGS84);
-    ellipsoid.geodeticSurfaceNormal(origin, normal);
-    tangent.x = -origin.y;
-    tangent.y = origin.x;
-    tangent.z = 0.0;
-    Cartesian3.normalize(tangent, tangent);
-    Cartesian3.cross(normal, tangent, bitangent);
-    if (!defined(result)) {
-      return new Matrix4(bitangent.x, tangent.x, -normal.x, origin.x, bitangent.y, tangent.y, -normal.y, origin.y, bitangent.z, tangent.z, -normal.z, origin.z, 0.0, 0.0, 0.0, 1.0);
-    }
-    result[0] = bitangent.x;
-    result[1] = bitangent.y;
-    result[2] = bitangent.z;
-    result[3] = 0.0;
-    result[4] = tangent.x;
-    result[5] = tangent.y;
-    result[6] = tangent.z;
-    result[7] = 0.0;
-    result[8] = -normal.x;
-    result[9] = -normal.y;
-    result[10] = -normal.z;
-    result[11] = 0.0;
-    result[12] = origin.x;
-    result[13] = origin.y;
-    result[14] = origin.z;
-    result[15] = 1.0;
-    return result;
+    return {
+      positions: cartesians,
+      lengths: segments
+    };
   };
-  Transforms.northUpEastToFixedFrame = function(origin, ellipsoid, result) {
-    if (!defined(origin)) {
-      throw new DeveloperError('origin is required.');
+  var removeDuplicatesEpsilon = CesiumMath.EPSILON10;
+  PolylinePipeline.removeDuplicates = function(positions) {
+    if (!defined(positions)) {
+      throw new DeveloperError('positions is required.');
     }
-    if (CesiumMath.equalsEpsilon(origin.x, 0.0, CesiumMath.EPSILON14) && CesiumMath.equalsEpsilon(origin.y, 0.0, CesiumMath.EPSILON14)) {
-      var sign = CesiumMath.sign(origin.z);
-      if (!defined(result)) {
-        return new Matrix4(-sign, 0.0, 0.0, origin.x, 0.0, 0.0, 1.0, origin.y, 0.0, sign, 0.0, origin.z, 0.0, 0.0, 0.0, 1.0);
+    var length = positions.length;
+    if (length < 2) {
+      return positions;
+    }
+    var i;
+    var v0;
+    var v1;
+    for (i = 1; i < length; ++i) {
+      v0 = positions[i - 1];
+      v1 = positions[i];
+      if (Cartesian3.equalsEpsilon(v0, v1, removeDuplicatesEpsilon)) {
+        break;
       }
-      result[0] = -sign;
-      result[1] = 0.0;
-      result[2] = 0.0;
-      result[3] = 0.0;
-      result[4] = 0.0;
-      result[5] = 0.0;
-      result[6] = sign;
-      result[7] = 0.0;
-      result[8] = 0.0;
-      result[9] = 1.0;
-      result[10] = 0.0;
-      result[11] = 0.0;
-      result[12] = origin.x;
-      result[13] = origin.y;
-      result[14] = origin.z;
-      result[15] = 1.0;
-      return result;
     }
-    var normal = eastNorthUpToFixedFrameNormal;
-    var tangent = eastNorthUpToFixedFrameTangent;
-    var bitangent = eastNorthUpToFixedFrameBitangent;
-    ellipsoid = defaultValue(ellipsoid, Ellipsoid.WGS84);
-    ellipsoid.geodeticSurfaceNormal(origin, normal);
-    tangent.x = -origin.y;
-    tangent.y = origin.x;
-    tangent.z = 0.0;
-    Cartesian3.normalize(tangent, tangent);
-    Cartesian3.cross(normal, tangent, bitangent);
-    if (!defined(result)) {
-      return new Matrix4(bitangent.x, normal.x, tangent.x, origin.x, bitangent.y, normal.y, tangent.y, origin.y, bitangent.z, normal.z, tangent.z, origin.z, 0.0, 0.0, 0.0, 1.0);
+    if (i === length) {
+      return positions;
     }
-    result[0] = bitangent.x;
-    result[1] = bitangent.y;
-    result[2] = bitangent.z;
-    result[3] = 0.0;
-    result[4] = normal.x;
-    result[5] = normal.y;
-    result[6] = normal.z;
-    result[7] = 0.0;
-    result[8] = tangent.x;
-    result[9] = tangent.y;
-    result[10] = tangent.z;
-    result[11] = 0.0;
-    result[12] = origin.x;
-    result[13] = origin.y;
-    result[14] = origin.z;
-    result[15] = 1.0;
-    return result;
+    var cleanedPositions = positions.slice(0, i);
+    for (; i < length; ++i) {
+      v1 = positions[i];
+      if (!Cartesian3.equalsEpsilon(v0, v1, removeDuplicatesEpsilon)) {
+        cleanedPositions.push(Cartesian3.clone(v1));
+        v0 = v1;
+      }
+    }
+    return cleanedPositions;
   };
-  var scratchHPRQuaternion = new Quaternion();
-  var scratchScale = new Cartesian3(1.0, 1.0, 1.0);
-  var scratchHPRMatrix4 = new Matrix4();
-  Transforms.headingPitchRollToFixedFrame = function(origin, heading, pitch, roll, ellipsoid, result) {
-    var hprQuaternion = Quaternion.fromHeadingPitchRoll(heading, pitch, roll, scratchHPRQuaternion);
-    var hprMatrix = Matrix4.fromTranslationQuaternionRotationScale(Cartesian3.ZERO, hprQuaternion, scratchScale, scratchHPRMatrix4);
-    result = Transforms.eastNorthUpToFixedFrame(origin, ellipsoid, result);
-    return Matrix4.multiply(result, hprMatrix, result);
+  PolylinePipeline.generateArc = function(options) {
+    if (!defined(options)) {
+      options = {};
+    }
+    var positions = options.positions;
+    if (!defined(positions)) {
+      throw new DeveloperError('options.positions is required.');
+    }
+    var length = positions.length;
+    var ellipsoid = defaultValue(options.ellipsoid, Ellipsoid.WGS84);
+    var height = defaultValue(options.height, 0);
+    if (length < 1) {
+      return [];
+    } else if (length === 1) {
+      var p = ellipsoid.scaleToGeodeticSurface(positions[0], scaleFirst);
+      if (height !== 0) {
+        var n = ellipsoid.geodeticSurfaceNormal(p, cartesian);
+        Cartesian3.multiplyByScalar(n, height, n);
+        Cartesian3.add(p, n, p);
+      }
+      return [p.x, p.y, p.z];
+    }
+    var minDistance = options.minDistance;
+    if (!defined(minDistance)) {
+      var granularity = defaultValue(options.granularity, CesiumMath.RADIANS_PER_DEGREE);
+      minDistance = CesiumMath.chordLength(granularity, ellipsoid.maximumRadius);
+    }
+    var numPoints = 0;
+    var i;
+    for (i = 0; i < length - 1; i++) {
+      numPoints += PolylinePipeline.numberOfPoints(positions[i], positions[i + 1], minDistance);
+    }
+    var arrayLength = (numPoints + 1) * 3;
+    var newPositions = new Array(arrayLength);
+    var offset = 0;
+    var hasHeightArray = isArray(height);
+    for (i = 0; i < length - 1; i++) {
+      var p0 = positions[i];
+      var p1 = positions[i + 1];
+      var h0 = hasHeightArray ? height[i] : height;
+      var h1 = hasHeightArray ? height[i + 1] : height;
+      offset = generateCartesianArc(p0, p1, minDistance, ellipsoid, h0, h1, newPositions, offset);
+    }
+    subdivideHeightsScratchArray.length = 0;
+    var lastPoint = positions[length - 1];
+    var carto = ellipsoid.cartesianToCartographic(lastPoint, carto1);
+    carto.height = hasHeightArray ? height[length - 1] : height;
+    var cart = ellipsoid.cartographicToCartesian(carto, cartesian);
+    Cartesian3.pack(cart, newPositions, arrayLength - 3);
+    return newPositions;
   };
-  var scratchENUMatrix4 = new Matrix4();
-  var scratchHPRMatrix3 = new Matrix3();
-  Transforms.headingPitchRollQuaternion = function(origin, heading, pitch, roll, ellipsoid, result) {
-    var transform = Transforms.headingPitchRollToFixedFrame(origin, heading, pitch, roll, ellipsoid, scratchENUMatrix4);
-    var rotation = Matrix4.getRotation(transform, scratchHPRMatrix3);
-    return Quaternion.fromRotationMatrix(rotation, result);
+  PolylinePipeline.generateCartesianArc = function(options) {
+    var numberArray = PolylinePipeline.generateArc(options);
+    var size = numberArray.length / 3;
+    var newPositions = new Array(size);
+    for (var i = 0; i < size; i++) {
+      newPositions[i] = Cartesian3.unpack(numberArray, i * 3);
+    }
+    return newPositions;
   };
-  var gmstConstant0 = 6 * 3600 + 41 * 60 + 50.54841;
-  var gmstConstant1 = 8640184.812866;
-  var gmstConstant2 = 0.093104;
-  var gmstConstant3 = -6.2E-6;
-  var rateCoef = 1.1772758384668e-19;
-  var wgs84WRPrecessing = 7.2921158553E-5;
-  var twoPiOverSecondsInDay = CesiumMath.TWO_PI / 86400.0;
-  var dateInUtc = new JulianDate();
-  Transforms.computeTemeToPseudoFixedMatrix = function(date, result) {
-    if (!defined(date)) {
-      throw new DeveloperError('date is required.');
-    }
-    dateInUtc = JulianDate.addSeconds(date, -JulianDate.computeTaiMinusUtc(date), dateInUtc);
-    var utcDayNumber = dateInUtc.dayNumber;
-    var utcSecondsIntoDay = dateInUtc.secondsOfDay;
-    var t;
-    var diffDays = utcDayNumber - 2451545;
-    if (utcSecondsIntoDay >= 43200.0) {
-      t = (diffDays + 0.5) / TimeConstants.DAYS_PER_JULIAN_CENTURY;
-    } else {
-      t = (diffDays - 0.5) / TimeConstants.DAYS_PER_JULIAN_CENTURY;
-    }
-    var gmst0 = gmstConstant0 + t * (gmstConstant1 + t * (gmstConstant2 + t * gmstConstant3));
-    var angle = (gmst0 * twoPiOverSecondsInDay) % CesiumMath.TWO_PI;
-    var ratio = wgs84WRPrecessing + rateCoef * (utcDayNumber - 2451545.5);
-    var secondsSinceMidnight = (utcSecondsIntoDay + TimeConstants.SECONDS_PER_DAY * 0.5) % TimeConstants.SECONDS_PER_DAY;
-    var gha = angle + (ratio * secondsSinceMidnight);
-    var cosGha = Math.cos(gha);
-    var sinGha = Math.sin(gha);
-    if (!defined(result)) {
-      return new Matrix3(cosGha, sinGha, 0.0, -sinGha, cosGha, 0.0, 0.0, 0.0, 1.0);
-    }
-    result[0] = cosGha;
-    result[1] = -sinGha;
-    result[2] = 0.0;
-    result[3] = sinGha;
-    result[4] = cosGha;
-    result[5] = 0.0;
-    result[6] = 0.0;
-    result[7] = 0.0;
-    result[8] = 1.0;
-    return result;
-  };
-  Transforms.iau2006XysData = new Iau2006XysData();
-  Transforms.earthOrientationParameters = EarthOrientationParameters.NONE;
-  var ttMinusTai = 32.184;
-  var j2000ttDays = 2451545.0;
-  Transforms.preloadIcrfFixed = function(timeInterval) {
-    var startDayTT = timeInterval.start.dayNumber;
-    var startSecondTT = timeInterval.start.secondsOfDay + ttMinusTai;
-    var stopDayTT = timeInterval.stop.dayNumber;
-    var stopSecondTT = timeInterval.stop.secondsOfDay + ttMinusTai;
-    var xysPromise = Transforms.iau2006XysData.preload(startDayTT, startSecondTT, stopDayTT, stopSecondTT);
-    var eopPromise = Transforms.earthOrientationParameters.getPromiseToLoad();
-    return when.all([xysPromise, eopPromise]);
-  };
-  Transforms.computeIcrfToFixedMatrix = function(date, result) {
-    if (!defined(date)) {
-      throw new DeveloperError('date is required.');
-    }
-    if (!defined(result)) {
-      result = new Matrix3();
-    }
-    var fixedToIcrfMtx = Transforms.computeFixedToIcrfMatrix(date, result);
-    if (!defined(fixedToIcrfMtx)) {
-      return undefined;
-    }
-    return Matrix3.transpose(fixedToIcrfMtx, result);
-  };
-  var xysScratch = new Iau2006XysSample(0.0, 0.0, 0.0);
-  var eopScratch = new EarthOrientationParametersSample(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-  var rotation1Scratch = new Matrix3();
-  var rotation2Scratch = new Matrix3();
-  Transforms.computeFixedToIcrfMatrix = function(date, result) {
-    if (!defined(date)) {
-      throw new DeveloperError('date is required.');
-    }
-    if (!defined(result)) {
-      result = new Matrix3();
-    }
-    var eop = Transforms.earthOrientationParameters.compute(date, eopScratch);
-    if (!defined(eop)) {
-      return undefined;
-    }
-    var dayTT = date.dayNumber;
-    var secondTT = date.secondsOfDay + ttMinusTai;
-    var xys = Transforms.iau2006XysData.computeXysRadians(dayTT, secondTT, xysScratch);
-    if (!defined(xys)) {
-      return undefined;
-    }
-    var x = xys.x + eop.xPoleOffset;
-    var y = xys.y + eop.yPoleOffset;
-    var a = 1.0 / (1.0 + Math.sqrt(1.0 - x * x - y * y));
-    var rotation1 = rotation1Scratch;
-    rotation1[0] = 1.0 - a * x * x;
-    rotation1[3] = -a * x * y;
-    rotation1[6] = x;
-    rotation1[1] = -a * x * y;
-    rotation1[4] = 1 - a * y * y;
-    rotation1[7] = y;
-    rotation1[2] = -x;
-    rotation1[5] = -y;
-    rotation1[8] = 1 - a * (x * x + y * y);
-    var rotation2 = Matrix3.fromRotationZ(-xys.s, rotation2Scratch);
-    var matrixQ = Matrix3.multiply(rotation1, rotation2, rotation1Scratch);
-    var dateUt1day = date.dayNumber;
-    var dateUt1sec = date.secondsOfDay - JulianDate.computeTaiMinusUtc(date) + eop.ut1MinusUtc;
-    var daysSinceJ2000 = dateUt1day - 2451545;
-    var fractionOfDay = dateUt1sec / TimeConstants.SECONDS_PER_DAY;
-    var era = 0.7790572732640 + fractionOfDay + 0.00273781191135448 * (daysSinceJ2000 + fractionOfDay);
-    era = (era % 1.0) * CesiumMath.TWO_PI;
-    var earthRotation = Matrix3.fromRotationZ(era, rotation2Scratch);
-    var pfToIcrf = Matrix3.multiply(matrixQ, earthRotation, rotation1Scratch);
-    var cosxp = Math.cos(eop.xPoleWander);
-    var cosyp = Math.cos(eop.yPoleWander);
-    var sinxp = Math.sin(eop.xPoleWander);
-    var sinyp = Math.sin(eop.yPoleWander);
-    var ttt = (dayTT - j2000ttDays) + secondTT / TimeConstants.SECONDS_PER_DAY;
-    ttt /= 36525.0;
-    var sp = -47.0e-6 * ttt * CesiumMath.RADIANS_PER_DEGREE / 3600.0;
-    var cossp = Math.cos(sp);
-    var sinsp = Math.sin(sp);
-    var fToPfMtx = rotation2Scratch;
-    fToPfMtx[0] = cosxp * cossp;
-    fToPfMtx[1] = cosxp * sinsp;
-    fToPfMtx[2] = sinxp;
-    fToPfMtx[3] = -cosyp * sinsp + sinyp * sinxp * cossp;
-    fToPfMtx[4] = cosyp * cossp + sinyp * sinxp * sinsp;
-    fToPfMtx[5] = -sinyp * cosxp;
-    fToPfMtx[6] = -sinyp * sinsp - cosyp * sinxp * cossp;
-    fToPfMtx[7] = sinyp * cossp - cosyp * sinxp * sinsp;
-    fToPfMtx[8] = cosyp * cosxp;
-    return Matrix3.multiply(pfToIcrf, fToPfMtx, result);
-  };
-  var pointToWindowCoordinatesTemp = new Cartesian4();
-  Transforms.pointToWindowCoordinates = function(modelViewProjectionMatrix, viewportTransformation, point, result) {
-    result = Transforms.pointToGLWindowCoordinates(modelViewProjectionMatrix, viewportTransformation, point, result);
-    result.y = 2.0 * viewportTransformation[5] - result.y;
-    return result;
-  };
-  Transforms.pointToGLWindowCoordinates = function(modelViewProjectionMatrix, viewportTransformation, point, result) {
-    if (!defined(modelViewProjectionMatrix)) {
-      throw new DeveloperError('modelViewProjectionMatrix is required.');
-    }
-    if (!defined(viewportTransformation)) {
-      throw new DeveloperError('viewportTransformation is required.');
-    }
-    if (!defined(point)) {
-      throw new DeveloperError('point is required.');
-    }
-    if (!defined(result)) {
-      result = new Cartesian2();
-    }
-    var tmp = pointToWindowCoordinatesTemp;
-    Matrix4.multiplyByVector(modelViewProjectionMatrix, Cartesian4.fromElements(point.x, point.y, point.z, 1, tmp), tmp);
-    Cartesian4.multiplyByScalar(tmp, 1.0 / tmp.w, tmp);
-    Matrix4.multiplyByVector(viewportTransformation, tmp, tmp);
-    return Cartesian2.fromCartesian4(tmp, result);
-  };
-  var normalScratch = new Cartesian3();
-  var rightScratch = new Cartesian3();
-  var upScratch = new Cartesian3();
-  Transforms.rotationMatrixFromPositionVelocity = function(position, velocity, ellipsoid, result) {
-    if (!defined(position)) {
-      throw new DeveloperError('position is required.');
-    }
-    if (!defined(velocity)) {
-      throw new DeveloperError('velocity is required.');
-    }
-    var normal = defaultValue(ellipsoid, Ellipsoid.WGS84).geodeticSurfaceNormal(position, normalScratch);
-    var right = Cartesian3.cross(velocity, normal, rightScratch);
-    if (Cartesian3.equalsEpsilon(right, Cartesian3.ZERO, CesiumMath.EPSILON6)) {
-      right = Cartesian3.clone(Cartesian3.UNIT_X, right);
-    }
-    var up = Cartesian3.cross(right, velocity, upScratch);
-    Cartesian3.cross(velocity, up, right);
-    Cartesian3.negate(right, right);
-    if (!defined(result)) {
-      result = new Matrix3();
-    }
-    result[0] = velocity.x;
-    result[1] = velocity.y;
-    result[2] = velocity.z;
-    result[3] = right.x;
-    result[4] = right.y;
-    result[5] = right.z;
-    result[6] = up.x;
-    result[7] = up.y;
-    result[8] = up.z;
-    return result;
-  };
-  return Transforms;
+  return PolylinePipeline;
 });
 
 })();
-$__System.register("66", ["5"], function(exports_1, context_1) {
+$__System.register("69", ["a"], function(exports_1, context_1) {
   "use strict";
   var __moduleName = context_1 && context_1.id;
   var cesium_imports_ts_1;
@@ -15780,7 +16625,7 @@ $__System.register("66", ["5"], function(exports_1, context_1) {
   };
 });
 
-$__System.register("5", ["45", "11", "3c", "26", "3d", "19", "1a", "1d", "25", "29", "1e", "1b", "12", "14", "35", "20", "21", "15", "43", "33", "36", "1c", "1f", "2b", "2c", "37", "3e", "28", "2f", "2d", "3f", "27", "40", "41", "42", "46", "50", "2e", "66"], function(exports_1, context_1) {
+$__System.register("a", ["48", "14", "3f", "29", "40", "1c", "1d", "20", "28", "2c", "21", "1e", "15", "17", "38", "23", "24", "18", "46", "36", "39", "1f", "22", "2e", "2f", "3a", "41", "2b", "32", "30", "42", "2a", "43", "44", "45", "31", "5e", "68", "69"], function(exports_1, context_1) {
   "use strict";
   var __moduleName = context_1 && context_1.id;
   return {
@@ -15854,18 +16699,18 @@ $__System.register("5", ["45", "11", "3c", "26", "3d", "19", "1a", "1d", "25", "
       exports_1({"SampledPositionProperty": SampledPositionProperty_1_1["default"]});
     }, function(SampledProperty_1_1) {
       exports_1({"SampledProperty": SampledProperty_1_1["default"]});
+    }, function(Transforms_1_1) {
+      exports_1({"Transforms": Transforms_1_1["default"]});
     }, function(Simon1994PlanetaryPositions_1_1) {
       exports_1({"Simon1994PlanetaryPositions": Simon1994PlanetaryPositions_1_1["default"]});
     }, function(PolylinePipeline_1_1) {
       exports_1({"PolylinePipeline": PolylinePipeline_1_1["default"]});
-    }, function(Transforms_1_1) {
-      exports_1({"Transforms": Transforms_1_1["default"]});
     }, function(_1) {}],
     execute: function() {}
   };
 });
 
-$__System.register("a", ["15", "5"], function(exports_1, context_1) {
+$__System.register("7", ["18", "a"], function(exports_1, context_1) {
   "use strict";
   var __moduleName = context_1 && context_1.id;
   var Event_1,
@@ -15875,6 +16720,8 @@ $__System.register("a", ["15", "5"], function(exports_1, context_1) {
       scratchCartesianPositionFIXED,
       scratchMatrix4,
       scratchMatrix3,
+      getEntityPosition,
+      getEntityOrientation,
       urlParser,
       MessageChannelLike,
       SynchronousMessageChannel,
@@ -15898,20 +16745,11 @@ $__System.register("a", ["15", "5"], function(exports_1, context_1) {
   exports_1("getEntityPositionInReferenceFrame", getEntityPositionInReferenceFrame);
   function getEntityOrientationInReferenceFrame(entity, time, referenceFrame, result) {
     var entityFrame = entity.position && entity.position.referenceFrame;
-    if (entityFrame === undefined)
+    if (!cesium_imports_1.defined(entityFrame))
       return undefined;
     var orientation = entity.orientation && entity.orientation.getValue(time, result);
-    if (!orientation) {
-      var entityPositionFIXED = getEntityPositionInReferenceFrame(entity, time, cesium_imports_1.ReferenceFrame.FIXED, scratchCartesianPositionFIXED);
-      if (!entityPositionFIXED)
-        return cesium_imports_1.Quaternion.clone(cesium_imports_1.Quaternion.IDENTITY, result);
-      if (cesium_imports_1.Cartesian3.ZERO.equals(entityPositionFIXED))
-        throw new Error('invalid cartographic position');
-      var transform = cesium_imports_1.Transforms.eastNorthUpToFixedFrame(entityPositionFIXED, cesium_imports_1.Ellipsoid.WGS84, scratchMatrix4);
-      var rotation = cesium_imports_1.Matrix4.getRotation(transform, scratchMatrix3);
-      var fixedOrientation = cesium_imports_1.Quaternion.fromRotationMatrix(rotation, result);
-      return cesium_imports_1.OrientationProperty.convertToReferenceFrame(time, fixedOrientation, cesium_imports_1.ReferenceFrame.FIXED, referenceFrame, result);
-    }
+    if (!cesium_imports_1.defined(orientation))
+      return undefined;
     return cesium_imports_1.OrientationProperty.convertToReferenceFrame(time, orientation, entityFrame, referenceFrame, result);
   }
   exports_1("getEntityOrientationInReferenceFrame", getEntityOrientationInReferenceFrame);
@@ -16004,11 +16842,7 @@ $__System.register("a", ["15", "5"], function(exports_1, context_1) {
               command: command,
               reject: reject,
               execute: function() {
-                console.log('CommandQueue: Executing command ' + command.toString());
                 var result = Promise.resolve().then(command);
-                result.then(function() {
-                  console.log('CommandQueue: DONE ' + command.toString());
-                });
                 resolve(result);
                 return result;
               }
@@ -16044,8 +16878,8 @@ $__System.register("a", ["15", "5"], function(exports_1, context_1) {
           var item = this._queue.shift();
           if (!item)
             return;
-          this._currentCommandPending = item.execute().then(this._executeNextCommand.bind(this)).catch(function(error) {
-            _this.errorEvent.raiseEvent(error);
+          this._currentCommandPending = item.execute().then(this._executeNextCommand.bind(this)).catch(function(e) {
+            _this.errorEvent.raiseEvent(e);
             _this._executeNextCommand();
           });
         };
@@ -16055,6 +16889,8 @@ $__System.register("a", ["15", "5"], function(exports_1, context_1) {
       scratchCartesianPositionFIXED = new cesium_imports_1.Cartesian3;
       scratchMatrix4 = new cesium_imports_1.Matrix4;
       scratchMatrix3 = new cesium_imports_1.Matrix3;
+      exports_1("getEntityPosition", getEntityPosition = getEntityPositionInReferenceFrame);
+      exports_1("getEntityOrientation", getEntityOrientation = getEntityOrientationInReferenceFrame);
       urlParser = typeof document !== 'undefined' ? document.createElement("a") : undefined;
       MessageChannelLike = (function() {
         function MessageChannelLike() {
@@ -16073,10 +16909,11 @@ $__System.register("a", ["15", "5"], function(exports_1, context_1) {
                 return _port1onmessage;
               },
               postMessage: function(data) {
-                _port2ready.then(function() {
-                  if (_portsOpen)
+                if (_portsOpen) {
+                  _port2ready.then(function() {
                     messageChannel.port2.onmessage({data: data});
-                });
+                  });
+                }
               },
               close: function() {
                 _portsOpen = false;
@@ -16094,10 +16931,11 @@ $__System.register("a", ["15", "5"], function(exports_1, context_1) {
                 return _port2onmessage;
               },
               postMessage: function(data) {
-                _port1ready.then(function() {
-                  if (_portsOpen)
+                if (_portsOpen) {
+                  _port1ready.then(function() {
                     messageChannel.port1.onmessage({data: data});
-                });
+                  });
+                }
               },
               close: function() {
                 _portsOpen = false;
@@ -16127,7 +16965,8 @@ $__System.register("a", ["15", "5"], function(exports_1, context_1) {
               pendingMessages1 = [];
             },
             postMessage: function(data) {
-              messageChannel.port2.onmessage({data: data});
+              if (messageChannel.port2.onmessage)
+                messageChannel.port2.onmessage({data: data});
             },
             close: function() {
               messageChannel.port1.onmessage = null;
@@ -16150,7 +16989,8 @@ $__System.register("a", ["15", "5"], function(exports_1, context_1) {
               pendingMessages2 = [];
             },
             postMessage: function(data) {
-              messageChannel.port1.onmessage({data: data});
+              if (messageChannel.port1.onmessage)
+                messageChannel.port1.onmessage({data: data});
             },
             close: function() {
               messageChannel.port1.onmessage = null;
@@ -16179,7 +17019,7 @@ $__System.register("a", ["15", "5"], function(exports_1, context_1) {
   };
 });
 
-$__System.register("1", ["2", "b", "5", "7", "6", "4", "e", "d", "8", "9", "c", "10", "a"], function(exports_1, context_1) {
+$__System.register("1", ["2", "8", "a", "5", "b", "6", "f", "c", "9", "d", "4", "12", "10", "13", "7"], function(exports_1, context_1) {
   "use strict";
   var __moduleName = context_1 && context_1.id;
   var DI,
@@ -16192,7 +17032,9 @@ $__System.register("1", ["2", "b", "5", "7", "6", "4", "e", "d", "8", "9", "c", 
       reality_1,
       timer_1,
       view_1,
-      vuforia_1;
+      vuforia_1,
+      empty_1,
+      live_video_1;
   var ArgonSystem;
   function init(options) {
     if (options === void 0) {
@@ -16216,7 +17058,7 @@ $__System.register("1", ["2", "b", "5", "7", "6", "4", "e", "d", "8", "9", "c", 
     }
     var config = Object.assign({
       role: common_1.Role.REALITY_VIEW,
-      realityViewSupportsControlPort: true
+      'reality.supportsControlPort': true
     }, options.config);
     return new ArgonSystem(config, options.container);
   }
@@ -16226,7 +17068,9 @@ $__System.register("1", ["2", "b", "5", "7", "6", "4", "e", "d", "8", "9", "c", 
     'init': true,
     'initReality': true,
     'DI': true,
-    'Cesium': true
+    'Cesium': true,
+    'EmptyRealityLoader': true,
+    'LiveVideoRealityLoader': true
   };
   function exportStar_1(m) {
     var exports = {};
@@ -16268,12 +17112,18 @@ $__System.register("1", ["2", "b", "5", "7", "6", "4", "e", "d", "8", "9", "c", 
     }, function(vuforia_1_1) {
       vuforia_1 = vuforia_1_1;
       exportStar_1(vuforia_1_1);
+    }, function(empty_1_1) {
+      empty_1 = empty_1_1;
+    }, function(live_video_1_1) {
+      live_video_1 = live_video_1_1;
     }, function(utils_1_1) {
       exportStar_1(utils_1_1);
     }],
     execute: function() {
       exports_1("DI", DI);
       exports_1("Cesium", Cesium);
+      exports_1("EmptyRealityLoader", empty_1.EmptyRealityLoader);
+      exports_1("LiveVideoRealityLoader", live_video_1.LiveVideoRealityLoader);
       ArgonSystem = (function() {
         function ArgonSystem(config, container) {
           if (container === void 0) {
@@ -16290,14 +17140,10 @@ $__System.register("1", ["2", "b", "5", "7", "6", "4", "e", "d", "8", "9", "c", 
             container.registerSingleton(session_1.ConnectService, session_1.WKWebViewConnectService);
           } else if (session_1.DebugConnectService.isAvailable()) {
             container.registerSingleton(session_1.ConnectService, session_1.DebugConnectService);
-          } else if (session_1.DebugConnectService.isAvailable()) {
-            container.registerSingleton(session_1.ConnectService, session_1.DOMConnectService);
-          } else {
-            container.registerSingleton(session_1.ConnectService, session_1.LoopbackConnectService);
           }
           if (config.role === common_1.Role.MANAGER) {
-            this.reality.registerLoader(container.get(reality_1.EmptyRealityLoader));
-            this.reality.registerLoader(container.get(vuforia_1.LiveVideoRealityLoader));
+            this.reality.registerLoader(container.get(empty_1.EmptyRealityLoader));
+            this.reality.registerLoader(container.get(live_video_1.LiveVideoRealityLoader));
             if (typeof document !== 'undefined') {
               this.reality.setDefault({
                 type: 'empty',
@@ -16412,4 +17258,3 @@ $__System.register("1", ["2", "b", "5", "7", "6", "4", "e", "d", "8", "9", "c", 
   else
     Argon = factory();
 });
-//# sourceMappingURL=argon.umd.js.map
