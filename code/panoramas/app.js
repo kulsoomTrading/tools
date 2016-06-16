@@ -1,8 +1,4 @@
-/// <reference path="../typings/browser.d.ts"/>
-// any time we use an INERTIAL frame in Cesium, it needs to know where to find it's
-// ASSET folder on the web.  The SunMoonLights computation uses INERTIAL frames, so
-// so we need to put the assets on the web and point Cesium at them
-var CESIUM_BASE_URL = '../../cesium/';
+/// <reference path="../../typings/index.d.ts"/>
 // set up Argon
 var app = Argon.init();
 // set up THREE.  Create a scene, a perspective camera and an object
@@ -34,19 +30,101 @@ app.view.element.appendChild(renderer.domElement);
 // that here.  The other option Argon supports is localOriginEastNorthUp, which is
 // more similar to what is used in the geospatial industry
 app.context.setDefaultReferenceFrame(app.context.localOriginEastUpSouth);
-// In this example, we are using the actual position of the sun and moon to create lights.
-// The SunMoonLights functions are created by ArgonSunMoon.js, and turn on the sun or moon
-// when they are above the horizon.  This package could be improved a lot (such as by 
-// adjusting the color of light based on distance above horizon, taking the phase of the
-// moon into account, etc) but it provides a simple starting point.
-var sunMoonLights = new THREE.SunMoonLights();
-// the SunMoonLights.update routine will add/remove the sun/moon lights depending on if
-// the sun/moon are above the horizon
-scene.add(sunMoonLights.lights);
 // add some ambient so things aren't so harshly illuminated
 var ambientlight = new THREE.AmbientLight(0x404040); // soft white ambient light 
 scene.add(ambientlight);
-// create 6 3D words for the 6 directions.  
+// set our desired reality 
+app.reality.setDesired({
+    type: 'hosted',
+    name: 'My Panorama Tour',
+    url: Argon.resolveURL('../panorama-reality/index.html')
+});
+var panoRealitySession;
+// list our panoramas
+var panoramas = [{
+        name: 'Georgia Aquarium',
+        url: Argon.resolveURL('images/aqui.jpg'),
+        longitude: 33.7634,
+        latitude: 84.3951,
+        height: 206
+    },
+    {
+        name: 'Centennial Park',
+        url: Argon.resolveURL('images/cent.jpg'),
+        longitude: 36.1485,
+        latitude: 86.8125,
+        height: 909
+    },
+    {
+        name: 'High Museum',
+        url: Argon.resolveURL('images/high.jpg'),
+        longitude: 33.79035,
+        latitude: 84.38584,
+        height: 289
+    },
+    {
+        name: 'Piedmont Park',
+        url: Argon.resolveURL('images/pied.jpg'),
+        longitude: 33.78577,
+        latitude: 84.37427,
+        height: 271
+    }
+];
+var currentPanorama;
+// get the menu element
+var menu = document.getElementById('menu');
+// add buttons to the menu for each panorama
+panoramas.forEach(function (p) {
+    var button = document.createElement('button');
+    button.textContent = p.name;
+    menu.appendChild(button);
+    // when a button is tapped, have the reality fade in the corresponding panorama
+    button.addEventListener('click', function () {
+        if (panoRealitySession) {
+            panoRealitySession.request('edu.gatech.ael.panorama.showPanorama', {
+                url: p.url,
+                transition: {
+                    easing: 'Quadratic.InOut',
+                    duration: 1000
+                }
+            }).then(function () {
+                currentPanorama = p;
+            });
+        }
+    });
+});
+// start listening for connections to a reality
+app.reality.connectEvent.addEventListener(function (session) {
+    // check if the connected supports our panorama protocol
+    if (session.supportsProtocol('edu.gatech.ael.panorama')) {
+        // save a reference to this session so our buttons can send messages
+        panoRealitySession = session;
+        // show the menu
+        document.getElementById('menu').style.visibility = 'visible';
+        // load our panoramas
+        panoramas.forEach(function (p) {
+            panoRealitySession.request('edu.gatech.ael.panorama.loadPanorama', p);
+        });
+        // fade in the first panorama slowly
+        panoRealitySession.request('edu.gatech.ael.panorama.showPanorama', {
+            url: panoramas[0].url,
+            transition: {
+                easing: 'Quadratic.InOut',
+                duration: 2000
+            }
+        }).then(function () {
+            currentPanorama = panoramas[0];
+        });
+        // hide the menu when the reality session closes
+        session.closeEvent.addEventListener(function () {
+            document.getElementById('menu').style.visibility = 'collapse';
+            panoRealitySession = undefined;
+            currentPanorama = undefined;
+        });
+    }
+});
+var myMysteriousLabel = new THREE.Object3D();
+// create a label  
 var loader = new THREE.FontLoader();
 loader.load('../resources/fonts/helvetiker_regular.typeface.js', function (font) {
     var textOptions = {
@@ -77,14 +155,10 @@ loader.load('../resources/fonts/helvetiker_regular.typeface.js', function (font)
             textMesh.rotation.y = rotation.y;
         if (rotation.z)
             textMesh.rotation.z = rotation.z;
-        userLocation.add(textMesh);
+        return textMesh;
     }
-    createDirectionLabel("North", { z: -100 }, {});
-    createDirectionLabel("South", { z: 100 }, { y: Math.PI });
-    createDirectionLabel("East", { x: 100 }, { y: -Math.PI / 2 });
-    createDirectionLabel("West", { x: -100 }, { y: Math.PI / 2 });
-    createDirectionLabel("Up", { y: 100 }, { x: Math.PI / 2 });
-    createDirectionLabel("Down", { y: -100 }, { x: -Math.PI / 2 });
+    var textMesh = createDirectionLabel("Pears!?", { x: -300 }, { y: Math.PI / 2 });
+    myMysteriousLabel.add(textMesh);
 });
 // the updateEvent is called each time the 3D world should be
 // rendered, before the renderEvent.  The state of your application
@@ -93,14 +167,18 @@ app.updateEvent.addEventListener(function () {
     // get the position and orientation (the "pose") of the user
     // in the local coordinate frame.
     var userPose = app.context.getEntityPose(app.context.user);
+    // show a 3d label when displaying a particular panorama
+    if (currentPanorama && currentPanorama.name === 'High Museum') {
+        userLocation.add(myMysteriousLabel);
+    }
+    else {
+        userLocation.remove(myMysteriousLabel);
+    }
     // assuming we know the user's pose, set the position of our 
     // THREE user object to match it
     if (userPose.poseStatus & Argon.PoseStatus.KNOWN) {
         userLocation.position.copy(userPose.position);
     }
-    // get sun and moon positions, add/remove lights as necessary
-    var date = app.context.getTime();
-    sunMoonLights.update(date, app.context.getDefaultReferenceFrame());
 });
 // renderEvent is fired whenever argon wants the app to update its display
 app.renderEvent.addEventListener(function () {
