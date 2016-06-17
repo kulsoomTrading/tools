@@ -130,12 +130,15 @@ var table = [
 
 // set up Argon
 var app = Argon.init();
+app.view.element.style.zIndex = 0;
 
-var camera, scene, renderer;
+var camera, scene, renderer, hud;
 var root, userLocation;
 
 var objects = [];
 var targets = { table: [], sphere: [], helix: [], grid: [] };
+
+var menu;
 
 init();
 
@@ -317,15 +320,23 @@ function init() {
   // In argon, we use a custom version of the CSS3DRenderer called CSS3DArgonRenderer.
   // This version of the renderer supports stereo in a way that fits with Argon's renderEvent,
   // especially supporting the user providing multiple divs for the potential multiple viewports
-  // in stereo mode, and providing multiple HUD's that can be used in stereo mode.  We do not
-  // use the HUD features here (instead, just removing the buttons below when in Stereo mode)
+  // in stereo mode.
   renderer = new THREE.CSS3DArgonRenderer();
+  // The CSS3DArgonHUD has a similar interface to a renderer, and provides a simple abstraction
+  // for multiple HTML HUD's that can be used in stereo mode.  We do not
+  // use the HUD features here (instead, just removing the buttons below when in Stereo mode)
+  hud = new THREE.CSS3DArgonHUD();
 
   // argon creates the domElement for the view, which we add our renderer dom to
+  app.view.element.appendChild(hud.domElement);
   app.view.element.appendChild(renderer.domElement);
 
-  // Add button event listeners
+  // move the menu to the Argon HUD.  We don't duplicated it because we only
+  // use it in mono mode
+  menu = document.getElementById( 'menu' );
+  hud.hudElements[0].appendChild(menu);
 
+  // Add button event listeners
   var button = document.getElementById( 'table' );
   button.addEventListener( 'click', function ( event ) {
     transform( targets.table, 2000 );
@@ -465,11 +476,11 @@ function renderFunc() {
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
     renderer.setSize(viewport.width, viewport.height);
+    hud.setSize(viewport.width, viewport.height);
 
     // There is 1 subview in monocular mode, 2 in stereo mode.
     // If we are in mono view, show the buttons.  If not, hide them, 
     // since we can't interact with them in an HMD
-    var menu = document.getElementById( 'menu' );
     if (subViews.length > 1) {
       menu.style.display = 'none';
     } else {
@@ -493,8 +504,10 @@ function renderFunc() {
         // set the viewport for this view
         var _b = subview.viewport, x = _b.x, y = _b.y, width = _b.width, height = _b.height;
         renderer.setViewport(x, y, width, height, _i);
+        hud.setViewport(x, y, width, height, _i);
 
         // render this view.
         renderer.render(scene, camera, _i);
+        hud.render(_i);
     }
 }

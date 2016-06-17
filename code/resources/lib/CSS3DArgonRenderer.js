@@ -64,24 +64,7 @@ THREE.CSS3DArgonRenderer = function () {
 
 	var domElement = document.createElement( 'div' );
 	this.domElement = domElement;
-
-	//
-
-	var hudElements = [];
-	this.hudElements = hudElements;
-	hudElements[0] = document.createElement( 'div' );
-	hudElements[0].style.display = 'none'; // start hidden
-	hudElements[0].style.position = 'absolute';
-	hudElements[0].style.overflow = 'hidden';
-	hudElements[0].style.zIndex = 1;
-	domElement.appendChild( hudElements[0] );
-
-	hudElements[1] = document.createElement( 'div' );
-	hudElements[1].style.display = 'none'; // start hidden
-	hudElements[1].style.position = 'absolute';
-	hudElements[1].style.overflow = 'hidden';
-	hudElements[1].style.zIndex = 1;
-	domElement.appendChild( hudElements[1] );
+	domElement.style.zIndex = 1;
 
 	//
 	
@@ -143,12 +126,6 @@ THREE.CSS3DArgonRenderer = function () {
 		domElements[side].style.width = width + 'px';
 		domElements[side].style.height = height + 'px';
 
-		hudElements[side].style.display = 'inline-block';
-		hudElements[side].style.top = y + 'px';
-		hudElements[side].style.left = x + 'px';
-		hudElements[side].style.width = width + 'px';
-		hudElements[side].style.height = height + 'px';
-
 		cameraElements[side].style.width = width + 'px';
 		cameraElements[side].style.height = height + 'px';
 		
@@ -175,18 +152,6 @@ THREE.CSS3DArgonRenderer = function () {
 		/*
 		 * do not reset the subviews.  
 		 */ 		
-		// default viewports for left and right eyes.
-		hudElements[0].style.display = 'none';
-		hudElements[0].style.top = 0 + 'px';
-		hudElements[0].style.left = 0 + 'px';
-		hudElements[0].style.width = _width + 'px';
-		hudElements[0].style.height = _height + 'px';
-
-		hudElements[1].style.display = 'none';
-		hudElements[1].style.top = 0 + 'px';
-		hudElements[1].style.left = _width + 'px';
-		hudElements[1].style.width = _width + 'px';
-		hudElements[1].style.height = _height + 'px';
 
 		// hide them after setSize
 		domElements[0].style.display = 'none';
@@ -340,7 +305,6 @@ THREE.CSS3DArgonRenderer = function () {
 			cache.camera.fov[side] = fov;
 		}
 
-		hudElements[side].style.display = 'inline-block';
 		domElements[side].style.display = 'inline-block'; 
 
 		camera.matrixWorldInverse.getInverse( camera.matrixWorld );

@@ -7,6 +7,7 @@ var JulianDate = Argon.Cesium.JulianDate;
 var CesiumMath = Argon.Cesium.CesiumMath;
 // set up Argon
 var app = Argon.init();
+//app.view.element.style.zIndex = 0;
 // set up THREE.  Create a scene, a perspective camera and an object
 // for the user's location
 var scene = new THREE.Scene();
@@ -14,21 +15,25 @@ var camera = new THREE.PerspectiveCamera();
 var userLocation = new THREE.Object3D;
 scene.add(camera);
 scene.add(userLocation);
-// The CSS3DArgonRenderer supports mono and stereo views, and 
-// includes both 3D elements and a place to put things that appear 
-// fixed to the screen (heads-up-display).  In this demo, we are 
-// rendering the 3D graphics with WebGL, using the standard
-// WebGLRenderer, but using the CSS3DArgonRenderer
+// The CSS3DArgonRenderer supports mono and stereo views.  Currently
+// not using it in this example, but left it in the code in case we
+// want to add an HTML element near either geo object. 
+// The CSS3DArgonHUD is a place to put things that appear 
+// fixed to the screen (heads-up-display).  
+// In this demo, we are  rendering the 3D graphics with WebGL, 
+// using the standard WebGLRenderer, and using the CSS3DArgonHUD
 // to manage the 2D display fixed content
 var cssRenderer = new THREE.CSS3DArgonRenderer();
+var hud = new THREE.CSS3DArgonHUD();
 var renderer = new THREE.WebGLRenderer({
     alpha: true,
     logarithmicDepthBuffer: true
 });
 renderer.setPixelRatio(window.devicePixelRatio);
 // the order we add the two renderers controls which content is in front
-app.view.element.appendChild(renderer.domElement);
+app.view.element.appendChild(hud.domElement);
 app.view.element.appendChild(cssRenderer.domElement);
+app.view.element.appendChild(renderer.domElement);
 // We put some elements in the index.html, for convenience. 
 // Here, we retrieve them, duplicate and move the information boxes to the 
 // the CSS3DArgonRnderer hudElements.  We are explicitly creating the two
@@ -42,8 +47,8 @@ menuchild = menu2.getElementsByClassName('location');
 var elem2 = menuchild.item(0);
 menu.remove();
 menu2.remove();
-cssRenderer.hudElements[0].appendChild(menu);
-cssRenderer.hudElements[1].appendChild(menu2);
+hud.hudElements[0].appendChild(menu);
+hud.hudElements[1].appendChild(menu2);
 // Tell argon what local coordinate system you want.  The default coordinate
 // frame used by Argon is Cesium's FIXED frame, which is centered at the center
 // of the earth and oriented with the earth's axes.  
@@ -246,6 +251,7 @@ app.renderEvent.addEventListener(function () {
     var viewport = app.view.getViewport();
     renderer.setSize(viewport.width, viewport.height);
     cssRenderer.setSize(viewport.width, viewport.height);
+    hud.setSize(viewport.width, viewport.height);
     // there is 1 subview in monocular mode, 2 in stereo mode    
     var i = 0;
     for (var _i = 0, _a = app.view.getSubviews(); _i < _a.length; _i++) {
@@ -268,5 +274,9 @@ app.renderEvent.addEventListener(function () {
         renderer.setScissor(x, y, width, height);
         renderer.setScissorTest(true);
         renderer.render(scene, camera);
+        // adjust the hud
+        hud.setViewport(x, y, width, height, i);
+        hud.render(i);
+        i++;
     }
 });
