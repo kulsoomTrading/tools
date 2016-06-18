@@ -24,8 +24,8 @@ const renderer = new THREE.WebGLRenderer({
     antialias: true
 });
 renderer.setPixelRatio(window.devicePixelRatio);
-app.view.element.appendChild(hud.domElement);
 app.view.element.appendChild(renderer.domElement);
+app.view.element.appendChild(hud.domElement);
 
 // variables for the application 
 var mesh, decal;
@@ -100,11 +100,19 @@ window.addEventListener( 'load', init );
 function init() {
     loadLeePerrySmith();
 
+    renderer.domElement.addEventListener( 'mouseup', function() {
+        checkIntersection();
+        shoot();
+    });
+    renderer.domElement.addEventListener( 'mousemove', onTouchMove );
+
     renderer.domElement.addEventListener( 'touchstart', function (event) {
 		var x = event.changedTouches[ 0 ].pageX;
         var y = event.changedTouches[ 0 ].pageY;
         mouse.x = ( x / window.innerWidth ) * 2 - 1;
         mouse.y = - ( y / window.innerHeight ) * 2 + 1;
+        // prevent touches from emiting mouse events 
+        event.preventDefault();
     }, false );
 
     renderer.domElement.addEventListener( 'touchend', function(event) {
@@ -116,21 +124,18 @@ function init() {
         // only do touches in mono mode
         if (monoMode) {
             checkIntersection();
-            if (intersection.intersects ) shoot();
+            if (intersection.intersects ) requestAnimationFrame(shoot);
         }
+
+        // prevent touches from emiting mouse events
+        event.preventDefault();
     } );
 
-    renderer.domElement.addEventListener( 'mouseup', function() {
-        checkIntersection();
-        shoot();
-    });
-
-    renderer.domElement.addEventListener( 'mousemove', onTouchMove );
     renderer.domElement.addEventListener( 'touchmove', onTouchMove );
 
-    function onTouchMove( event ) {
+    function onTouchMove( event:TouchEvent|MouseEvent ) {
         var x,y: number;
-        if ( event.changedTouches ) {
+        if ( event instanceof TouchEvent ) {
 
             x = event.changedTouches[ 0 ].pageX;
             y = event.changedTouches[ 0 ].pageY;
@@ -150,6 +155,7 @@ function init() {
             checkIntersection();
         }
 
+        event.preventDefault();
     }
 
     gui = new dat.GUI({ autoPlace: false });
@@ -285,7 +291,7 @@ function shoot() {
     var material = decalMaterial.clone();
     material.color.setHex( Math.random() * 0xffffff );
 
-    var m2 = new THREE.Mesh( new THREE.DecalGeometry( mesh, p, r, s, check ), material );
+    var m2 = new THREE.Mesh( new THREE.DecalGeometry( mesh, p, r, s, false ), material );
     decals.push( m2 );
     headModel.add( m2 );
 
@@ -353,6 +359,7 @@ app.vuforia.init({
                 
                 if (stonesPose.poseStatus & Argon.PoseStatus.FOUND) {
                     scene.add (stonesObject);
+                    headModel.position.set(0,0,80);
                 } else if (stonesPose.poseStatus & Argon.PoseStatus.LOST) {
                     scene.remove (stonesObject);
                 }

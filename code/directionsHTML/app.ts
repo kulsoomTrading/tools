@@ -191,9 +191,7 @@ function renderFunc() {
     // both views if we are in stereo viewing mode
     renderer.setSize(viewport.width, viewport.height);
 
-    // there is 1 subview in monocular mode, 2 in stereo mode    
-    var i = 0;  // we pass the view number to the renderer so it knows 
-                // which div's to use for each view
+    // there is 1 subview in monocular mode, 2 in stereo mode
     for (let subview of subViews) {
         // set the position and orientation of the camera for 
         // this subview
@@ -207,10 +205,9 @@ function renderFunc() {
 
         // set the viewport for this view
         let {x,y,width,height} = subview.viewport;
-        renderer.setViewport(x,y,width,height, i);
+        renderer.setViewport(x,y,width,height, subview.index);
 
         // render this view.
-        renderer.render(scene, camera, i);
-        i++;
+        renderer.render(scene, camera, subview.index);
     }
 }

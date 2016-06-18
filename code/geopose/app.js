@@ -1,4 +1,4 @@
-/// <reference path="../typings/browser.d.ts"/>
+/// <reference path="../../typings/index.d.ts"/>
 // grab some handles on APIs we use
 var Cesium = Argon.Cesium;
 var Cartesian3 = Argon.Cesium.Cartesian3;
@@ -30,25 +30,19 @@ var renderer = new THREE.WebGLRenderer({
     logarithmicDepthBuffer: true
 });
 renderer.setPixelRatio(window.devicePixelRatio);
-// the order we add the two renderers controls which content is in front
-app.view.element.appendChild(hud.domElement);
-app.view.element.appendChild(cssRenderer.domElement);
+// Assuming the z-orders are the same, the order of sibling elements
+// in the DOM determines which content is in front (top->bottom = back->front)
 app.view.element.appendChild(renderer.domElement);
+app.view.element.appendChild(cssRenderer.domElement);
+app.view.element.appendChild(hud.domElement);
 // We put some elements in the index.html, for convenience. 
 // Here, we retrieve them, duplicate and move the information boxes to the 
 // the CSS3DArgonRnderer hudElements.  We are explicitly creating the two
 // elements so we can update them both.
-var menu = document.getElementById('menu');
-var menu2 = menu.cloneNode(true);
-menu2.id = "menu2"; // make the id of the new clone unique
-var menuchild = menu.getElementsByClassName('location');
-var elem = menuchild.item(0);
-menuchild = menu2.getElementsByClassName('location');
-var elem2 = menuchild.item(0);
-menu.remove();
-menu2.remove();
-hud.hudElements[0].appendChild(menu);
-hud.hudElements[1].appendChild(menu2);
+var hudContent = document.getElementById('hud');
+hud.hudElements[0].appendChild(hudContent);
+hud.hudElements[1].appendChild(hudContent.cloneNode(true));
+var locationElements = hud.domElement.getElementsByClassName('location');
 // Tell argon what local coordinate system you want.  The default coordinate
 // frame used by Argon is Cesium's FIXED frame, which is centered at the center
 // of the earth and oriented with the earth's axes.  
@@ -238,8 +232,8 @@ app.updateEvent.addEventListener(function () {
     infoText += "distance to box (" + toFixed(distanceToBox, 2) + ")";
     infoText += " distance to GT (" + toFixed(distanceToBuzz, 2) + ")";
     if (lastInfoText !== infoText) {
-        elem.innerText = infoText;
-        elem2.innerText = infoText;
+        locationElements[0].innerHTML = infoText;
+        locationElements[1].innerHTML = infoText;
         lastInfoText = infoText;
     }
 });
