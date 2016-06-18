@@ -12,14 +12,17 @@ THREE.CSS3DObject = function ( element ) {
 	if (Array.isArray(element)) {
 		for (var i =0; i <element.length; i++) {
 			this.elements[i] = element[i];
-			this.elements[i].style.position = 'absolute';
 		}
 	} else {
 		this.elements[0] = element;
-		this.elements[0].style.position = 'absolute';
 		this.elements[1] = element.cloneNode( true );
-		this.elements[1].style.position = 'absolute';
 	}
+
+	this.elements.forEach(function(el){
+		el.style.position = 'absolute';
+		el.style.pointerEvents = 'auto';
+		el.style.userSelect = 'contain';
+	});
 
 	this.addEventListener( 'removed', function ( event ) {
 		for (var i =0; i <this.elements.length; i++) {
@@ -64,7 +67,9 @@ THREE.CSS3DArgonRenderer = function () {
 
 	var domElement = document.createElement( 'div' );
 	this.domElement = domElement;
-	domElement.style.zIndex = 1;
+	domElement.style.zIndex = -1;
+	domElement.style.pointerEvents = 'none';
+	domElement.style.userSelect = 'none';
 
 	//
 	
@@ -75,6 +80,7 @@ THREE.CSS3DArgonRenderer = function () {
 	domElements[0].style.display = 'none'; // was 'inline-block';
 	domElements[0].style.overflow = 'hidden';
 	domElements[0].style.position = 'absolute';
+	domElements[0].style.pointerEvents = 'none';
 
 	domElements[0].style.WebkitTransformStyle = 'preserve-3d';
 	domElements[0].style.MozTransformStyle = 'preserve-3d';
@@ -85,6 +91,7 @@ THREE.CSS3DArgonRenderer = function () {
 
 	var cameraElements = [];
 	cameraElements[0] = document.createElement( 'div' );
+	cameraElements[0].style.pointerEvents = 'none';
 	cameraElements[0].style.WebkitTransformStyle = 'preserve-3d';
 	cameraElements[0].style.MozTransformStyle = 'preserve-3d';
 	cameraElements[0].style.oTransformStyle = 'preserve-3d';
@@ -98,6 +105,7 @@ THREE.CSS3DArgonRenderer = function () {
 	domElements[1].style.display = 'none'; // was 'inline-block';
 	domElements[1].style.overflow = 'hidden';
 	domElements[1].style.position = 'absolute';
+	domElements[1].style.pointerEvents = 'none';
 
 	domElements[1].style.WebkitTransformStyle = 'preserve-3d';
 	domElements[1].style.MozTransformStyle = 'preserve-3d';
@@ -107,7 +115,7 @@ THREE.CSS3DArgonRenderer = function () {
 	domElement.appendChild( domElements[1] );
  
 	cameraElements[1] = document.createElement( 'div' );
-
+	cameraElements[1].style.pointerEvents = 'none';
 	cameraElements[1].style.WebkitTransformStyle = 'preserve-3d';
 	cameraElements[1].style.MozTransformStyle = 'preserve-3d';
 	cameraElements[1].style.oTransformStyle = 'preserve-3d';

@@ -138,8 +138,6 @@ var root, userLocation;
 var objects = [];
 var targets = { table: [], sphere: [], helix: [], grid: [] };
 
-var menu;
-
 init();
 
 // The original animate function was called once to start the 
@@ -333,8 +331,8 @@ function init() {
 
   // move the menu to the Argon HUD.  We don't duplicated it because we only
   // use it in mono mode
-  menu = document.getElementById( 'menu' );
-  hud.hudElements[0].appendChild(menu);
+  var hudContainer = document.getElementById( 'hud' );
+  hud.hudElements[0].appendChild(hudContainer);
 
   // Add button event listeners
   var button = document.getElementById( 'table' );
@@ -481,10 +479,10 @@ function renderFunc() {
     // There is 1 subview in monocular mode, 2 in stereo mode.
     // If we are in mono view, show the buttons.  If not, hide them, 
     // since we can't interact with them in an HMD
-    if (subViews.length > 1) {
-      menu.style.display = 'none';
+    if (subViews.length > 1 || !app.focus.hasFocus) {
+      hud.domElement.style.display = 'none';
     } else {
-      menu.style.display = 'inline';
+      hud.domElement.style.display = 'block';
     }
 
     // we pass the view number to the renderer so it knows 

@@ -53,7 +53,7 @@ var panoramas = [{
         url: Argon.resolveURL('images/cent.jpg'),
         longitude: 36.1485,
         latitude: 86.8125,
-        height: 909
+        height: 309
     },
     {
         name: 'High Museum',
@@ -92,6 +92,12 @@ panoramas.forEach(function (p) {
             });
         }
     });
+});
+app.focusEvent.addEventListener(function () {
+    document.getElementById('menu').style.display = 'block';
+});
+app.blurEvent.addEventListener(function () {
+    document.getElementById('menu').style.display = 'none';
 });
 // start listening for connections to a reality
 app.reality.connectEvent.addEventListener(function (session) {

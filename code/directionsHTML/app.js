@@ -1,4 +1,4 @@
-/// <reference path="../typings/browser.d.ts"/>
+/// <reference path="../../typings/index.d.ts"/>
 // set up Argon
 var app = Argon.init();
 // set up THREE.  Create a scene, a perspective camera and an object
@@ -153,8 +153,8 @@ function renderFunc() {
     // there is 1 subview in monocular mode, 2 in stereo mode    
     var i = 0; // we pass the view number to the renderer so it knows 
     // which div's to use for each view
-    for (var _i = 0, subViews_1 = subViews; _i < subViews_1.length; _i++) {
-        var subview = subViews_1[_i];
+    for (var _i = 0; _i < subViews.length; _i++) {
+        var subview = subViews[_i];
         // set the position and orientation of the camera for 
         // this subview
         camera.position.copy(subview.pose.position);

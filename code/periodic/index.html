@@ -10,7 +10,7 @@
 	<link rel="stylesheet" type="text/css" href="style.css">
     <style>
 #descriptionBox {
-  z-index: 5;
+	z-index: 1;
   font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
   padding: 10px;
   background-color:rgba(255,255,255,0.7);
@@ -22,16 +22,18 @@
 	</head>
 	<body>
 		<div id="argon">
-			<div id="menu">
-				<button id="table">TABLE</button>
-				<button id="sphere">SPHERE</button>
-				<button id="helix">HELIX</button>
-				<button id="grid">GRID</button>
-	    	</div>
-			<div onclick="hideMe(this)" id="descriptionBox" >
-				<h2>Periodic table (from three.js)</h2>
-				<h5>(click to dismiss)</h5>
-				<p> This example adapts a three.js example showing the Periodic elements. In the three.js documentation, you can find the  <a href="http://threejs.org/examples/#css3d_periodictable">example written for the screen</a>: The Argon version shows the four versions of the periodic table handing in space around the user. This illustrates how three.js is used to present and manipulate 3D graphics in Argon. </p>
+			<div id="hud">
+				<div id="menu">
+					<button id="table">TABLE</button>
+					<button id="sphere">SPHERE</button>
+					<button id="helix">HELIX</button>
+					<button id="grid">GRID</button>
+				</div>
+				<div onclick="hideMe(this)" id="descriptionBox" >
+					<h2>Periodic table (from three.js)</h2>
+					<h5>(click to dismiss)</h5>
+					<p> This example adapts a three.js example showing the Periodic elements. In the three.js documentation, you can find the  <a href="http://threejs.org/examples/#css3d_periodictable">example written for the screen</a>: The Argon version shows the four versions of the periodic table handing in space around the user. This illustrates how three.js is used to present and manipulate 3D graphics in Argon. </p>
+				</div>
 			</div>
 		</div>
 	</body>

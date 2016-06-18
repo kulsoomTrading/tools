@@ -119,6 +119,13 @@ panoramas.forEach((p)=>{
     })
 })
 
+app.focusEvent.addEventListener(()=>{
+    document.getElementById('menu').style.display = 'block';
+})
+app.blurEvent.addEventListener(()=>{
+    document.getElementById('menu').style.display = 'none';
+})
+
 // start listening for connections to a reality
 app.reality.connectEvent.addEventListener((session)=>{
     // check if the connected supports our panorama protocol
