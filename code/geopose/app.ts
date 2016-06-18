@@ -1,4 +1,4 @@
-/// <reference path="../typings/browser.d.ts"/>
+/// <reference path="../../typings/index.d.ts"/>
 // When we distribute Argon typings, we can get rid of this, but for now
 // we need to shut up the Typescript compiler about missing Argon typings
 declare const Argon:any;
@@ -38,28 +38,20 @@ const renderer = new THREE.WebGLRenderer({
 });
 renderer.setPixelRatio(window.devicePixelRatio);
 
-// the order we add the two renderers controls which content is in front
-app.view.element.appendChild(hud.domElement);
-app.view.element.appendChild(cssRenderer.domElement);
+// Assuming the z-orders are the same, the order of sibling elements
+// in the DOM determines which content is in front (top->bottom = back->front)
 app.view.element.appendChild(renderer.domElement);
+app.view.element.appendChild(cssRenderer.domElement);
+app.view.element.appendChild(hud.domElement);
 
 // We put some elements in the index.html, for convenience. 
 // Here, we retrieve them, duplicate and move the information boxes to the 
 // the CSS3DArgonRnderer hudElements.  We are explicitly creating the two
 // elements so we can update them both.
-let menu = document.getElementById('menu');
-let menu2: HTMLElement = menu.cloneNode( true ) as HTMLElement;
-menu2.id = "menu2";   // make the id of the new clone unique
-
-var menuchild = menu.getElementsByClassName('location');
-let elem = menuchild.item(0) as HTMLElement;
-menuchild = menu2.getElementsByClassName('location');
-let elem2 = menuchild.item(0) as HTMLElement;
-
-menu.remove();
-menu2.remove();
-hud.hudElements[0].appendChild(menu);
-hud.hudElements[1].appendChild(menu2);
+const hudContent = document.getElementById('hud');
+hud.hudElements[0].appendChild(hudContent);
+hud.hudElements[1].appendChild(hudContent.cloneNode(true));
+var locationElements = hud.domElement.getElementsByClassName('location');
 
 // Tell argon what local coordinate system you want.  The default coordinate
 // frame used by Argon is Cesium's FIXED frame, which is centered at the center
@@ -278,8 +270,8 @@ app.updateEvent.addEventListener(() => {
     infoText += " distance to GT (" + toFixed(distanceToBuzz,2) + ")";
 
     if (lastInfoText !== infoText) { // prevent unecessary DOM invalidations
-        elem.innerText = infoText;
-        elem2.innerText = infoText;
+        locationElements[0].innerHTML = infoText;
+        locationElements[1].innerHTML = infoText;
         lastInfoText = infoText;
     }
 })

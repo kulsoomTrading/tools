@@ -326,8 +326,8 @@ function init() {
   hud = new THREE.CSS3DArgonHUD();
 
   // argon creates the domElement for the view, which we add our renderer dom to
-  app.view.element.appendChild(hud.domElement);
   app.view.element.appendChild(renderer.domElement);
+  app.view.element.appendChild(hud.domElement);
 
   // move the menu to the Argon HUD.  We don't duplicated it because we only
   // use it in mono mode

@@ -20,8 +20,6 @@ THREE.CSS3DObject = function ( element ) {
 
 	this.elements.forEach(function(el){
 		el.style.position = 'absolute';
-		el.style.pointerEvents = 'auto';
-		el.style.userSelect = 'contain';
 	});
 
 	this.addEventListener( 'removed', function ( event ) {
@@ -67,9 +65,7 @@ THREE.CSS3DArgonRenderer = function () {
 
 	var domElement = document.createElement( 'div' );
 	this.domElement = domElement;
-	domElement.style.zIndex = -1;
 	domElement.style.pointerEvents = 'none';
-	domElement.style.userSelect = 'none';
 
 	//
 	
@@ -80,7 +76,6 @@ THREE.CSS3DArgonRenderer = function () {
 	domElements[0].style.display = 'none'; // was 'inline-block';
 	domElements[0].style.overflow = 'hidden';
 	domElements[0].style.position = 'absolute';
-	domElements[0].style.pointerEvents = 'none';
 
 	domElements[0].style.WebkitTransformStyle = 'preserve-3d';
 	domElements[0].style.MozTransformStyle = 'preserve-3d';
@@ -91,7 +86,6 @@ THREE.CSS3DArgonRenderer = function () {
 
 	var cameraElements = [];
 	cameraElements[0] = document.createElement( 'div' );
-	cameraElements[0].style.pointerEvents = 'none';
 	cameraElements[0].style.WebkitTransformStyle = 'preserve-3d';
 	cameraElements[0].style.MozTransformStyle = 'preserve-3d';
 	cameraElements[0].style.oTransformStyle = 'preserve-3d';
@@ -105,7 +99,6 @@ THREE.CSS3DArgonRenderer = function () {
 	domElements[1].style.display = 'none'; // was 'inline-block';
 	domElements[1].style.overflow = 'hidden';
 	domElements[1].style.position = 'absolute';
-	domElements[1].style.pointerEvents = 'none';
 
 	domElements[1].style.WebkitTransformStyle = 'preserve-3d';
 	domElements[1].style.MozTransformStyle = 'preserve-3d';
@@ -115,7 +108,6 @@ THREE.CSS3DArgonRenderer = function () {
 	domElement.appendChild( domElements[1] );
  
 	cameraElements[1] = document.createElement( 'div' );
-	cameraElements[1].style.pointerEvents = 'none';
 	cameraElements[1].style.WebkitTransformStyle = 'preserve-3d';
 	cameraElements[1].style.MozTransformStyle = 'preserve-3d';
 	cameraElements[1].style.oTransformStyle = 'preserve-3d';

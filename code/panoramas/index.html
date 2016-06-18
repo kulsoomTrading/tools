@@ -36,7 +36,9 @@ button:active {
 	background-color: rgba(0,255,255,0.75);
 }
 
-#descriptionBox {
+#description {
+  z-index: 1;
+  pointer-events: auto;
   font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
   padding: 10px;
   background-color:rgba(255,255,255,0.7);
@@ -45,12 +47,27 @@ button:active {
   bottom: 0px;
 }
 
+.argon-focus #description {
+  transition: opacity 0.8s;
+  visibility: visible;
+  opacity: 1; 
+}
+
+.argon-no-focus #description {
+  transition: visibility 0s linear 0.8s, opacity 0.8s;
+  visibility: visible;
+  opacity: 0;
+}
+
+#menu {
+  pointer-events: auto;
+}
     </style>
 </head>
   <body>
     <div id="argon">
       <div id="menu" style="visibility:collapse"></div>
-      <div onclick="hideMe(this)" id="descriptionBox">
+      <div onclick="hideMe(this)" id="description">
         <h2>Requesting a Custom Reality</h2>
         <h5>(tap to dismiss)</h5>
         <p>This example demonstrates the use of custom reality views, a feature which enables multiple apps to together augment a custom view of reality. In this case, the app sets its desired reality view so that the manager is made aware of the app's preference. </p>  
