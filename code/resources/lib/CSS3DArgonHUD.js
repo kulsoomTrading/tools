@@ -12,9 +12,7 @@ THREE.CSS3DArgonHUD = function () {
 
 	var domElement = document.createElement( 'div' );
 	this.domElement = domElement;
-	domElement.style.zIndex = 2;
-	
-	//domElement.style.zIndex = 1;
+	this.domElement.style.pointerEvents = 'none';
 
 	var hudElements = [];
 	this.hudElements = hudElements;
@@ -22,12 +20,14 @@ THREE.CSS3DArgonHUD = function () {
 	hudElements[0].style.display = 'none'; // start hidden
 	hudElements[0].style.position = 'absolute';
 	hudElements[0].style.overflow = 'hidden';
+	hudElements[0].style.pointerEvents = 'none';
 	domElement.appendChild( hudElements[0] );
 
 	hudElements[1] = document.createElement( 'div' );
 	hudElements[1].style.display = 'none'; // start hidden
 	hudElements[1].style.position = 'absolute';
 	hudElements[1].style.overflow = 'hidden';
+	hudElements[1].style.pointerEvents = 'none';
 	domElement.appendChild( hudElements[1] );
 
     this.setViewport = function ( x, y, width, height, side ) {
