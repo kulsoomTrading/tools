@@ -1,4 +1,4 @@
-/// <reference path="../typings/browser.d.ts"/>
+/// <reference path="../../typings/index.d.ts"/>
 
 // When we distribute Argon typings, we can get rid of this, but for now
 // we need to shut up the Typescript compiler about missing Argon typings

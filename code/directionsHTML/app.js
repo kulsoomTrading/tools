@@ -150,11 +150,9 @@ function renderFunc() {
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
     renderer.setSize(viewport.width, viewport.height);
-    // there is 1 subview in monocular mode, 2 in stereo mode    
-    var i = 0; // we pass the view number to the renderer so it knows 
-    // which div's to use for each view
-    for (var _i = 0; _i < subViews.length; _i++) {
-        var subview = subViews[_i];
+    // there is 1 subview in monocular mode, 2 in stereo mode
+    for (var _i = 0, subViews_1 = subViews; _i < subViews_1.length; _i++) {
+        var subview = subViews_1[_i];
         // set the position and orientation of the camera for 
         // this subview
         camera.position.copy(subview.pose.position);
@@ -166,9 +164,8 @@ function renderFunc() {
         renderer.updateCameraFOVFromProjection(camera);
         // set the viewport for this view
         var _a = subview.viewport, x = _a.x, y = _a.y, width = _a.width, height = _a.height;
-        renderer.setViewport(x, y, width, height, i);
+        renderer.setViewport(x, y, width, height, subview.index);
         // render this view.
-        renderer.render(scene, camera, i);
-        i++;
+        renderer.render(scene, camera, subview.index);
     }
 }

@@ -1,4 +1,4 @@
-/// <reference path="../typings/browser.d.ts"/>
+/// <reference path="../../typings/index.d.ts"/>
 // set up Argon
 var app = Argon.init();
 // set up THREE.  Create a scene, a perspective camera and an object

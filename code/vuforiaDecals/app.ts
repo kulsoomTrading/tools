@@ -102,7 +102,7 @@ function init() {
 
     renderer.domElement.addEventListener( 'mouseup', function() {
         checkIntersection();
-        shoot();
+        if (intersection.intersects )  shoot();
     });
     renderer.domElement.addEventListener( 'mousemove', onTouchMove );
 

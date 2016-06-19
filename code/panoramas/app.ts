@@ -51,7 +51,8 @@ app.reality.setDesired({
     url: Argon.resolveURL('../panorama-reality/index.html')
 })
 
-
+// the information needed for each panorama to be used.  Panoramas need to be geolocated to be
+// used with the Reality, since a Reality must provide the position and orientation of the camera
 interface PanoramaInfo {
     name: string,
     url: string,

@@ -79,7 +79,8 @@ function init() {
     loadLeePerrySmith();
     renderer.domElement.addEventListener('mouseup', function () {
         checkIntersection();
-        shoot();
+        if (intersection.intersects)
+            shoot();
     });
     renderer.domElement.addEventListener('mousemove', onTouchMove);
     renderer.domElement.addEventListener('touchstart', function (event) {
