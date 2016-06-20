@@ -443,7 +443,7 @@ $__System.register("4", ["9", "5", "6", "7", "8"], function(exports_1, context_1
             style.type = 'text/css';
             document.head.insertBefore(style, document.head.firstChild);
             var sheet = style.sheet;
-            sheet.insertRule("\n                #argon {\n                    position: fixed;\n                    transform: translateZ(0px);\n                    left: 0px;\n                    bottom: 0px;\n                    width: 100%;\n                    height: 100%;\n                    margin: 0;\n                    border: 0;\n                    padding: 0;\n                }\n            ", 0);
+            sheet.insertRule("\n                #argon {\n                    position: fixed;\n                    left: 0px;\n                    bottom: 0px;\n                    width: 100%;\n                    height: 100%;\n                    margin: 0;\n                    border: 0;\n                    padding: 0;\n                }\n            ", 0);
             sheet.insertRule("\n                .argon-view > * {\n                    position: absolute;\n                    pointer-events: none;\n                }\n            ", 1);
             this.focusService.focusEvent.addEventListener(function() {
               argonContainer_1.classList.remove('argon-no-focus');
@@ -471,6 +471,7 @@ $__System.register("4", ["9", "5", "6", "7", "8"], function(exports_1, context_1
           this._current.subviews.forEach(function(subview, index) {
             var viewEntity = _this.contextService.entities.getById('ar.view_' + index);
             subviews[index] = {
+              index: index,
               type: subview.type,
               pose: _this.contextService.getEntityPose(viewEntity, referenceFrame),
               projectionMatrix: subview.projectionMatrix,
