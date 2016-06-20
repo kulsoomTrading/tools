@@ -46,7 +46,7 @@ app.view.element.appendChild(hud.domElement);
 
 // We put some elements in the index.html, for convenience. 
 // Here, we retrieve them, duplicate and move the information boxes to the 
-// the CSS3DArgonRnderer hudElements.  We are explicitly creating the two
+// the CSS3DArgonHUD hudElements.  We are explicitly creating the two
 // elements so we can update them both.
 const hudContent = document.getElementById('hud');
 hud.hudElements[0].appendChild(hudContent);
@@ -302,7 +302,6 @@ app.renderEvent.addEventListener(() => {
     }
 
     // there is 1 subview in monocular mode, 2 in stereo mode    
-    var i = 0;
     for (let subview of app.view.getSubviews()) {
         // set the position and orientation of the camera for 
         // this subview
@@ -317,8 +316,8 @@ app.renderEvent.addEventListener(() => {
 
         // set the CSS rendering up, by computing the FOV, and render this view
         cssRenderer.updateCameraFOVFromProjection(camera);
-        cssRenderer.setViewport(x,y,width,height, i);
-        cssRenderer.render(scene, camera, i);
+        cssRenderer.setViewport(x,y,width,height, subview.index);
+        cssRenderer.render(scene, camera, subview.index);
 
         // set the webGL rendering parameters and render this view
         renderer.setViewport(x,y,width,height);
@@ -327,10 +326,8 @@ app.renderEvent.addEventListener(() => {
         renderer.render(scene, camera);
 
         // adjust the hud
-        hud.setViewport(x,y,width,height, i);
-        hud.render(i);
-
-        i++;
+        hud.setViewport(x,y,width,height, subview.index);
+        hud.render(subview.index);
     }
 })
 

@@ -1,16 +1,33 @@
 /// <reference path="../../typings/index.d.ts"/>
+// set up Argon
 var app = Argon.init();
+// Tell argon what local coordinate system you want.  The default coordinate
+// frame used by Argon is Cesium's FIXED frame, which is centered at the center
+// of the earth and oriented with the earth's axes.  
+// The FIXED frame is inconvenient for a number of reasons: the numbers used are
+// large and cause issues with rendering, and the orientation of the user's "local
+// view of the world" is different that the FIXED orientation (my perception of "up"
+// does not correspond to one of the FIXED axes).  
+// Therefore, Argon uses a local coordinate frame that sits on a plane tangent to 
+// the earth near the user's current location.  This frame automatically changes if the
+// user moves more than a few kilometers.
+// The EUS frame cooresponds to the typical 3D computer graphics coordinate frame, so we use
+// that here.  The other option Argon supports is localOriginEastNorthUp, which is
+// more similar to what is used in the geospatial industry
 app.context.setDefaultReferenceFrame(app.context.localOriginEastUpSouth);
-// set up the world
+// set up THREE.  Create a scene, a perspective camera and an object
+// for the stones target.  Do not add the stones target content to the scene yet
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera();
 var stonesObject = new THREE.Object3D();
 scene.add(camera);
-// for the dat.GUI() instance
+// variable for the dat.GUI() instance
 var gui;
+// create an object to put the head in, which is then added to the object attached to the 
+// stones target
 var headModel = new THREE.Object3D();
 stonesObject.add(headModel);
-var hud = new THREE.CSS3DArgonHUD();
+// We use the standard WebGLRenderer when we only need WebGL-based content
 var renderer = new THREE.WebGLRenderer({
     alpha: true,
     //logarithmicDepthBuffer: true,
@@ -18,7 +35,16 @@ var renderer = new THREE.WebGLRenderer({
 });
 renderer.setPixelRatio(window.devicePixelRatio);
 app.view.element.appendChild(renderer.domElement);
+// our HUD renderer for 2D screen-fixed content.  This deals with stereo viewing in argon
+var hud = new THREE.CSS3DArgonHUD();
+var description = document.getElementById('description');
+hud.hudElements[0].appendChild(description);
 app.view.element.appendChild(hud.domElement);
+// This application is based on the Decals demo for three.js.  We had to change
+// it to deal with the fact that the content is NOT attached to the origin of 
+// the scene.  In the original demo, all content was added to the scene, and 
+// many of the computations assumed the head was positioned at the origin of 
+// the world with the identity orientation. 
 // variables for the application 
 var mesh, decal;
 var line;
@@ -68,8 +94,10 @@ light.position.set(-1, 0.75, -0.5);
 scene.add(light);
 var geometry = new THREE.Geometry();
 geometry.vertices.push(new THREE.Vector3(), new THREE.Vector3());
+// add to the headModel node, not the scene
 line = new THREE.Line(geometry, new THREE.LineBasicMaterial({ linewidth: 4 }));
 headModel.add(line);
+// leave mouseHelper in the scene, since it will get positioned/oriented in world coordinates
 var raycaster = new THREE.Raycaster();
 var mouseHelper = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 10), new THREE.MeshNormalMaterial());
 mouseHelper.visible = false;
@@ -77,12 +105,16 @@ scene.add(mouseHelper);
 window.addEventListener('load', init);
 function init() {
     loadLeePerrySmith();
-    renderer.domElement.addEventListener('mouseup', function () {
+    // Support both mouse and touch.
+    renderer.domElement.addEventListener('mouseup', function (event) {
+        var x = event.clientX;
+        var y = event.clientY;
+        mouse.x = (x / window.innerWidth) * 2 - 1;
+        mouse.y = -(y / window.innerHeight) * 2 + 1;
         checkIntersection();
         if (intersection.intersects)
             shoot();
     });
-    renderer.domElement.addEventListener('mousemove', onTouchMove);
     renderer.domElement.addEventListener('touchstart', function (event) {
         var x = event.changedTouches[0].pageX;
         var y = event.changedTouches[0].pageY;
@@ -106,6 +138,7 @@ function init() {
         event.preventDefault();
     });
     renderer.domElement.addEventListener('touchmove', onTouchMove);
+    renderer.domElement.addEventListener('mousemove', onTouchMove);
     function onTouchMove(event) {
         var x, y;
         if (event instanceof TouchEvent) {
@@ -124,6 +157,8 @@ function init() {
         }
         event.preventDefault();
     }
+    // add dat.GUI to the left HUD.  We hid it in stereo viewing, so we don't need to 
+    // figure out how to duplicate it.
     gui = new dat.GUI({ autoPlace: false });
     hud.hudElements[0].appendChild(gui.domElement);
     gui.add(params, 'projection', { 'From cam to mesh': 'camera', 'Normal to mesh': 'normal' });
@@ -133,6 +168,9 @@ function init() {
     gui.add(params, 'clear');
     gui.open();
 }
+// a temporary variable to hold the world inverse matrix.  Used to move values between
+// scene (world) coordinates and the headModel coordinates, to make this demo work 
+// when the head is not attached to the world
 var invWorld = new THREE.Matrix4();
 function checkIntersection() {
     if (!mesh)
@@ -155,9 +193,9 @@ function checkIntersection() {
         n.multiplyScalar(10);
         n.add(intersects[0].point);
         mouseHelper.lookAt(n);
-        // move line coordinates to "world" object
         line.geometry.vertices[0].copy(intersection.point);
         line.geometry.vertices[1].copy(n);
+        // move line coordinates to the headModel object coordinates, from the world
         line.geometry.vertices[0].applyMatrix4(invWorld);
         line.geometry.vertices[1].applyMatrix4(invWorld);
         line.geometry.verticesNeedUpdate = true;
@@ -179,6 +217,7 @@ function loadLeePerrySmith() {
             shininess: 25
         });
         mesh = new THREE.Mesh(geometry, material);
+        // add the model to the headModel object, not the scene
         headModel.add(mesh);
         mesh.scale.set(20, 20, 20);
         mesh.rotation.x = THREE.Math.degToRad(90);
@@ -196,7 +235,7 @@ function shoot() {
         c.multiplyScalar(10);
         c.add(p);
         m.lookAt(p, c, up);
-        // put the rotation in "world" object coordinates
+        // put the rotation in headModel object coordinates
         m.multiplyMatrices(invWorld, m);
         m = m.extractRotation(m);
         var dummy = new THREE.Object3D();
@@ -206,12 +245,13 @@ function shoot() {
     else {
         p = intersection.point;
         var m = new THREE.Matrix4();
+        // get the mouseHelper orientation in headModel coordinates
         m.multiplyMatrices(invWorld, mouseHelper.matrixWorld);
         var dummy = new THREE.Object3D();
         dummy.rotation.setFromRotationMatrix(m);
         r.set(dummy.rotation.x, dummy.rotation.y, dummy.rotation.z);
     }
-    // move p to "world" object coordinates
+    // move p to headModel object coordinates from world
     p = p.clone();
     p.applyMatrix4(invWorld);
     var scale = params.minScale + Math.random() * (params.maxScale - params.minScale);
@@ -220,6 +260,7 @@ function shoot() {
         r.z = Math.random() * 2 * Math.PI;
     var material = decalMaterial.clone();
     material.color.setHex(Math.random() * 0xffffff);
+    // mesh is in headModel coordinates, to p & r have also been moved into headModel coords
     var m2 = new THREE.Mesh(new THREE.DecalGeometry(mesh, p, r, s, false), material);
     decals.push(m2);
     headModel.add(m2);
@@ -248,19 +289,43 @@ function mergeDecals() {
         decals.push(mesh);
     }
 }
+// tell argon to initialize vuforia for our app, using our license information.
 app.vuforia.init({
     licenseKey: "AXRIsu7/////AAAAAaYn+sFgpkAomH+Z+tK/Wsc8D+x60P90Nz8Oh0J8onzjVUIP5RbYjdDfyatmpnNgib3xGo1v8iWhkU1swiCaOM9V2jmpC4RZommwQzlgFbBRfZjV8DY3ggx9qAq8mijhN7nMzFDMgUhOlRWeN04VOcJGVUxnKn+R+oot1XTF5OlJZk3oXK2UfGkZo5DzSYafIVA0QS3Qgcx6j2qYAa/SZcPqiReiDM9FpaiObwxV3/xYJhXPUGVxI4wMcDI0XBWtiPR2yO9jAnv+x8+p88xqlMH8GHDSUecG97NbcTlPB0RayGGg1F6Y7v0/nQyk1OIp7J8VQ2YrTK25kKHST0Ny2s3M234SgvNCvnUHfAKFQ5KV"
 }).then(function (api) {
+    // the vuforia API is ready, so we can start using it.
+    // tell argon to download a vuforia dataset.  The .xml and .dat file must be together
+    // in the web directory, even though we just provide the .xml file url here 
     api.objectTracker.createDataSet('../resources/datasets/StonesAndChips.xml').then(function (dataSet) {
+        // the data set has been succesfully downloaded
+        // tell vuforia to load the dataset.  
         dataSet.load().then(function () {
+            // when it is loaded, we retrieve a list of trackables defined in the
+            // dataset and set up the content for the target
             var trackables = dataSet.getTrackables();
+            // tell argon we want to track a specific trackable.  Each trackable
+            // has a Cesium entity associated with it, and is expressed in a 
+            // coordinate frame relative to the camera.  Because they are Cesium
+            // entities, we can ask for their pose in any coordinate frame we know
+            // about.
             var stonesEntity = app.context.subscribeToEntityById(trackables['stones'].id);
+            // the updateEvent is called each time the 3D world should be
+            // rendered, before the renderEvent.  The state of your application
+            // should be updated here.
             app.context.updateEvent.addEventListener(function () {
+                // get the pose (in local coordinates) of the stones target
                 var stonesPose = app.context.getEntityPose(stonesEntity);
+                // if the pose is known the target is visible, so set the
+                // THREE object to it's location and orientation
                 if (stonesPose.poseStatus & Argon.PoseStatus.KNOWN) {
                     stonesObject.position.copy(stonesPose.position);
                     stonesObject.quaternion.copy(stonesPose.orientation);
                 }
+                // when the target is first seen after not being seen, the 
+                // status is FOUND.  Add the stonesObject content to the target.
+                // when the target is first lost after being seen, the status 
+                // is LOST.  Here, we remove the stonesObject, removing all the
+                // content attached to the target from the world.
                 if (stonesPose.poseStatus & Argon.PoseStatus.FOUND) {
                     scene.add(stonesObject);
                     headModel.position.set(0, 0, 80);
@@ -270,9 +335,12 @@ app.vuforia.init({
                 }
             });
         });
+        // activate the dataset.
         api.objectTracker.activateDataSet(dataSet);
     });
 }).catch(function () {
+    // if we're not running in Argon, we'll position the headModel in front of the camera
+    // in the world, so we see something and can test
     if (app.session.isManager) {
         app.context.updateEvent.addEventListener(function () {
             var userPose = app.context.getEntityPose(app.context.user);
@@ -288,28 +356,38 @@ app.vuforia.init({
         });
     }
 });
+// make a note of if we're in mono or stereo mode, for use in the touch callbacks
 var monoMode = false;
+// renderEvent is fired whenever argon wants the app to update its display
 app.renderEvent.addEventListener(function () {
+    // if we have 1 subView, we're in mono mode.  If more, stereo.
     monoMode = (app.view.getSubviews()).length == 1;
+    // set the renderer to know the current size of the viewport.
+    // This is the full size of the viewport, which would include
+    // both views if we are in stereo viewing mode
     var viewport = app.view.getViewport();
     renderer.setSize(viewport.width, viewport.height);
     hud.setSize(viewport.width, viewport.height);
-    var i = 0;
     for (var _i = 0, _a = app.view.getSubviews(); _i < _a.length; _i++) {
         var subview = _a[_i];
+        // set the position and orientation of the camera for 
+        // this subview
         camera.position.copy(subview.pose.position);
         camera.quaternion.copy(subview.pose.orientation);
+        // the underlying system provide a full projection matrix
+        // for the camera. 
         camera.projectionMatrix.fromArray(subview.projectionMatrix);
+        // set the viewport for this view
         var _b = subview.viewport, x = _b.x, y = _b.y, width = _b.width, height = _b.height;
         renderer.setViewport(x, y, width, height);
+        // set the webGL rendering parameters and render this view
         renderer.setScissor(x, y, width, height);
         renderer.setScissorTest(true);
         renderer.render(scene, camera);
         if (monoMode) {
-            // adjust the hud
-            hud.setViewport(x, y, width, height, i);
-            hud.render(i);
+            // adjust the hud, but only in mono mode. 
+            hud.setViewport(x, y, width, height, subview.index);
+            hud.render(subview.index);
         }
-        i++;
     }
 });

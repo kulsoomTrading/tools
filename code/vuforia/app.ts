@@ -24,6 +24,21 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setPixelRatio(window.devicePixelRatio);
 app.view.element.appendChild(renderer.domElement);
 
+// to easily control stuff on the display
+const hud = new (<any>THREE).CSS3DArgonHUD();
+
+// We put some elements in the index.html, for convenience. 
+// Here, we retrieve the description box and move it to the 
+// the CSS3DArgonHUD hudElements[0].  We only put it in the left
+// hud since we'll be hiding it in stereo
+var description = document.getElementById( 'description' );
+hud.hudElements[0].appendChild(description);
+app.view.element.appendChild(hud.domElement);
+
+// let's show the rendering stats
+var stats = new Stats();
+hud.hudElements[0].appendChild( stats.dom );
+
 // Tell argon what local coordinate system you want.  The default coordinate
 // frame used by Argon is Cesium's FIXED frame, which is centered at the center
 // of the earth and oriented with the earth's axes.  
@@ -38,6 +53,7 @@ app.view.element.appendChild(renderer.domElement);
 // that here.  The other option Argon supports is localOriginEastNorthUp, which is
 // more similar to what is used in the geospatial industry
 app.context.setDefaultReferenceFrame(app.context.localOriginEastUpSouth);
+
 
 // create a bit of animated 3D text that says "argon.js" to display 
 var uniforms = {
@@ -130,7 +146,6 @@ loader.load( '../resources/fonts/helvetiker_bold.typeface.js', function ( font:T
 });
 
 // tell argon to initialize vuforia for our app, using our license information.
-// when vuforia is 
 app.vuforia.init({
 	licenseKey: "AXRIsu7/////AAAAAaYn+sFgpkAomH+Z+tK/Wsc8D+x60P90Nz8Oh0J8onzjVUIP5RbYjdDfyatmpnNgib3xGo1v8iWhkU1swiCaOM9V2jmpC4RZommwQzlgFbBRfZjV8DY3ggx9qAq8mijhN7nMzFDMgUhOlRWeN04VOcJGVUxnKn+R+oot1XTF5OlJZk3oXK2UfGkZo5DzSYafIVA0QS3Qgcx6j2qYAa/SZcPqiReiDM9FpaiObwxV3/xYJhXPUGVxI4wMcDI0XBWtiPR2yO9jAnv+x8+p88xqlMH8GHDSUecG97NbcTlPB0RayGGg1F6Y7v0/nQyk1OIp7J8VQ2YrTK25kKHST0Ny2s3M234SgvNCvnUHfAKFQ5KV"
 }).then((api)=>{
@@ -209,11 +224,18 @@ app.context.updateEvent.addEventListener(() => {
     
 // renderEvent is fired whenever argon wants the app to update its display
 app.renderEvent.addEventListener(() => {
+    // update the rendering stats
+    stats.update();
+    
+    // if we have 1 subView, we're in mono mode.  If more, stereo.
+    var monoMode = (app.view.getSubviews()).length == 1;
+
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
     const viewport = app.view.getViewport();
     renderer.setSize(viewport.width, viewport.height);
+    hud.setSize(viewport.width, viewport.height);
     
     // there is 1 subview in monocular mode, 2 in stereo mode    
     for (let subview of app.view.getSubviews()) {
@@ -233,5 +255,11 @@ app.renderEvent.addEventListener(() => {
         renderer.setScissor(x,y,width,height);
         renderer.setScissorTest(true);
         renderer.render(scene, camera);
+
+        // adjust the hud, but only in mono
+        if (monoMode) {
+            hud.setViewport(x,y,width,height, subview.index);
+            hud.render(subview.index);
+        }
     }
 })
