@@ -83,20 +83,37 @@ function onFrame(time, index) {
     var viewport = app.view.getMaximumViewport();
     perspectiveProjection.aspectRatio = viewport.width / viewport.height;
     var matrix = perspectiveProjection.infiniteProjectionMatrix;
-    // By raising a frame state event, we are telling the manager how we would like
-    // to render (and likewise, how we would like apps to render). However, the manager
-    // may modify the view configuration depending on various conditions (i.e, 
-    // whether or not a stereo viewer is being used or not, etc).
+    // By raising a frame state event, we are describing to the  manager when and where we
+    // are in the world, what direction we are looking, and how we are able to render. 
     app.reality.frameEvent.raiseEvent({
         time: time,
         index: index,
-        view: {
-            viewport: viewport,
+        // A reality should pass an "eye" configuration to the manager. The manager will 
+        // then construct an appropriate "view" configuration using the eye properties we 
+        // send it and other factors unknown to the reality. 
+        // For example, the manager may decide to ask applications (including this reality),
+        // to render in stereo or in mono, based on wheter or not the user is using a 
+        // stereo viewer. 
+        // Technically, a reality can instead pass a view configuration to the manager, but 
+        // the best practice is to use an eye configuration. Passing a view configuration 
+        // is effectively the same thing as telling the manager:
+        //      "I am going to render this way, like it or not, don't tell me otherwise"
+        // Thus, a view configuration should only be used if absolutely necessary.
+        eye: {
+            // We must provide a pose representing where we are in world, 
+            // and what we are looking at. The viewing direction is always the
+            // -Z axis, assuming a right-handed cordinate system with Y pointing up
+            // in the camera's local coordinate system. 
             pose: Argon.getSerializedEntityPose(eyeEntity, time),
-            subviews: [{
-                    type: Argon.SubviewType.SINGULAR,
-                    projectionMatrix: Argon.Cesium.Matrix4.toArray(matrix, scratchArray)
-                }]
+            // The stereo multiplier tells the manager how we wish to render stereo
+            // in relation to the user's interpupillary distance (typically around 0.063m).
+            // In this case, since we are using a single panoramic image,
+            // we can only render from the center of the panorama (a stereo view 
+            // would have the same image in the left and right eyes): thus, we may prefer to use 
+            // a stereo multiplier of 0. On the other hand, if our panorama presents a 
+            // background that can be considered "far away" or at "infinity", we may prefer to 
+            // allow stereo by passing a non-zero value as the multiplier. 
+            stereoMultiplier: 0
         }
     });
     app.timer.requestFrame(onFrame);
