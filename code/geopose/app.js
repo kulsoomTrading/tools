@@ -43,6 +43,12 @@ var hudContent = document.getElementById('hud');
 hud.hudElements[0].appendChild(hudContent);
 hud.hudElements[1].appendChild(hudContent.cloneNode(true));
 var locationElements = hud.domElement.getElementsByClassName('location');
+//  We also move the description box to the left Argon HUD.  
+// We don't duplicated it because we only use it in mono mode
+var holder = document.createElement('div');
+var hudDescription = document.getElementById('description');
+holder.appendChild(hudDescription);
+hudContent.appendChild(holder);
 // Tell argon what local coordinate system you want.  The default coordinate
 // frame used by Argon is Cesium's FIXED frame, which is centered at the center
 // of the earth and oriented with the earth's axes.  
@@ -246,8 +252,15 @@ app.renderEvent.addEventListener(function () {
     renderer.setSize(viewport.width, viewport.height);
     cssRenderer.setSize(viewport.width, viewport.height);
     hud.setSize(viewport.width, viewport.height);
+    // There is 1 subview in monocular mode, 2 in stereo mode.
+    // If we are in mono view, show the description.  If not, hide it, 
+    if (app.view.getSubviews().length > 1) {
+        holder.style.display = 'none';
+    }
+    else {
+        holder.style.display = 'block';
+    }
     // there is 1 subview in monocular mode, 2 in stereo mode    
-    var i = 0;
     for (var _i = 0, _a = app.view.getSubviews(); _i < _a.length; _i++) {
         var subview = _a[_i];
         // set the position and orientation of the camera for 
@@ -261,16 +274,15 @@ app.renderEvent.addEventListener(function () {
         var _b = subview.viewport, x = _b.x, y = _b.y, width = _b.width, height = _b.height;
         // set the CSS rendering up, by computing the FOV, and render this view
         cssRenderer.updateCameraFOVFromProjection(camera);
-        cssRenderer.setViewport(x, y, width, height, i);
-        cssRenderer.render(scene, camera, i);
+        cssRenderer.setViewport(x, y, width, height, subview.index);
+        cssRenderer.render(scene, camera, subview.index);
         // set the webGL rendering parameters and render this view
         renderer.setViewport(x, y, width, height);
         renderer.setScissor(x, y, width, height);
         renderer.setScissorTest(true);
         renderer.render(scene, camera);
         // adjust the hud
-        hud.setViewport(x, y, width, height, i);
-        hud.render(i);
-        i++;
+        hud.setViewport(x, y, width, height, subview.index);
+        hud.render(subview.index);
     }
 });
