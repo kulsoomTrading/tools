@@ -44,29 +44,29 @@ var panoRealitySession;
 var panoramas = [{
         name: 'Georgia Aquarium',
         url: Argon.resolveURL('images/aqui.jpg'),
-        longitude: 33.7634,
-        latitude: 84.3951,
+        longitude: -84.3951,
+        latitude: 33.7634,
         height: 206
     },
     {
         name: 'Centennial Park',
         url: Argon.resolveURL('images/cent.jpg'),
-        longitude: 36.1485,
-        latitude: 86.8125,
+        longitude: -84.3931,
+        latitude: 33.7608,
         height: 309
     },
     {
         name: 'High Museum',
         url: Argon.resolveURL('images/high.jpg'),
-        longitude: 33.79035,
-        latitude: 84.38584,
+        longitude: -84.38584,
+        latitude: 33.79035,
         height: 289
     },
     {
         name: 'Piedmont Park',
         url: Argon.resolveURL('images/pied.jpg'),
-        longitude: 33.78577,
-        latitude: 84.37427,
+        longitude: -84.37427,
+        latitude: 33.78577,
         height: 271
     }
 ];
