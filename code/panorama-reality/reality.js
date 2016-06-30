@@ -72,13 +72,11 @@ var scratchArray = [];
 // Reality views must raise frame events at regular intervals in order to 
 // drive updates for the entire system. 
 function onFrame(time, index) {
-    // Get the eye position from the current panorama
-    if (currentPano) {
-        eyeEntity.position = currentPano.position;
-    }
-    // Get the current interface-aligned device orientation relative to the device location
+    // Get the current display-aligned device orientation relative to the device geolocation
     app.device.update();
-    var deviceOrientation = Argon.getEntityOrientation(app.device.interfaceEntity, time, app.device.locationEntity, scratchQuaternion);
+    var deviceOrientation = Argon.getEntityOrientation(app.device.displayEntity, time, app.device.geolocationEntity, scratchQuaternion);
+    // Rotate the eye according to the device orientation
+    // (the eye should be positioned at the current panorama)
     eyeEntity.orientation.setValue(deviceOrientation);
     var viewport = app.view.getMaximumViewport();
     perspectiveProjection.aspectRatio = viewport.width / viewport.height;
@@ -173,11 +171,19 @@ app.reality.connectEvent.addEventListener(function (controlSession) {
         if (!pano.url)
             throw new Error('Expected an equirectangular image url!');
         var offsetRadians = (pano.offsetDegrees || 0) * CesiumMath.DEGREES_PER_RADIAN;
-        var positionProperty = new Argon.Cesium.ConstantPositionProperty(undefined);
+        var entity = new Argon.Cesium.Entity;
         if (Argon.Cesium.defined(pano.longitude) &&
             Argon.Cesium.defined(pano.longitude)) {
+            var positionProperty = new Argon.Cesium.ConstantPositionProperty(undefined);
             var positionValue = Cartesian3.fromDegrees(pano.longitude, pano.latitude, pano.height || 0);
             positionProperty.setValue(positionValue, Argon.Cesium.ReferenceFrame.FIXED);
+            entity.position = positionProperty;
+            var orientationProperty = new Argon.Cesium.ConstantProperty();
+            // calculate the orientation for the ENU coodrinate system at the given position
+            var orientationValue = Argon.Cesium.Transforms.headingPitchRollQuaternion(positionValue, 0, 0, 0);
+            // TODO: apply offsetDegrees to orientation
+            orientationProperty.setValue(orientationValue);
+            entity.orientation = orientationProperty;
         }
         var texture = new Promise(function (resolve) {
             loader.load(pano.url, function (texture) {
@@ -191,7 +197,7 @@ app.reality.connectEvent.addEventListener(function (controlSession) {
             latitude: pano.latitude,
             height: pano.height,
             offsetDegrees: pano.offsetDegrees,
-            position: positionProperty,
+            entity: entity,
             texture: texture
         });
         // We can optionally return a value (or a promise of a value) in a message handler. 
@@ -221,6 +227,7 @@ function showPanorama(options) {
     if (!panoIn)
         throw new Error('Unknown pano: ' + url + ' (did you forget to add the panorama first?)');
     currentPano = panoIn;
+    eyeEntity.position = new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, currentPano.entity);
     // get the threejs objects for rendering our panoramas
     var sphereOut = panoSpheres[currentSphere];
     currentSphere++;
