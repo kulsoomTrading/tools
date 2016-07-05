@@ -150,9 +150,7 @@ function onFrame(time, index:number) {
             // a stereo multiplier of 0. On the other hand, if our panorama presents a 
             // background that can be considered "far away" or at "infinity", we may prefer to 
             // allow stereo by passing a non-zero value as the multiplier. 
-            stereoMultiplier:0,
-            // We can pass a desired fov in radians
-            fov: Math.PI/3
+            stereoMultiplier:0
         }
     })
 
