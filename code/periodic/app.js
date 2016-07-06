@@ -138,7 +138,8 @@ var root, userLocation;
 var objects = [];
 var targets = { table: [], sphere: [], helix: [], grid: [] };
 
-init();
+// need init to run after everything loads
+window.addEventListener( 'load', init );
 
 // The original animate function was called once to start the 
 // requestAnimationFrame update cycle.  We don't do that with Argon
