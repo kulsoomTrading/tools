@@ -3812,7 +3812,10 @@ $__System.register("13", ["8", "6", "b", "c", "7", "e", "10"], function(exports_
       context_2,
       utils_1,
       focus_1;
-  var argonContainerPromise,
+  var argonContainer,
+      argonContainerPromise,
+      scratchFrustum,
+      scratchArray,
       ViewService,
       PinchZoomService;
   return {
@@ -3852,6 +3855,7 @@ $__System.register("13", ["8", "6", "b", "c", "7", "e", "10"], function(exports_
             container.id = 'argon';
             container.classList.add('argon-view');
             document.body.appendChild(container);
+            argonContainer = container;
             resolve(container);
           };
           if (document.readyState == 'loading') {
@@ -3867,6 +3871,8 @@ $__System.register("13", ["8", "6", "b", "c", "7", "e", "10"], function(exports_
         sheet.insertRule("\n        #argon {\n            position: fixed;\n            left: 0px;\n            bottom: 0px;\n            width: 100%;\n            height: 100%;\n            margin: 0;\n            border: 0;\n            padding: 0;\n        }\n    ", 0);
         sheet.insertRule("\n        .argon-view > * {\n            position: absolute;\n            pointer-events: none;\n        }\n    ", 1);
       }
+      scratchFrustum = new cesium_imports_1.PerspectiveFrustum();
+      scratchArray = [];
       ViewService = (function() {
         function ViewService(containerElement, sessionService, focusService, contextService) {
           var _this = this;
@@ -3879,8 +3885,6 @@ $__System.register("13", ["8", "6", "b", "c", "7", "e", "10"], function(exports_
           this.desiredViewportMap = new WeakMap();
           this._subviewEntities = [];
           this.zoomFactor = 1;
-          this._scratchFrustum = new cesium_imports_1.PerspectiveFrustum();
-          this._scratchArray = [];
           if (typeof document !== 'undefined' && document.createElement) {
             var element_1 = this.element = document.createElement('div');
             element_1.style.width = '100%';
@@ -3891,11 +3895,15 @@ $__System.register("13", ["8", "6", "b", "c", "7", "e", "10"], function(exports_
                 containerElement.insertBefore(element_1, containerElement.firstChild);
                 resolve(containerElement);
               } else {
-                argonContainerPromise.then(function(argonContainer) {
-                  containerElement = argonContainer;
-                  containerElement.insertBefore(element_1, containerElement.firstChild);
-                  resolve(containerElement);
-                });
+                if (argonContainer) {
+                  argonContainer.insertBefore(element_1, argonContainer.firstChild);
+                  resolve(argonContainer);
+                } else {
+                  argonContainerPromise.then(function(argonContainer) {
+                    argonContainer.insertBefore(element_1, argonContainer.firstChild);
+                    resolve(argonContainer);
+                  });
+                }
                 _this.focusService.focusEvent.addEventListener(function() {
                   argonContainerPromise.then(function(argonContainer) {
                     argonContainer.classList.remove('argon-no-focus');
@@ -3940,12 +3948,12 @@ $__System.register("13", ["8", "6", "b", "c", "7", "e", "10"], function(exports_
               delete state.entities[id];
               subviewEntities[index] = _this.contextService.entities.getById(id);
             });
-            _this.update();
+            _this._update();
           });
         }
         ViewService.prototype.getSubviews = function(referenceFrame) {
           var _this = this;
-          this.update();
+          this._update();
           var subviews = [];
           this._current.subviews.forEach(function(subview, index) {
             var subviewEntity = _this._subviewEntities[index];
@@ -3981,10 +3989,10 @@ $__System.register("13", ["8", "6", "b", "c", "7", "e", "10"], function(exports_
         };
         ViewService.prototype.generateViewFromEyeParameters = function(eye) {
           var viewport = this.getMaximumViewport();
-          this._scratchFrustum.fov = Math.PI / 3;
-          this._scratchFrustum.aspectRatio = viewport.width / viewport.height;
-          this._scratchFrustum.near = 0.01;
-          var projectionMatrix = cesium_imports_1.Matrix4.toArray(this._scratchFrustum.infiniteProjectionMatrix, this._scratchArray);
+          scratchFrustum.fov = Math.PI / 2;
+          scratchFrustum.aspectRatio = viewport.width / viewport.height;
+          scratchFrustum.near = 0.01;
+          var projectionMatrix = cesium_imports_1.Matrix4.toArray(scratchFrustum.infiniteProjectionMatrix, scratchArray);
           if (this.zoomFactor !== 1) {
             projectionMatrix[0] *= this.zoomFactor;
             projectionMatrix[1] *= this.zoomFactor;
@@ -4004,7 +4012,7 @@ $__System.register("13", ["8", "6", "b", "c", "7", "e", "10"], function(exports_
             }]
           };
         };
-        ViewService.prototype.update = function() {
+        ViewService.prototype._update = function() {
           var view = this.contextService.state.view;
           var viewportJSON = JSON.stringify(view.viewport);
           var previousViewport = this._current && this._current.viewport;
@@ -4175,6 +4183,7 @@ $__System.register("14", ["8", "c", "d", "13"], function(exports_1, context_1) {
           window.addEventListener('message', handleConnectMessage);
           this.iframeElement.src = '';
           this.iframeElement.src = reality['url'];
+          this.iframeElement.style.pointerEvents = 'auto';
         };
         HostedRealityLoader.prototype._handleMessage = function(ev) {};
         HostedRealityLoader = __decorate([aurelia_dependency_injection_1.inject(session_1.SessionService, view_1.ViewService)], HostedRealityLoader);
