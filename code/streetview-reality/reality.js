@@ -420,15 +420,17 @@ app.renderEvent.addEventListener(function () {
             subviewElement.querySelector('canvas').style.visibility = 'visible';
         }
         // set the fov
-        var fovy = subview.frustum.fovy * Argon.Cesium.CesiumMath.DEGREES_PER_RADIAN;
-        var fovx = subview.frustum.aspectRatio * fovy;
-        var zoomLevel = 1 - Math.log2(fovx / 90);
-        // raise zoomLevel to 1.05 power because streetview is rendering slightly lower fov 
-        // than expected, especially when zoomed in. 
-        zoomLevel = Math.pow(zoomLevel, 1.05);
-        // apply the zoom level
-        if (streetview.getZoom() !== zoomLevel)
-            streetview.setZoom(zoomLevel);
+        if (!manualPov) {
+            var fovy = subview.frustum.fovy * Argon.Cesium.CesiumMath.DEGREES_PER_RADIAN;
+            var fovx = subview.frustum.aspectRatio * fovy;
+            var zoomLevel = 1 - Math.log2(fovx / 90);
+            // raise zoomLevel to 1.05 power because streetview is rendering slightly lower fov 
+            // than expected, especially when zoomed in. 
+            zoomLevel = Math.pow(zoomLevel, 1.05);
+            // apply the zoom level
+            if (streetview.getZoom() !== zoomLevel)
+                streetview.setZoom(zoomLevel);
+        }
     }
 });
 function rotationMatrixToEulerZXY(mat, result) {

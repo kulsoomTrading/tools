@@ -471,15 +471,17 @@ app.renderEvent.addEventListener(() => {
         }
 
         // set the fov
-        const fovy = subview.frustum.fovy * Argon.Cesium.CesiumMath.DEGREES_PER_RADIAN;
-        const fovx = subview.frustum.aspectRatio * fovy;
-        let zoomLevel = 1 - Math.log2(fovx / 90)
-        // raise zoomLevel to 1.05 power because streetview is rendering slightly lower fov 
-        // than expected, especially when zoomed in. 
-        zoomLevel = Math.pow(zoomLevel,1.05);
-        // apply the zoom level
-        if (streetview.getZoom() !== zoomLevel)
-            streetview.setZoom(zoomLevel); 
+        if (!manualPov) {
+            const fovy = subview.frustum.fovy * Argon.Cesium.CesiumMath.DEGREES_PER_RADIAN;
+            const fovx = subview.frustum.aspectRatio * fovy;
+            let zoomLevel = 1 - Math.log2(fovx / 90)
+            // raise zoomLevel to 1.05 power because streetview is rendering slightly lower fov 
+            // than expected, especially when zoomed in. 
+            zoomLevel = Math.pow(zoomLevel,1.05);
+            // apply the zoom level
+            if (streetview.getZoom() !== zoomLevel)
+                streetview.setZoom(zoomLevel); 
+        }
 
         // apply the roll directly to the DOM elements... 
         // since the streetview api doesn't support setting the roll :(        

@@ -1825,7 +1825,6 @@ $__System.register("7", ["8", "6", "c", "d", "e"], function(exports_1, context_1
       scratchCartesian3,
       scratchQuaternion,
       scratchOriginCartesian3,
-      negX90,
       ContextService;
   function _stringFromReferenceFrame(referenceFrame) {
     var rf = referenceFrame;
@@ -1854,7 +1853,6 @@ $__System.register("7", ["8", "6", "c", "d", "e"], function(exports_1, context_1
       scratchCartesian3 = new cesium_imports_1.Cartesian3(0, 0);
       scratchQuaternion = new cesium_imports_1.Quaternion(0, 0);
       scratchOriginCartesian3 = new cesium_imports_1.Cartesian3(0, 0);
-      negX90 = cesium_imports_1.Quaternion.fromAxisAngle(cesium_imports_1.Cartesian3.UNIT_X, -cesium_imports_1.CesiumMath.PI_OVER_TWO);
       ContextService = (function() {
         function ContextService(sessionService, realityService) {
           var _this = this;
@@ -1884,7 +1882,12 @@ $__System.register("7", ["8", "6", "c", "d", "e"], function(exports_1, context_1
             position: new cesium_imports_1.ConstantPositionProperty(cesium_imports_1.Cartesian3.ZERO, this.localOriginEastNorthUp),
             orientation: new cesium_imports_1.ConstantProperty(cesium_imports_1.Quaternion.fromAxisAngle(cesium_imports_1.Cartesian3.UNIT_X, Math.PI / 2))
           });
-          this._time = new cesium_imports_1.JulianDate(0, 0);
+          this.maxDeltaTime = 1 / 3 * 1000;
+          this._lastFrameUpdateTime = 0;
+          this._frame = {
+            time: new cesium_imports_1.JulianDate(0, 0),
+            deltaTime: 0
+          };
           this._defaultReferenceFrame = this.localOriginEastNorthUp;
           this._entityPoseCache = {};
           this._entityPoseMap = new Map();
@@ -1914,22 +1917,24 @@ $__System.register("7", ["8", "6", "c", "d", "e"], function(exports_1, context_1
             };
           }
         }
-        Object.defineProperty(ContextService.prototype, "time", {
+        Object.defineProperty(ContextService.prototype, "frame", {
           get: function() {
-            return this._time;
+            if (!cesium_imports_1.defined(this.serializedFrameState))
+              throw new Error('A frame state has not yet been received');
+            return this._frame;
           },
           enumerable: true,
           configurable: true
         });
-        Object.defineProperty(ContextService.prototype, "state", {
+        Object.defineProperty(ContextService.prototype, "serializedFrameState", {
           get: function() {
-            return this._state;
+            return this._serializedState;
           },
           enumerable: true,
           configurable: true
         });
         ContextService.prototype.getTime = function() {
-          return this._time;
+          return this.frame.time;
         };
         ContextService.prototype.setDefaultReferenceFrame = function(origin) {
           this._defaultReferenceFrame = origin;
@@ -1945,7 +1950,7 @@ $__System.register("7", ["8", "6", "c", "d", "e"], function(exports_1, context_1
           if (referenceFrame === void 0) {
             referenceFrame = this._defaultReferenceFrame;
           }
-          var time = this._time;
+          var time = this.getTime();
           var key = entity.id + '@' + _stringFromReferenceFrame(referenceFrame);
           var entityPose = this._entityPoseMap.get(key);
           if (!cesium_imports_1.defined(entityPose)) {
@@ -1979,22 +1984,21 @@ $__System.register("7", ["8", "6", "c", "d", "e"], function(exports_1, context_1
           console.warn('getCurrentEntityState is deprecated. Use getEntityPose instead.');
           return this.getEntityPose(entity, referenceFrame);
         };
-        ContextService.prototype._update = function(state) {
+        ContextService.prototype._update = function(serializedState) {
           var _this = this;
           if (this.sessionService.isManager) {
-            delete state.entities[this.user.id];
+            delete serializedState.entities[this.user.id];
             this._entityPoseCache = {};
             for (var _i = 0,
                 _a = this.sessionService.managedSessions; _i < _a.length; _i++) {
               var session = _a[_i];
-              this._sendUpdateForSession(state, session);
+              this._sendUpdateForSession(serializedState, session);
             }
           }
-          this._state = state;
-          state.entities[this.user.id] = state.view.pose;
+          serializedState.entities[this.user.id] = serializedState.view.pose;
           this._knownEntities.clear();
-          for (var id in state.entities) {
-            this.updateEntityFromFrameState(id, state);
+          for (var id in serializedState.entities) {
+            this.updateEntityFromFrameState(id, serializedState);
             this._updatingEntities.add(id);
             this._knownEntities.add(id);
           }
@@ -2006,10 +2010,15 @@ $__System.register("7", ["8", "6", "c", "d", "e"], function(exports_1, context_1
               _this._updatingEntities.delete(id);
             }
           });
-          this._updateLocalOrigin(state);
-          cesium_imports_1.JulianDate.clone(this._state.time, this._time);
-          this.updateEvent.raiseEvent(state);
-          this.renderEvent.raiseEvent(state);
+          this._updateLocalOrigin(serializedState);
+          var frame = this._frame;
+          var now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+          frame.deltaTime = Math.max(now - this._lastFrameUpdateTime, this.maxDeltaTime);
+          cesium_imports_1.JulianDate.clone(serializedState.time, frame.time);
+          this._serializedState = serializedState;
+          this._lastFrameUpdateTime = now;
+          this.updateEvent.raiseEvent(frame);
+          this.renderEvent.raiseEvent(frame);
         };
         ContextService.prototype.updateEntityFromFrameState = function(id, state) {
           var entityPose = state.entities[id];
@@ -3178,10 +3187,10 @@ $__System.register("c", ["6", "8", "b", "e"], function(exports_1, context_1) {
         };
         SessionPort.prototype.open = function(messagePort, options) {
           var _this = this;
+          if (this._isClosed)
+            return;
           if (this._isOpened)
             throw new Error('Session can only be opened once');
-          if (this._isClosed)
-            throw new Error('Session has already been closed');
           if (!options)
             throw new Error('Session options must be provided');
           this.messagePort = messagePort;
@@ -3580,10 +3589,11 @@ $__System.register("d", ["8", "6", "b", "10", "c", "e"], function(exports_1, con
           this._frustum = new cesium_imports_1.PerspectiveFrustum;
           this._scratchFrustum = new cesium_imports_1.PerspectiveFrustum();
           this._scratchArray = new Array();
+          this._loadID = -1;
           if (sessionService.isManager) {
             sessionService.manager.connectEvent.addEventListener(function() {
               setTimeout(function() {
-                if (!_this._current)
+                if (_this._loadID === -1)
                   _this._setNextReality(_this.onSelectReality());
               });
             });
@@ -3685,7 +3695,7 @@ $__System.register("d", ["8", "6", "b", "10", "c", "e"], function(exports_1, con
           this.sessionService.ensureNotReality();
           this._desired = reality;
           if (this.sessionService.isManager) {
-            this._setNextReality(reality);
+            this._setNextReality(reality, true);
           } else {
             this.sessionService.manager.send('ar.reality.desired', {reality: reality});
           }
@@ -3752,9 +3762,9 @@ $__System.register("d", ["8", "6", "b", "10", "c", "e"], function(exports_1, con
           return selectedReality;
         };
         RealityService.prototype.onGenerateViewFromEyeParameters = function(eye) {
-          var fov = (eye.frustum && eye.frustum.fov) || this._desiredFov || this._defaultFov;
+          var fov = eye.fov || this._desiredFov || this._defaultFov;
           var viewport = eye.viewport || this.getMaximumViewport();
-          var aspectRatio = viewport.width / viewport.height;
+          var aspectRatio = eye.aspect || viewport.width / viewport.height;
           this._scratchFrustum.fov = fov;
           this._scratchFrustum.aspectRatio = aspectRatio;
           this._scratchFrustum.near = 0.01;
@@ -3791,9 +3801,12 @@ $__System.register("d", ["8", "6", "b", "10", "c", "e"], function(exports_1, con
           }
           return newFov;
         };
-        RealityService.prototype._setNextReality = function(reality) {
+        RealityService.prototype._setNextReality = function(reality, force) {
           var _this = this;
-          if (this._current && reality && this._current === reality)
+          if (force === void 0) {
+            force = false;
+          }
+          if (this._current && reality && this._current === reality && !force)
             return;
           if (this._current && !reality && this._realitySession)
             return;
@@ -3805,9 +3818,18 @@ $__System.register("d", ["8", "6", "b", "10", "c", "e"], function(exports_1, con
               this.sessionService.errorEvent.raiseEvent(new Error('Reality of type "' + reality.type + '" is not available on this platform'));
               return;
             }
+            var loadID_1 = ++this._loadID;
             this._executeRealityLoader(reality, function(realitySession) {
               if (realitySession.isConnected)
                 throw new Error('Expected an unconnected session');
+              if (loadID_1 !== _this._loadID) {
+                realitySession.close();
+                return;
+              }
+              var previousRealitySession = _this._realitySession;
+              var previousReality = _this._current;
+              _this._realitySession = realitySession;
+              _this._setCurrent(reality);
               realitySession.on['ar.reality.frameState'] = function(serializedState) {
                 var state = serializedState;
                 if (!cesium_imports_1.defined(serializedState.view)) {
@@ -3825,7 +3847,8 @@ $__System.register("d", ["8", "6", "b", "10", "c", "e"], function(exports_1, con
               };
               realitySession.closeEvent.addEventListener(function() {
                 console.log('Reality session closed: ' + JSON.stringify(reality));
-                if (_this._current == reality) {
+                if (_this._loadID === loadID_1) {
+                  _this._realitySession = undefined;
                   _this._current = undefined;
                   _this._setNextReality(_this.onSelectReality());
                 }
@@ -3836,10 +3859,6 @@ $__System.register("d", ["8", "6", "b", "10", "c", "e"], function(exports_1, con
                   realitySession.close();
                   throw new Error('The application "' + realitySession.info.name + '" does not support being loaded as a reality');
                 }
-                var previousRealitySession = _this._realitySession;
-                var previousReality = _this._current;
-                _this._realitySession = realitySession;
-                _this._setCurrent(reality);
                 if (previousRealitySession) {
                   previousRealitySession.close();
                 }
@@ -4041,7 +4060,8 @@ $__System.register("13", ["8", "6", "c", "7", "e", "10", "d"], function(exports_
               };
             });
           }
-          this.contextService.renderEvent.addEventListener(function(state) {
+          this.contextService.renderEvent.addEventListener(function() {
+            var state = _this.contextService.serializedFrameState;
             var subviewEntities = _this._subviewEntities;
             subviewEntities.length = 0;
             state.view.subviews.forEach(function(subview, index) {
@@ -4091,7 +4111,7 @@ $__System.register("13", ["8", "6", "c", "7", "e", "10", "d"], function(exports_
         ViewService.prototype.isOwner = function() {};
         ViewService.prototype._update = function() {
           var _this = this;
-          var state = this.contextService.state;
+          var state = this.contextService.serializedFrameState;
           if (!state)
             throw new Error('Expected state to be defined');
           var view = state.view;
@@ -4124,101 +4144,103 @@ $__System.register("13", ["8", "6", "c", "7", "e", "10", "d"], function(exports_
           this.contextService = contextService;
           this.sessionService = sessionService;
           if (this.sessionService.isManager) {
-            var el = viewService.element;
-            el.style.pointerEvents = 'auto';
-            var fov_1 = -1;
-            if (typeof PointerEvent !== 'undefined') {
-              var evCache_1 = new Array();
-              var startDistSquared_1 = -1;
-              var zoom_1 = 1;
-              var remove_event_1 = function(ev) {
-                for (var i = 0; i < evCache_1.length; i++) {
-                  if (evCache_1[i].pointerId == ev.pointerId) {
-                    evCache_1.splice(i, 1);
-                    break;
+            viewService.containingElementPromise.then(function(el) {
+              el.style.pointerEvents = 'auto';
+              var fov = -1;
+              if (typeof PointerEvent !== 'undefined') {
+                var evCache_1 = new Array();
+                var startDistSquared_1 = -1;
+                var zoom_1 = 1;
+                var remove_event_1 = function(ev) {
+                  for (var i = 0; i < evCache_1.length; i++) {
+                    if (evCache_1[i].pointerId == ev.pointerId) {
+                      evCache_1.splice(i, 1);
+                      break;
+                    }
                   }
-                }
-              };
-              var pointerdown_handler = function(ev) {
-                evCache_1.push(ev);
-              };
-              var pointermove_handler = function(ev) {
-                for (var i = 0; i < evCache_1.length; i++) {
-                  if (ev.pointerId == evCache_1[i].pointerId) {
-                    evCache_1[i] = ev;
-                    break;
+                };
+                var pointerdown_handler = function(ev) {
+                  evCache_1.push(ev);
+                };
+                var pointermove_handler = function(ev) {
+                  for (var i = 0; i < evCache_1.length; i++) {
+                    if (ev.pointerId == evCache_1[i].pointerId) {
+                      evCache_1[i] = ev;
+                      break;
+                    }
                   }
-                }
-                var state = _this.contextService.state;
-                if (!state)
-                  return;
-                if (evCache_1.length == 2) {
-                  var curDiffX = Math.abs(evCache_1[0].clientX - evCache_1[1].clientX);
-                  var curDiffY = Math.abs(evCache_1[0].clientY - evCache_1[1].clientY);
-                  var currDistSquared = curDiffX * curDiffX + curDiffY * curDiffY;
-                  if (startDistSquared_1 == -1) {
-                    startDistSquared_1 = currDistSquared;
-                    fov_1 = state.view.subviews[0].frustum.fov;
-                    zoom_1 = 1;
+                  var state = _this.contextService.serializedFrameState;
+                  if (!state)
+                    return;
+                  if (evCache_1.length == 2) {
+                    var curDiffX = Math.abs(evCache_1[0].clientX - evCache_1[1].clientX);
+                    var curDiffY = Math.abs(evCache_1[0].clientY - evCache_1[1].clientY);
+                    var currDistSquared = curDiffX * curDiffX + curDiffY * curDiffY;
+                    if (startDistSquared_1 == -1) {
+                      startDistSquared_1 = currDistSquared;
+                      fov = state.view.subviews[0].frustum.fov;
+                      zoom_1 = 1;
+                      _this.realityService.zoom({
+                        zoom: zoom_1,
+                        fov: fov,
+                        state: reality_1.RealityZoomState.START
+                      });
+                    } else {
+                      zoom_1 = currDistSquared / startDistSquared_1;
+                      _this.realityService.zoom({
+                        zoom: zoom_1,
+                        fov: fov,
+                        state: reality_1.RealityZoomState.CHANGE
+                      });
+                    }
+                  } else {
                     _this.realityService.zoom({
                       zoom: zoom_1,
-                      fov: fov_1,
+                      fov: fov,
+                      state: reality_1.RealityZoomState.END
+                    });
+                    startDistSquared_1 = -1;
+                  }
+                };
+                var pointerup_handler = function(ev) {
+                  remove_event_1(ev);
+                  if (evCache_1.length < 2)
+                    startDistSquared_1 = -1;
+                };
+                el.onpointerdown = pointerdown_handler;
+                el.onpointermove = pointermove_handler;
+                el.onpointerup = pointerup_handler;
+                el.onpointercancel = pointerup_handler;
+                el.onpointerout = pointerup_handler;
+                el.onpointerleave = pointerup_handler;
+              } else {
+                el.addEventListener('gesturestart', function(ev) {
+                  var state = _this.contextService.serializedFrameState;
+                  if (state && state.view.subviews[0]) {
+                    fov = state.view.subviews[0].frustum.fov;
+                    _this.realityService.zoom({
+                      zoom: ev.scale,
+                      fov: fov,
                       state: reality_1.RealityZoomState.START
                     });
-                  } else {
-                    zoom_1 = currDistSquared / startDistSquared_1;
-                    _this.realityService.zoom({
-                      zoom: zoom_1,
-                      fov: fov_1,
-                      state: reality_1.RealityZoomState.CHANGE
-                    });
                   }
-                } else {
-                  _this.realityService.zoom({
-                    zoom: zoom_1,
-                    fov: fov_1,
-                    state: reality_1.RealityZoomState.END
-                  });
-                  startDistSquared_1 = -1;
-                }
-              };
-              var pointerup_handler = function(ev) {
-                remove_event_1(ev);
-                if (evCache_1.length < 2)
-                  startDistSquared_1 = -1;
-              };
-              el.onpointerdown = pointerdown_handler;
-              el.onpointermove = pointermove_handler;
-              el.onpointerup = pointerup_handler;
-              el.onpointercancel = pointerup_handler;
-              el.onpointerout = pointerup_handler;
-              el.onpointerleave = pointerup_handler;
-            } else {
-              el.addEventListener('gesturestart', function(ev) {
-                if (_this.contextService.state && _this.contextService.state.view.subviews[0]) {
-                  fov_1 = _this.contextService.state.view.subviews[0].frustum.fov;
+                });
+                el.addEventListener('gesturechange', function(ev) {
                   _this.realityService.zoom({
                     zoom: ev.scale,
-                    fov: fov_1,
-                    state: reality_1.RealityZoomState.START
+                    fov: fov,
+                    state: reality_1.RealityZoomState.CHANGE
                   });
-                }
-              });
-              el.addEventListener('gesturechange', function(ev) {
-                _this.realityService.zoom({
-                  zoom: ev.scale,
-                  fov: fov_1,
-                  state: reality_1.RealityZoomState.CHANGE
                 });
-              });
-              el.addEventListener('gestureend', function(ev) {
-                _this.realityService.zoom({
-                  zoom: ev.scale,
-                  fov: fov_1,
-                  state: reality_1.RealityZoomState.END
+                el.addEventListener('gestureend', function(ev) {
+                  _this.realityService.zoom({
+                    zoom: ev.scale,
+                    fov: fov,
+                    state: reality_1.RealityZoomState.END
+                  });
                 });
-              });
-            }
+              }
+            });
           }
         }
         PinchZoomService = __decorate([aurelia_dependency_injection_1.inject(ViewService, reality_1.RealityService, context_2.ContextService, session_1.SessionService)], PinchZoomService);
@@ -4272,6 +4294,7 @@ $__System.register("14", ["8", "c", "d", "13"], function(exports_1, context_1) {
       HostedRealityLoader = (function(_super) {
         __extends(HostedRealityLoader, _super);
         function HostedRealityLoader(sessionService, viewService) {
+          var _this = this;
           _super.call(this);
           this.sessionService = sessionService;
           this.viewService = viewService;
@@ -4280,35 +4303,38 @@ $__System.register("14", ["8", "c", "d", "13"], function(exports_1, context_1) {
           this.iframeElement.style.border = '0';
           this.iframeElement.width = '100%';
           this.iframeElement.height = '100%';
-          viewService.element.insertBefore(this.iframeElement, viewService.element.firstChild);
+          viewService.containingElementPromise.then(function(container) {
+            container.insertBefore(_this.iframeElement, container.firstChild);
+          });
         }
         HostedRealityLoader.prototype.load = function(reality, callback) {
           var _this = this;
-          var handleConnectMessage = function(ev) {
-            if (ev.data.type !== 'ARGON_SESSION')
-              return;
-            var messagePort = ev.ports && ev.ports[0];
-            if (!messagePort)
-              throw new Error('Received an ARGON_SESSION message without a MessagePort object');
-            var i = 0;
-            var frame;
-            while (i < window.frames.length && !frame) {
-              if (window.frames[i] == ev.source)
-                frame = document.getElementsByTagName('iframe')[i];
-            }
-            if (frame !== _this.iframeElement)
-              return;
-            window.removeEventListener('message', handleConnectMessage);
-            var realitySession = _this.sessionService.addManagedSessionPort();
-            callback(realitySession);
-            realitySession.open(messagePort, _this.sessionService.configuration);
-          };
-          window.addEventListener('message', handleConnectMessage);
-          this.iframeElement.src = '';
-          this.iframeElement.src = reality['url'];
-          this.iframeElement.style.pointerEvents = 'auto';
+          this.viewService.containingElementPromise.then(function(container) {
+            var handleConnectMessage = function(ev) {
+              if (ev.data.type !== 'ARGON_SESSION')
+                return;
+              var messagePort = ev.ports && ev.ports[0];
+              if (!messagePort)
+                throw new Error('Received an ARGON_SESSION message without a MessagePort object');
+              var i = 0;
+              var frame;
+              while (i < window.frames.length && !frame) {
+                if (window.frames[i] == ev.source)
+                  frame = document.getElementsByTagName('iframe')[i];
+              }
+              if (frame !== _this.iframeElement)
+                return;
+              window.removeEventListener('message', handleConnectMessage);
+              var realitySession = _this.sessionService.addManagedSessionPort();
+              callback(realitySession);
+              realitySession.open(messagePort, _this.sessionService.configuration);
+            };
+            window.addEventListener('message', handleConnectMessage);
+            _this.iframeElement.src = '';
+            _this.iframeElement.src = reality['url'];
+            _this.iframeElement.style.pointerEvents = 'auto';
+          });
         };
-        HostedRealityLoader.prototype._handleMessage = function(ev) {};
         HostedRealityLoader = __decorate([aurelia_dependency_injection_1.inject(session_1.SessionService, view_1.ViewService)], HostedRealityLoader);
         return HostedRealityLoader;
       }(reality_1.RealityLoader));
