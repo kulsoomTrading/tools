@@ -5,6 +5,6 @@
   },
   "scripts": {
     "serve": "static-server -p 1337",
-    "build": "tsc -p geopose && tsc -p vuforia && tsc -p directionsHTML && tsc -p directionsWebGL"
+    "build": "tsc -p code/geopose && tsc -p code/vuforia && tsc -p code/vuforiaDecals && tsc -p code/directionsHTML && tsc -p code/directionsWebGL && tsc -p code/panorama-reality && tsc -p code/panorama && tsc -p code/streetview-reality && tsc -p code/streetview  "
   }
 }

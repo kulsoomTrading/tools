@@ -13,6 +13,7 @@ var app = Argon.init();
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera();
 var userLocation = new THREE.Object3D;
+scene.add(camera);
 scene.add(userLocation);
 // The CSS3DArgonRenderer supports mono and stereo views.  Currently
 // not using it in this example, but left it in the code in case we
@@ -133,7 +134,7 @@ function toFixed(value, precision) {
 // the updateEvent is called each time the 3D world should be
 // rendered, before the renderEvent.  The state of your application
 // should be updated here.
-app.updateEvent.addEventListener(function () {
+app.updateEvent.addEventListener(function (frame) {
     // get the position and orientation (the "pose") of the user
     // in the local coordinate frame.
     var userPose = app.context.getEntityPose(app.context.user);
@@ -149,27 +150,17 @@ app.updateEvent.addEventListener(function () {
     // the first time through, we create a geospatial position for
     // the box somewhere near us 
     if (!boxInit) {
-        var frame = app.context.getDefaultReferenceFrame();
+        var defaultFrame = app.context.getDefaultReferenceFrame();
         // set the box's position to 10 meters away from the user.
         // First, clone the userPose postion, and add 10 to the X
         var boxPos_1 = userPose.position.clone();
         boxPos_1.x += 10;
         // set the value of the box Entity to this local position, by
         // specifying the frame of reference to our local frame
-        boxGeoEntity.position.setValue(boxPos_1, frame);
+        boxGeoEntity.position.setValue(boxPos_1, defaultFrame);
         // orient the box according to the local world frame
         boxGeoEntity.orientation.setValue(Cesium.Quaternion.IDENTITY);
-        // now, we want to move the box's coordinates to the FIXED frame, so
-        // the box doesn't move if the local coordinate system origin changes.
-        // Get box position in global coordinates and reset it's
-        // position to be independent of the user location, in the 
-        // global frame of reference
-        var boxPoseFIXED_1 = app.context.getEntityPose(boxGeoEntity, ReferenceFrame.FIXED);
-        if (boxPoseFIXED_1.poseStatus & Argon.PoseStatus.KNOWN) {
-            boxInit = true;
-            boxGeoEntity.position.setValue(boxPoseFIXED_1.position, ReferenceFrame.FIXED);
-            boxGeoEntity.orientation.setValue(boxPoseFIXED_1.orientation);
-            // once everything is done, add it to the scene
+        if (Argon.convertEntityReferenceFrame(boxGeoEntity, frame.time, ReferenceFrame.FIXED)) {
             scene.add(boxGeoObject);
         }
     }
@@ -220,11 +211,11 @@ app.updateEvent.addEventListener(function () {
     }
     // we'll compute the distance to the cube, just for fun. If the cube could be further away,
     // we'd want to use Cesium.EllipsoidGeodesic, rather than Euclidean distance, but this is fine here.
-    var userPos = userLocation.getWorldPosition();
+    var cameraPos = camera.getWorldPosition();
     var buzzPos = buzz.getWorldPosition();
     var boxPos = box.getWorldPosition();
-    var distanceToBox = userPos.distanceTo(boxPos);
-    var distanceToBuzz = userPos.distanceTo(buzzPos);
+    var distanceToBox = cameraPos.distanceTo(boxPos);
+    var distanceToBuzz = cameraPos.distanceTo(buzzPos);
     // create some feedback text
     var infoText = "Geospatial Argon example:\n";
     // infoText = "frame: " + state.frameNumber;
