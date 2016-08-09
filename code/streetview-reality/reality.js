@@ -277,3 +277,6 @@ function rotationMatrixToEulerZXY(mat, result) {
     }
     return result;
 }
+// function fovFromProjectionMatrix(mat) {
+//     Matrix4
+// } 
