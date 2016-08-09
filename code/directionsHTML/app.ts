@@ -216,7 +216,7 @@ function renderFunc() {
         // for the camera.  Use it, and then update the FOV of the 
         // camera from it (needed by the CSS Perspective DIV)
         camera.projectionMatrix.fromArray(subview.projectionMatrix);
-        renderer.updateCameraFOVFromProjection(camera);
+        camera.fov = subview.frustum.fovy * 180 / Math.PI;
 
         // set the viewport for this view
         let {x,y,width,height} = subview.viewport;

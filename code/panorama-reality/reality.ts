@@ -13,7 +13,7 @@ const CesiumMath = Argon.Cesium.CesiumMath;
 // Defining a protocol allows apps to communicate with the reality in a 
 // reliable way. 
 const app = Argon.initReality({
-    config: {
+    configuration: {
         protocols: ['ael.gatech.panorama@v1'] 
     }
 });
@@ -115,14 +115,10 @@ function onFrame(time, index:number) {
     // Rotate the eye according to the device orientation
     // (the eye should be positioned at the current panorama)
     eyeEntity.orientation.setValue(deviceOrientation);
-    
-    const viewport = app.view.getMaximumViewport();
-    perspectiveProjection.aspectRatio = viewport.width / viewport.height;
-    const matrix = perspectiveProjection.infiniteProjectionMatrix;
-        
+
     // By raising a frame state event, we are describing to the  manager when and where we
     // are in the world, what direction we are looking, and how we are able to render. 
-    app.reality.frameEvent.raiseEvent({
+    app.reality.publishFrame({
         time,
         index,
         // A reality should pass an "eye" configuration to the manager. The manager will 
