@@ -13,7 +13,6 @@ var app = Argon.init();
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera();
 var userLocation = new THREE.Object3D;
-scene.add(camera);
 scene.add(userLocation);
 // The CSS3DArgonRenderer supports mono and stereo views.  Currently
 // not using it in this example, but left it in the code in case we
@@ -37,7 +36,7 @@ app.view.element.appendChild(cssRenderer.domElement);
 app.view.element.appendChild(hud.domElement);
 // We put some elements in the index.html, for convenience. 
 // Here, we retrieve them, duplicate and move the information boxes to the 
-// the CSS3DArgonRnderer hudElements.  We are explicitly creating the two
+// the CSS3DArgonHUD hudElements.  We are explicitly creating the two
 // elements so we can update them both.
 var hudContent = document.getElementById('hud');
 hud.hudElements[0].appendChild(hudContent);
@@ -221,11 +220,11 @@ app.updateEvent.addEventListener(function () {
     }
     // we'll compute the distance to the cube, just for fun. If the cube could be further away,
     // we'd want to use Cesium.EllipsoidGeodesic, rather than Euclidean distance, but this is fine here.
-    var cameraPos = camera.getWorldPosition();
+    var userPos = userLocation.getWorldPosition();
     var buzzPos = buzz.getWorldPosition();
     var boxPos = box.getWorldPosition();
-    var distanceToBox = cameraPos.distanceTo(boxPos);
-    var distanceToBuzz = cameraPos.distanceTo(buzzPos);
+    var distanceToBox = userPos.distanceTo(boxPos);
+    var distanceToBuzz = userPos.distanceTo(buzzPos);
     // create some feedback text
     var infoText = "Geospatial Argon example:\n";
     // infoText = "frame: " + state.frameNumber;
