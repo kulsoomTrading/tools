@@ -1,4 +1,6 @@
-/// <reference path="../../typings/index.d.ts"/>
+/// <reference types="argon"/>
+/// <reference types="three"/>
+/// <reference types="dat-gui"/>
 // set up Argon
 var app = Argon.init();
 // Tell argon what local coordinate system you want.  The default coordinate
@@ -291,7 +293,8 @@ function mergeDecals() {
 }
 // tell argon to initialize vuforia for our app, using our license information.
 app.vuforia.init({
-    licenseKey: "AXRIsu7/////AAAAAaYn+sFgpkAomH+Z+tK/Wsc8D+x60P90Nz8Oh0J8onzjVUIP5RbYjdDfyatmpnNgib3xGo1v8iWhkU1swiCaOM9V2jmpC4RZommwQzlgFbBRfZjV8DY3ggx9qAq8mijhN7nMzFDMgUhOlRWeN04VOcJGVUxnKn+R+oot1XTF5OlJZk3oXK2UfGkZo5DzSYafIVA0QS3Qgcx6j2qYAa/SZcPqiReiDM9FpaiObwxV3/xYJhXPUGVxI4wMcDI0XBWtiPR2yO9jAnv+x8+p88xqlMH8GHDSUecG97NbcTlPB0RayGGg1F6Y7v0/nQyk1OIp7J8VQ2YrTK25kKHST0Ny2s3M234SgvNCvnUHfAKFQ5KV"
+    licenseKey: "AXRIsu7/////AAAAAaYn+sFgpkAomH+Z+tK/Wsc8D+x60P90Nz8Oh0J8onzjVUIP5RbYjdDfyatmpnNgib3xGo1v8iWhkU1swiCaOM9V2jmpC4RZommwQzlgFbBRfZjV8DY3ggx9qAq8mijhN7nMzFDMgUhOlRWeN04VOcJGVUxnKn+R+oot1XTF5OlJZk3oXK2UfGkZo5DzSYafIVA0QS3Qgcx6j2qYAa/SZcPqiReiDM9FpaiObwxV3/xYJhXPUGVxI4wMcDI0XBWtiPR2yO9jAnv+x8+p88xqlMH8GHDSUecG97NbcTlPB0RayGGg1F6Y7v0/nQyk1OIp7J8VQ2YrTK25kKHST0Ny2s3M234SgvNCvnUHfAKFQ5KV",
+    encryptedLicenseData: "-----BEGIN PGP MESSAGE-----\n    Version: OpenPGP.js v2.3.2\n    Comment: http://openpgpjs.org\n\n    wcFMA1AUQCNdm8lhAQ/8DgunMAyO2CdJGDaWqz+XhS+TNIl9i1g4kDxY8jpV\n    WH0cw8R9f2G8z/bj+6KviOBEUnV/7XORp4CnwxsVrbQyGZAJwTn+MzNZjFkl\n    cg963F/LiUqfMwL4A3GIAZfAK8H8QYOUm9NUEYKNR5KSbBR/Q2GmgQy0bFSU\n    2UTfdq4upQMHYWSA7Bhb4+TNziZC1RNY5s0UGoMpYCrpuqRrI0PzY+Y+Upm/\n    62p2QdCwdO6VwtZrYrU6geoiry0a773WgCwXGgoJcm7cwn4ZBzVLTvq2iUc6\n    ZsQloVX5+w3aIovbqSY8iAv/LUTZRaxj4fsrXENUbus9hXr5QsILMDviKNws\n    AQQDCuxKxZn4P/Kr5cSuj5CInYcR1+43jLdYOSrdvx5R6akcPMoOH0Jf4O0y\n    G2O7tuHmD/eUYIO4cJqMzPsopl4+lEVheOCNg6XvfEMpgGKj7x2b8Ah5NYqZ\n    R7dfKypwuk4KAScN9Sv0AL7gBGEHMgH2tey6jK/FN4LhoYWGpSiYYF8ESefj\n    y8dR+OEon0689U9Qx0SFpIf3N8sv65PcgvEG0q88U3MP0ILVrblJi/1nPjH3\n    wdHC5gOFHQ7znGc8b8ULK5LWJglFSZSAEuyQKf/VzeLrMCYmf5VojMoHkCF0\n    t/JLV90N3D9Xq4VTJb+LwZSefOd3cM2JioaX84oIkV/SwUgBlFdPT1pl2QCd\n    HiH3xFzI5Aqo1ou9+hSia7i/Wy+0tcrQGSN/EVgLUnaOAhtS+nGvLIEaQ7CK\n    stNgWcgs3RV6l0j08OIBAePUAq4VA/eXNdhf+Kr0kTQHBWNJynOTSfMPOd40\n    cX6j08oymiXCoo14M9KbcGYzW/SviBcyYRjpFCJoyEA21peh9T+1r5/ysAS9\n    TqZesOtTqzyq3Cl1/RD9mWhbyNA+uy7UtiADB2n3TfRhotHexCw6mc+ViuDy\n    Jqas6reSRrzlbsdgW0QWt7NsCKXR/PFWjDLcFxU1Si+UCzrQmj6KKVem9J+j\n    jCooRgZdNhBkk1YI1YN6Rk1CS57vYyJzguGRLtd5oNGiyWHWKcFycGWtS4hQ\n    zOctD+6v+9jVekg2CZpK3l8CZV8VfKQweEJqHL8Rz0oVxbE4cXUbkoqdZITc\n    gThpqJ3BFdCek921yT8M/qKjvJNvfHKkjVNfR94Id+rpW05fvjyAQIgQ+eaI\n    S2cxPSB2C/Fke2goHc9yOQsOeouXI1U0xI4IWT9h8yaxsZ4DUzkOdITBACKQ\n    txkkd41URb2UQZnnU/UEbkOBblj3/m7XDb7tq5tQG+vhiFzBa/R70E23Xfun\n    8hgeolsw+e7qQKzylZtMi1AFu+FLg2+NCTTru3Pjw2M0tKl0Q+VcsqyXE+3G\n    NPXVCPzd/pPn6J0Mx/6l\n    =RBAV\n    -----END PGP MESSAGE-----\n    "
 }).then(function (api) {
     // the vuforia API is ready, so we can start using it.
     // tell argon to download a vuforia dataset.  The .xml and .dat file must be together

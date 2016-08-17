@@ -1,8 +1,6 @@
-/// <reference path="../../typings/index.d.ts"/>
-
-// When we distribute Argon typings, we can get rid of this, but for now
-// we need to shut up the Typescript compiler about missing Argon typings
-declare const Argon:any;
+/// <reference types="argon"/>
+/// <reference types="three"/>
+/// <reference types="dat-gui"/>
 
 // set up Argon
 const app = Argon.init();
@@ -385,7 +383,39 @@ function mergeDecals() {
 
 // tell argon to initialize vuforia for our app, using our license information.
 app.vuforia.init({
-	licenseKey: "AXRIsu7/////AAAAAaYn+sFgpkAomH+Z+tK/Wsc8D+x60P90Nz8Oh0J8onzjVUIP5RbYjdDfyatmpnNgib3xGo1v8iWhkU1swiCaOM9V2jmpC4RZommwQzlgFbBRfZjV8DY3ggx9qAq8mijhN7nMzFDMgUhOlRWeN04VOcJGVUxnKn+R+oot1XTF5OlJZk3oXK2UfGkZo5DzSYafIVA0QS3Qgcx6j2qYAa/SZcPqiReiDM9FpaiObwxV3/xYJhXPUGVxI4wMcDI0XBWtiPR2yO9jAnv+x8+p88xqlMH8GHDSUecG97NbcTlPB0RayGGg1F6Y7v0/nQyk1OIp7J8VQ2YrTK25kKHST0Ny2s3M234SgvNCvnUHfAKFQ5KV"
+	licenseKey: "AXRIsu7/////AAAAAaYn+sFgpkAomH+Z+tK/Wsc8D+x60P90Nz8Oh0J8onzjVUIP5RbYjdDfyatmpnNgib3xGo1v8iWhkU1swiCaOM9V2jmpC4RZommwQzlgFbBRfZjV8DY3ggx9qAq8mijhN7nMzFDMgUhOlRWeN04VOcJGVUxnKn+R+oot1XTF5OlJZk3oXK2UfGkZo5DzSYafIVA0QS3Qgcx6j2qYAa/SZcPqiReiDM9FpaiObwxV3/xYJhXPUGVxI4wMcDI0XBWtiPR2yO9jAnv+x8+p88xqlMH8GHDSUecG97NbcTlPB0RayGGg1F6Y7v0/nQyk1OIp7J8VQ2YrTK25kKHST0Ny2s3M234SgvNCvnUHfAKFQ5KV",
+    encryptedLicenseData:
+    `-----BEGIN PGP MESSAGE-----
+    Version: OpenPGP.js v2.3.2
+    Comment: http://openpgpjs.org
+
+    wcFMA1AUQCNdm8lhAQ/8DgunMAyO2CdJGDaWqz+XhS+TNIl9i1g4kDxY8jpV
+    WH0cw8R9f2G8z/bj+6KviOBEUnV/7XORp4CnwxsVrbQyGZAJwTn+MzNZjFkl
+    cg963F/LiUqfMwL4A3GIAZfAK8H8QYOUm9NUEYKNR5KSbBR/Q2GmgQy0bFSU
+    2UTfdq4upQMHYWSA7Bhb4+TNziZC1RNY5s0UGoMpYCrpuqRrI0PzY+Y+Upm/
+    62p2QdCwdO6VwtZrYrU6geoiry0a773WgCwXGgoJcm7cwn4ZBzVLTvq2iUc6
+    ZsQloVX5+w3aIovbqSY8iAv/LUTZRaxj4fsrXENUbus9hXr5QsILMDviKNws
+    AQQDCuxKxZn4P/Kr5cSuj5CInYcR1+43jLdYOSrdvx5R6akcPMoOH0Jf4O0y
+    G2O7tuHmD/eUYIO4cJqMzPsopl4+lEVheOCNg6XvfEMpgGKj7x2b8Ah5NYqZ
+    R7dfKypwuk4KAScN9Sv0AL7gBGEHMgH2tey6jK/FN4LhoYWGpSiYYF8ESefj
+    y8dR+OEon0689U9Qx0SFpIf3N8sv65PcgvEG0q88U3MP0ILVrblJi/1nPjH3
+    wdHC5gOFHQ7znGc8b8ULK5LWJglFSZSAEuyQKf/VzeLrMCYmf5VojMoHkCF0
+    t/JLV90N3D9Xq4VTJb+LwZSefOd3cM2JioaX84oIkV/SwUgBlFdPT1pl2QCd
+    HiH3xFzI5Aqo1ou9+hSia7i/Wy+0tcrQGSN/EVgLUnaOAhtS+nGvLIEaQ7CK
+    stNgWcgs3RV6l0j08OIBAePUAq4VA/eXNdhf+Kr0kTQHBWNJynOTSfMPOd40
+    cX6j08oymiXCoo14M9KbcGYzW/SviBcyYRjpFCJoyEA21peh9T+1r5/ysAS9
+    TqZesOtTqzyq3Cl1/RD9mWhbyNA+uy7UtiADB2n3TfRhotHexCw6mc+ViuDy
+    Jqas6reSRrzlbsdgW0QWt7NsCKXR/PFWjDLcFxU1Si+UCzrQmj6KKVem9J+j
+    jCooRgZdNhBkk1YI1YN6Rk1CS57vYyJzguGRLtd5oNGiyWHWKcFycGWtS4hQ
+    zOctD+6v+9jVekg2CZpK3l8CZV8VfKQweEJqHL8Rz0oVxbE4cXUbkoqdZITc
+    gThpqJ3BFdCek921yT8M/qKjvJNvfHKkjVNfR94Id+rpW05fvjyAQIgQ+eaI
+    S2cxPSB2C/Fke2goHc9yOQsOeouXI1U0xI4IWT9h8yaxsZ4DUzkOdITBACKQ
+    txkkd41URb2UQZnnU/UEbkOBblj3/m7XDb7tq5tQG+vhiFzBa/R70E23Xfun
+    8hgeolsw+e7qQKzylZtMi1AFu+FLg2+NCTTru3Pjw2M0tKl0Q+VcsqyXE+3G
+    NPXVCPzd/pPn6J0Mx/6l
+    =RBAV
+    -----END PGP MESSAGE-----
+    `
 }).then((api)=>{
     // the vuforia API is ready, so we can start using it.
 
@@ -417,8 +447,8 @@ app.vuforia.init({
                 // if the pose is known the target is visible, so set the
                 // THREE object to it's location and orientation
                 if (stonesPose.poseStatus & Argon.PoseStatus.KNOWN) {
-                    stonesObject.position.copy(stonesPose.position);
-                    stonesObject.quaternion.copy(stonesPose.orientation);
+                    stonesObject.position.copy(<any>stonesPose.position);
+                    stonesObject.quaternion.copy(<any>stonesPose.orientation);
                 }
                 
                 // when the target is first seen after not being seen, the 
@@ -447,8 +477,8 @@ app.vuforia.init({
             const userPose = app.context.getEntityPose(app.context.user);
 
             if (userPose.poseStatus & Argon.PoseStatus.KNOWN) {
-                headModel.position.copy(userPose.position);
-                headModel.quaternion.copy(userPose.orientation);
+                headModel.position.copy(<any>userPose.position);
+                headModel.quaternion.copy(<any>userPose.orientation);
                 headModel.translateZ(-160);
                 headModel.rotateX(-Math.PI/2);
             }
@@ -478,11 +508,11 @@ app.renderEvent.addEventListener(() => {
     for (let subview of app.view.getSubviews()) {
         // set the position and orientation of the camera for 
         // this subview
-        camera.position.copy(subview.pose.position);
-        camera.quaternion.copy(subview.pose.orientation);
+        camera.position.copy(<any>subview.pose.position);
+        camera.quaternion.copy(<any>subview.pose.orientation);
         // the underlying system provide a full projection matrix
         // for the camera. 
-        camera.projectionMatrix.fromArray(subview.projectionMatrix);
+        camera.projectionMatrix.fromArray(<any>subview.projectionMatrix);
 
         // set the viewport for this view
         let {x,y,width,height} = subview.viewport;

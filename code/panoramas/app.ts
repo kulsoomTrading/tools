@@ -1,8 +1,5 @@
-/// <reference path="../../typings/index.d.ts"/>
-
-// When we distribute Argon typings, we can get rid of this, but for now
-// we need to shut up the Typescript compiler about missing Argon typings
-declare const Argon:any;
+/// <reference types="argon"/>
+/// <reference types="three"/>
 
 // set up Argon
 const app = Argon.init();
@@ -46,9 +43,8 @@ scene.add(ambientlight);
 
 // set our desired reality 
 app.reality.setDesired({
-    type:'hosted',
-    name: 'My Panorama Tour',
-    url: Argon.resolveURL('../panorama-reality/index.html')
+    title: 'My Panorama Tour',
+    uri: Argon.resolveURL('../panorama-reality/index.html')
 })
 
 // the information needed for each panorama to be used.  Panoramas need to be geolocated to be
@@ -213,7 +209,7 @@ app.updateEvent.addEventListener(() => {
     // assuming we know the user's pose, set the position of our 
     // THREE user object to match it
     if (userPose.poseStatus & Argon.PoseStatus.KNOWN) {
-        userLocation.position.copy(userPose.position);
+        userLocation.position.copy(<any>userPose.position);
     }
 })
 
@@ -229,11 +225,11 @@ app.renderEvent.addEventListener(() => {
     for (let subview of app.view.getSubviews()) {
         // set the position and orientation of the camera for 
         // this subview
-        camera.position.copy(subview.pose.position);
-        camera.quaternion.copy(subview.pose.orientation);
+        camera.position.copy(<any>subview.pose.position);
+        camera.quaternion.copy(<any>subview.pose.orientation);
         // the underlying system provide a full projection matrix
         // for the camera. 
-        camera.projectionMatrix.fromArray(subview.projectionMatrix);
+        camera.projectionMatrix.fromArray(<any>subview.projectionMatrix);
 
         // set the viewport for this view
         let {x,y,width,height} = subview.viewport;

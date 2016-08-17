@@ -1,9 +1,8 @@
-/// <reference path="../../typings/index.d.ts"/>
+/// <reference types="argon"/>
 // set up Argon
 var app = Argon.init();
 // set our desired reality 
 app.reality.setDesired({
-    type: 'hosted',
-    name: 'My Nearest Streetview',
-    url: Argon.resolveURL('../streetview-reality/index.html')
+    title: 'My Nearest Streetview',
+    uri: Argon.resolveURL('../streetview-reality/index.html')
 });

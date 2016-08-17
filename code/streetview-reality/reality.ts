@@ -1,8 +1,6 @@
-/// <reference path="../../typings/index.d.ts"/>
-
-// When we distribute Argon typings, we can get rid of this, but for now
-// we need to shut up the Typescript compiler about missing Argon typings
-declare const Argon:any;
+/// <reference types="argon"/>
+/// <reference types="three"/>
+/// <reference types="googlemaps"/>
 
 // save some local references to commonly used classes
 const Cartesian3 = Argon.Cesium.Cartesian3;
