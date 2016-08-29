@@ -1,4 +1,5 @@
-/// <reference path="../../typings/index.d.ts"/>
+/// <reference types="@argonjs/argon" />
+/// <reference types="three"/>
 // set up Argon
 var app = Argon.init();
 // set up THREE.  Create a scene, a perspective camera and an object
@@ -35,9 +36,8 @@ var ambientlight = new THREE.AmbientLight(0x404040); // soft white ambient light
 scene.add(ambientlight);
 // set our desired reality 
 app.reality.setDesired({
-    type: 'hosted',
-    name: 'My Panorama Tour',
-    url: Argon.resolveURL('../panorama-reality/index.html')
+    title: 'My Panorama Tour',
+    uri: Argon.resolveURL('../panorama-reality/index.html')
 });
 var panoRealitySession;
 // list our panoramas

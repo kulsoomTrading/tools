@@ -1,7 +1,5 @@
-/// <reference path="../../typings/index.d.ts"/>
-// When we distribute Argon typings, we can get rid of this, but for now
-// we need to shut up the Typescript compiler about missing Argon typings
-declare const Argon:any;
+/// <reference types="@argonjs/argon" />
+/// <reference types="three" />
 
 // grab some handles on APIs we use
 const Cesium = Argon.Cesium;
@@ -147,7 +145,6 @@ boxGeoObject.add(box);
 var boxInit = false;
 var boxCartographicDeg = [0,0,0];
 var lastInfoText = "";
-var lastTime = null;
 
 // make floating point output a little less ugly
 function toFixed(value, precision) {
@@ -204,18 +201,10 @@ app.updateEvent.addEventListener((frame) => {
     var geoPose = app.context.getEntityPose(gatechGeoEntity);
     gatechGeoTarget.position.copy(geoPose.position);        
 
-    // rotate the boxes at a constant speed, independent of frame rates
-    var deltaTime = 0;
-    if (lastTime) {
-        deltaTime = JulianDate.secondsDifference(app.context.getTime(), lastTime);
-    } else {
-        lastTime = new JulianDate();
-    }
-    lastTime = app.context.getTime().clone(lastTime);
-     
-    // make it a little less boring
-    buzz.rotateY(2 * deltaTime);
-    box.rotateY( 3 * deltaTime);
+    // rotate the boxes at a constant speed, independent of frame rates     
+    // to make it a little less boring
+    buzz.rotateY(2 * frame.deltaTime/10000);
+    box.rotateY( 3 * frame.deltaTime/10000);
 
     //
     // stuff to print out the status message.  It's fairly expensive to convert FIXED

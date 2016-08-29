@@ -1,4 +1,4 @@
-/// <reference types="argon"/>
+/// <reference types="@argonjs/argon" />
 /// <reference types="three"/>
 
 // set up Argon

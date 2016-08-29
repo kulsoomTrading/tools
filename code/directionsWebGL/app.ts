@@ -1,4 +1,5 @@
-/// <reference path="../../typings/index.d.ts"/>
+/// <reference types="@argonjs/argon"/>
+/// <reference types="three"/>
 
 // When we distribute Argon typings, we can get rid of this, but for now
 // we need to shut up the Typescript compiler about missing Argon typings
@@ -61,7 +62,7 @@ app.context.setDefaultReferenceFrame(app.context.localOriginEastUpSouth);
 // when they are above the horizon.  This package could be improved a lot (such as by 
 // adjusting the color of light based on distance above horizon, taking the phase of the
 // moon into account, etc) but it provides a simple starting point.
-const sunMoonLights = new THREE.SunMoonLights();
+const sunMoonLights = new (<any>THREE).SunMoonLights();
 // the SunMoonLights.update routine will add/remove the sun/moon lights depending on if
 // the sun/moon are above the horizon
 scene.add( sunMoonLights.lights );

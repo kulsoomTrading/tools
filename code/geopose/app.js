@@ -1,4 +1,5 @@
-/// <reference path="../../typings/index.d.ts"/>
+/// <reference types="@argonjs/argon" />
+/// <reference types="three" />
 // grab some handles on APIs we use
 var Cesium = Argon.Cesium;
 var Cartesian3 = Argon.Cesium.Cartesian3;
@@ -125,7 +126,6 @@ boxGeoObject.add(box);
 var boxInit = false;
 var boxCartographicDeg = [0, 0, 0];
 var lastInfoText = "";
-var lastTime = null;
 // make floating point output a little less ugly
 function toFixed(value, precision) {
     var power = Math.pow(10, precision || 0);
@@ -160,6 +160,8 @@ app.updateEvent.addEventListener(function (frame) {
         boxGeoEntity.position.setValue(boxPos_1, defaultFrame);
         // orient the box according to the local world frame
         boxGeoEntity.orientation.setValue(Cesium.Quaternion.IDENTITY);
+        // now, we want to move the box's coordinates to the FIXED frame, so
+        // the box doesn't move if the local coordinate system origin changes.
         if (Argon.convertEntityReferenceFrame(boxGeoEntity, frame.time, ReferenceFrame.FIXED)) {
             scene.add(boxGeoObject);
         }
@@ -171,18 +173,10 @@ app.updateEvent.addEventListener(function (frame) {
     // get the local coordinates of the GT box, and set the THREE object
     var geoPose = app.context.getEntityPose(gatechGeoEntity);
     gatechGeoTarget.position.copy(geoPose.position);
-    // rotate the boxes at a constant speed, independent of frame rates
-    var deltaTime = 0;
-    if (lastTime) {
-        deltaTime = JulianDate.secondsDifference(app.context.getTime(), lastTime);
-    }
-    else {
-        lastTime = new JulianDate();
-    }
-    lastTime = app.context.getTime().clone(lastTime);
-    // make it a little less boring
-    buzz.rotateY(2 * deltaTime);
-    box.rotateY(3 * deltaTime);
+    // rotate the boxes at a constant speed, independent of frame rates     
+    // to make it a little less boring
+    buzz.rotateY(2 * frame.deltaTime / 10000);
+    box.rotateY(3 * frame.deltaTime / 10000);
     //
     // stuff to print out the status message.  It's fairly expensive to convert FIXED
     // coordinates back to LLA, but those coordinates probably make the most sense as

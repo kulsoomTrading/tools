@@ -1,4 +1,4 @@
-/// <reference types="argon"/>
+/// <reference types="@argonjs/argon" />
 
 // set up Argon
 const app = Argon.init();

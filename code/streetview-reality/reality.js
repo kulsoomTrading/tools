@@ -1,4 +1,6 @@
-/// <reference path="../../typings/index.d.ts"/>
+/// <reference types="@argonjs/argon" />
+/// <reference types="three"/>
+/// <reference types="googlemaps"/>
 // save some local references to commonly used classes
 var Cartesian3 = Argon.Cesium.Cartesian3;
 var Quaternion = Argon.Cesium.Quaternion;
@@ -454,6 +456,3 @@ function rotationMatrixToEulerZXY(mat, result) {
     }
     return result;
 }
-// function fovFromProjectionMatrix(mat) {
-//     Matrix4
-// } 

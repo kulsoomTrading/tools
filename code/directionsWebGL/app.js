@@ -1,4 +1,5 @@
-/// <reference path="../../typings/index.d.ts"/>
+/// <reference types="@argonjs/argon"/>
+/// <reference types="three"/>
 // any time we use an INERTIAL frame in Cesium, it needs to know where to find it's
 // ASSET folder on the web.  The SunMoonLights computation uses INERTIAL frames, so
 // so we need to put the assets on the web and point Cesium at them

@@ -1,4 +1,5 @@
-/// <reference path="../../typings/index.d.ts"/>
+/// <reference types="@argonjs/argon"/>
+/// <reference types="three"/>
 
 // When we distribute Argon typings, we can get rid of this, but for now
 // we need to shut up the Typescript compiler about missing Argon typings

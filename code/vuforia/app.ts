@@ -1,5 +1,7 @@
-/// <reference types="argon" />
+/// <reference types="@argonjs/argon" />
 /// <reference types="three" />
+/// <reference types="dat-gui" />
+/// <reference types="stats" />
 
 // set up Argon
 const app = Argon.init();
@@ -144,7 +146,6 @@ loader.load( '../resources/fonts/helvetiker_bold.typeface.js', function ( font:T
 
 // tell argon to initialize vuforia for our app, using our license information.
 app.vuforia.init({
-	licenseKey: "AXRIsu7/////AAAAAaYn+sFgpkAomH+Z+tK/Wsc8D+x60P90Nz8Oh0J8onzjVUIP5RbYjdDfyatmpnNgib3xGo1v8iWhkU1swiCaOM9V2jmpC4RZommwQzlgFbBRfZjV8DY3ggx9qAq8mijhN7nMzFDMgUhOlRWeN04VOcJGVUxnKn+R+oot1XTF5OlJZk3oXK2UfGkZo5DzSYafIVA0QS3Qgcx6j2qYAa/SZcPqiReiDM9FpaiObwxV3/xYJhXPUGVxI4wMcDI0XBWtiPR2yO9jAnv+x8+p88xqlMH8GHDSUecG97NbcTlPB0RayGGg1F6Y7v0/nQyk1OIp7J8VQ2YrTK25kKHST0Ny2s3M234SgvNCvnUHfAKFQ5KV",
     encryptedLicenseData: 
 `-----BEGIN PGP MESSAGE-----
 Version: OpenPGP.js v2.3.2

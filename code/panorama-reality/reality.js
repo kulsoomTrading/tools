@@ -1,4 +1,4 @@
-/// <reference types="argon"/>
+/// <reference types="@argonjs/argon"/>
 /// <reference types="three"/>
 /// <reference types="tween.js"/>
 // save some local references to commonly used classes
