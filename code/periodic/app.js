@@ -490,6 +490,8 @@ function renderFunc() {
     // which div's to use for each view
     for (var _i = 0, _a = subViews; _i < _a.length; _i++) {
         var subview = _a[_i];
+        var frustum = subview.frustum;
+
         // set the position and orientation of the camera for 
         // this subview
         camera.position.copy(subview.pose.position);
@@ -498,7 +500,7 @@ function renderFunc() {
         // for the camera.  Use it, and then update the FOV of the 
         // camera from it (needed by the CSS Perspective DIV)
         camera.projectionMatrix.fromArray(subview.projectionMatrix);
-        renderer.updateCameraFOVFromProjection(camera);
+        camera.fov = THREE.Math.radToDeg(frustum.fovy);
 
         // set the viewport for this view
         var _b = subview.viewport, x = _b.x, y = _b.y, width = _b.width, height = _b.height;

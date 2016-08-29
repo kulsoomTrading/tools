@@ -283,6 +283,7 @@ app.renderEvent.addEventListener(() => {
 
     // there is 1 subview in monocular mode, 2 in stereo mode    
     for (let subview of app.view.getSubviews()) {
+        var frustum = subview.frustum;
         // set the position and orientation of the camera for 
         // this subview
         camera.position.copy(subview.pose.position);
@@ -295,7 +296,8 @@ app.renderEvent.addEventListener(() => {
         let {x,y,width,height} = subview.viewport;
 
         // set the CSS rendering up, by computing the FOV, and render this view
-        cssRenderer.updateCameraFOVFromProjection(camera);
+        camera.fov = THREE.Math.radToDeg(frustum.fovy);
+
         cssRenderer.setViewport(x,y,width,height, subview.index);
         cssRenderer.render(scene, camera, subview.index);
 

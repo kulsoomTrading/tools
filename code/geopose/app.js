@@ -247,6 +247,7 @@ app.renderEvent.addEventListener(function () {
     // there is 1 subview in monocular mode, 2 in stereo mode    
     for (var _i = 0, _a = app.view.getSubviews(); _i < _a.length; _i++) {
         var subview = _a[_i];
+        var frustum = subview.frustum;
         // set the position and orientation of the camera for 
         // this subview
         camera.position.copy(subview.pose.position);
@@ -257,7 +258,7 @@ app.renderEvent.addEventListener(function () {
         // set the viewport for this view
         var _b = subview.viewport, x = _b.x, y = _b.y, width = _b.width, height = _b.height;
         // set the CSS rendering up, by computing the FOV, and render this view
-        cssRenderer.updateCameraFOVFromProjection(camera);
+        camera.fov = THREE.Math.radToDeg(frustum.fovy);
         cssRenderer.setViewport(x, y, width, height, subview.index);
         cssRenderer.render(scene, camera, subview.index);
         // set the webGL rendering parameters and render this view
