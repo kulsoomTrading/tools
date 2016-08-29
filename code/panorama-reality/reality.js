@@ -1,4 +1,6 @@
-/// <reference path="../../typings/index.d.ts"/>
+/// <reference types="argon"/>
+/// <reference types="three"/>
+/// <reference types="tween.js"/>
 // save some local references to commonly used classes
 var Cartesian3 = Argon.Cesium.Cartesian3;
 var Quaternion = Argon.Cesium.Quaternion;

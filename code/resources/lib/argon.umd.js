@@ -3280,11 +3280,12 @@ $__System.register('9', ['c', 'a', 'b', '8'], function (exports_1, context_1) {
                     context.wellKnownReferenceFrames.add(this.orientationEntity);
                     context.wellKnownReferenceFrames.add(this.entity);
                     context.wellKnownReferenceFrames.add(this.displayEntity);
-                    if (typeof window !== 'undefined' && window.navigator) {
-                        this._mobileDetect = new mobile_detect_1.default(window.navigator.userAgent);
+                    if (typeof navigator !== 'undefined') {
+                        this._mobileDetect = new mobile_detect_1.default(navigator.userAgent);
                     }
                 }
                 DeviceService.prototype.onIdle = function () {
+                    if (typeof navigator === 'undefined') return;
                     if (cesium_imports_1.defined(this._geolocationWatchId)) {
                         navigator.geolocation.clearWatch(this._geolocationWatchId);
                         this._geolocationWatchId = undefined;
@@ -3297,7 +3298,7 @@ $__System.register('9', ['c', 'a', 'b', '8'], function (exports_1, context_1) {
                 };
                 DeviceService.prototype.onUpdate = function () {
                     var _this = this;
-                    if (typeof window !== 'undefined') {
+                    if (typeof navigator !== 'undefined') {
                         var interfaceOrientationProperty = this.displayEntity.orientation;
                         var interfaceOrientation = cesium_imports_1.Quaternion.fromAxisAngle(cesium_imports_1.Cartesian3.UNIT_Z, (-window.orientation || 0) * cesium_imports_1.CesiumMath.RADIANS_PER_DEGREE, this._scratchQuaternion1);
                         if (this._mobileDetect && !this._mobileDetect.mobile()) {
@@ -3312,7 +3313,7 @@ $__System.register('9', ['c', 'a', 'b', '8'], function (exports_1, context_1) {
                                     var sampledPostionProperty = new cesium_imports_1.SampledPositionProperty(cesium_imports_1.ReferenceFrame.FIXED);
                                     sampledPostionProperty.forwardExtrapolationType = cesium_imports_1.ExtrapolationType.HOLD;
                                     sampledPostionProperty.backwardExtrapolationType = cesium_imports_1.ExtrapolationType.HOLD;
-                                    sampledPostionProperty['maxNumSamples'] = 10;
+                                    sampledPostionProperty.maxNumSamples = 10;
                                     _this.geolocationEntity.position = sampledPostionProperty;
                                 }
                                 var positionTime = cesium_imports_1.JulianDate.fromDate(new Date(pos.timestamp));
@@ -3648,6 +3649,9 @@ $__System.register('13', ['c', '14', '10', '12'], function (exports_1, context_1
                 VuforiaServiceDelegate.prototype.setHint = function (hint, value) {
                     return true;
                 };
+                VuforiaServiceDelegate.prototype.decryptLicenseKey = function (encryptedLicenseData, session) {
+                    return Promise.resolve(undefined);
+                };
                 VuforiaServiceDelegate.prototype.init = function (options) {
                     return Promise.resolve(VuforiaInitResult.SUCCESS);
                 };
@@ -3717,22 +3721,28 @@ $__System.register('13', ['c', '14', '10', '12'], function (exports_1, context_1
                             session.on['ar.vuforia.isAvailable'] = function () {
                                 return Promise.resolve({ available: delegate.isAvailable() });
                             };
-                            session.on['ar.vuforia.init'] = function (options, event) {
+                            session.on['ar.vuforia.init'] = function (options) {
                                 if (!delegate.isAvailable()) throw new Error("Vuforia is not supported");
                                 if (_this._sessionIsInitialized.get(session)) throw new Error("Vuforia has already been initialized");
-                                _this._sessionInitOptions.set(session, options);
-                                var result = commandQueue.push(function () {
-                                    return _this._init(session).then(function () {
-                                        _this._sessionIsInitialized.set(session, true);
+                                if (!options.key && !options.encryptedLicenseData) throw new Error("Expected `encryptedLicenseData` field. You can encrypt your Vuforia license key at http://docs.argonjs.io/start/vuforia-pgp-encryptor");
+                                var keyPromise = options.key ? Promise.resolve(options.key) : delegate.decryptLicenseKey(options.encryptedLicenseData, session);
+                                return keyPromise.then(function (key) {
+                                    _this._sessionInitOptions.set(session, {
+                                        key: key
                                     });
-                                }, _this._controllingSession === session);
-                                if (_this.focusService.getSession() === session) {
-                                    _this._setControllingSession(session);
-                                }
-                                _this._sessionInitPromise.set(session, result);
-                                return result;
+                                    var result = commandQueue.push(function () {
+                                        return _this._init(session).then(function () {
+                                            _this._sessionIsInitialized.set(session, true);
+                                        });
+                                    }, _this._controllingSession === session);
+                                    if (_this.focusService.getSession() === session) {
+                                        _this._setControllingSession(session);
+                                    }
+                                    _this._sessionInitPromise.set(session, result);
+                                    return result;
+                                });
                             };
-                            session.on['ar.vuforia.objectTrackerCreateDataSet'] = function (_a, event) {
+                            session.on['ar.vuforia.objectTrackerCreateDataSet'] = function (_a) {
                                 var url = _a.url;
                                 return commandQueue.push(function () {
                                     var id = delegate.objectTrackerCreateDataSet(url);
@@ -3743,7 +3753,7 @@ $__System.register('13', ['c', '14', '10', '12'], function (exports_1, context_1
                                     throw new Error('Unable to create DataSet');
                                 }, _this._controllingSession === session);
                             };
-                            session.on['ar.vuforia.objectTrackerActivateDataSet'] = function (_a, event) {
+                            session.on['ar.vuforia.objectTrackerActivateDataSet'] = function (_a) {
                                 var id = _a.id;
                                 return commandQueue.push(function () {
                                     if (delegate.objectTrackerActivateDataSet(id)) {
@@ -3754,7 +3764,7 @@ $__System.register('13', ['c', '14', '10', '12'], function (exports_1, context_1
                                     throw new Error("Unable to activate DataSet (" + id + ")");
                                 }, _this._controllingSession === session);
                             };
-                            session.on['ar.vuforia.objectTrackerDeactivateDataSet'] = function (_a, event) {
+                            session.on['ar.vuforia.objectTrackerDeactivateDataSet'] = function (_a) {
                                 var id = _a.id;
                                 return commandQueue.push(function () {
                                     if (delegate.objectTrackerDeactivateDataSet(id)) {
@@ -3765,13 +3775,13 @@ $__System.register('13', ['c', '14', '10', '12'], function (exports_1, context_1
                                     throw new Error("Unable to deactivate DataSet (" + id + ")");
                                 }, _this._controllingSession === session);
                             };
-                            session.on['ar.vuforia.dataSetFetch'] = function (_a, event) {
+                            session.on['ar.vuforia.dataSetFetch'] = function (_a) {
                                 var id = _a.id;
                                 return commandQueue.push(function () {
                                     return delegate.dataSetFetch(id);
                                 }, _this._controllingSession === session);
                             };
-                            session.on['ar.vuforia.dataSetLoad'] = function (_a, event) {
+                            session.on['ar.vuforia.dataSetLoad'] = function (_a) {
                                 var id = _a.id;
                                 return commandQueue.push(function () {
                                     return delegate.dataSetLoad(id);
@@ -3805,8 +3815,24 @@ $__System.register('13', ['c', '14', '10', '12'], function (exports_1, context_1
                         return message.available;
                     });
                 };
+                /**
+                 * Initialize vuforia with an unecrypted key. Manager-only, unless the "force" (flag) is used.
+                 * It's a bad idea to publish your private vuforia key on the internet.
+                 */
+                VuforiaService.prototype.initWithUnencryptedKey = function (options, force) {
+                    var _this = this;
+                    if (!force) this.sessionService.ensureIsManager();
+                    return this.sessionService.manager.request('ar.vuforia.init', options).then(function () {
+                        return new VuforiaAPI(_this.sessionService.manager);
+                    });
+                };
+                /**
+                 * Initialize vuforia using an encrypted license key.
+                 * You can encrypt your license key at http://docs.argonjs.io/start/vuforia-pgp-encryptor
+                 */
                 VuforiaService.prototype.init = function (options) {
                     var _this = this;
+                    if (!options.encryptedLicenseData || typeof options.encryptedLicenseData !== 'string') throw new Error('options.encryptedLicenseData is required.');
                     return this.sessionService.manager.request('ar.vuforia.init', options).then(function () {
                         return new VuforiaAPI(_this.sessionService.manager);
                     });
@@ -3895,13 +3921,9 @@ $__System.register('13', ['c', '14', '10', '12'], function (exports_1, context_1
                 };
                 VuforiaService.prototype._init = function (session) {
                     var _this = this;
+                    console.log("Attempting to initialize vuforia for " + session.uri);
                     var options = this._sessionInitOptions.get(session);
-                    var detailedOptions = {
-                        licenseKey: options.licenseKey,
-                        encryptedLicenseData: options.encryptedLicenseData,
-                        origin: session.uri || ''
-                    };
-                    return this.delegate.init(detailedOptions).then(function (initResult) {
+                    return this.delegate.init(options).then(function (initResult) {
                         if (initResult !== VuforiaInitResult.SUCCESS) {
                             throw new Error("Vuforia init failed: " + VuforiaInitResult[initResult]);
                         }
@@ -3927,7 +3949,9 @@ $__System.register('13', ['c', '14', '10', '12'], function (exports_1, context_1
                         if (!_this.delegate.cameraDeviceInitAndStart()) {
                             throw new Error("Vuforia init failed: Unable to complete initialization");
                         }
+                        console.log("Vuforia init success");
                     }).catch(function (err) {
+                        console.log("Vuforia init fail: " + err.message);
                         _this._sessionInitOptions.delete(session);
                         _this._sessionIsInitialized.set(session, false);
                         _this._deinit(session);
@@ -3988,13 +4012,13 @@ $__System.register('13', ['c', '14', '10', '12'], function (exports_1, context_1
                     this._dataSetMap = new Map();
                     this.dataSetActivateEvent = new utils_1.Event();
                     this.dataSetDeactivateEvent = new utils_1.Event();
-                    manager.on['ar.vuforia.objectTrackerActivateDataSetEvent'] = function (_a, event) {
+                    manager.on['ar.vuforia.objectTrackerActivateDataSetEvent'] = function (_a) {
                         var id = _a.id;
                         var dataSet = _this._dataSetMap.get(id);
                         dataSet._onActivate();
                         _this.dataSetActivateEvent.raiseEvent(dataSet);
                     };
-                    manager.on['ar.vuforia.objectTrackerDeactivateDataSetEvent'] = function (_a, event) {
+                    manager.on['ar.vuforia.objectTrackerDeactivateDataSetEvent'] = function (_a) {
                         var id = _a.id;
                         var dataSet = _this._dataSetMap.get(id);
                         dataSet._onDeactivate();
@@ -4419,6 +4443,10 @@ $__System.register('b', ['c', 'a', '10', '11', '12'], function (exports_1, conte
                             var entity = _this.subscribedEntities.getById(id);
                             entity.position = undefined;
                             entity.orientation = undefined;
+                            // WORKAROUND until https://github.com/AnalyticalGraphicsInc/cesium/issues/4225 is fixed
+                            entity = _this.entities.getById(id);
+                            entity.position = undefined;
+                            entity.orientation = undefined;
                             _this._updatingEntities.delete(id);
                         }
                     });
@@ -4465,26 +4493,22 @@ $__System.register('b', ['c', 'a', '10', '11', '12'], function (exports_1, conte
                     if (!entityPosition || entityPosition.referenceFrame !== referenceFrame) {
                         entityPosition = new cesium_imports_1.ConstantPositionProperty(positionValue, referenceFrame);
                         entity.position = entityPosition;
-                    }
-                    if (entityPosition instanceof cesium_imports_1.ConstantPositionProperty) {
+                    } else if (entityPosition instanceof cesium_imports_1.ConstantPositionProperty) {
                         entityPosition.setValue(positionValue, referenceFrame);
                     } else if (entityPosition instanceof cesium_imports_1.SampledPositionProperty) {
                         entityPosition.addSample(cesium_imports_1.JulianDate.clone(state.time), positionValue);
                     }
-                    if (orientationValue && !entityOrientation) {
-                        entityOrientation = new cesium_imports_1.SampledProperty(cesium_imports_1.Quaternion);
-                        entityOrientation.forwardExtrapolationType = cesium_imports_1.ExtrapolationType.HOLD;
-                        entityOrientation.forwardExtrapolationDuration = 5 / 60;
-                        entityOrientation['maxNumSamples'] = 10; // using our extension to limit memory consumption
+                    if (!entityOrientation) {
+                        entityOrientation = new cesium_imports_1.ConstantProperty(orientationValue);
                         entity.orientation = entityOrientation;
-                    }
-                    if (entityOrientation instanceof cesium_imports_1.ConstantProperty) {
+                    } else if (entityOrientation instanceof cesium_imports_1.ConstantProperty) {
                         entityOrientation.setValue(orientationValue);
                     } else if (entityOrientation instanceof cesium_imports_1.SampledProperty) {
                         entityOrientation.addSample(cesium_imports_1.JulianDate.clone(state.time), orientationValue);
                     }
                     return entity;
                 };
+                ContextService.prototype.publishEntityState = function (entity, referenceFrame) {};
                 ContextService.prototype._updateLocalOrigin = function (state) {
                     var userRootFrame = utils_1.getRootReferenceFrame(this.user);
                     var userPosition = this.user.position && this.user.position.getValueInReferenceFrame(state.time, userRootFrame, scratchCartesian3);
@@ -6187,11 +6211,17 @@ $__System.register('11', ['c', 'a', 'f', '14', '10', '12'], function (exports_1,
                                 var previous = _this.desiredRealityMap.get(session);
                                 console.log('Session set desired reality: ' + JSON.stringify(reality));
                                 if (reality) {
-                                    if (_this.isSupported(reality.type)) {
+                                    if (reality['type']) {
+                                        var type = reality['type'];
+                                        reality.uri = reality.uri || 'reality:' + type;
+                                        if (type === 'hosted') reality.uri = reality['url'];
+                                        if (!reality.title && reality['name']) reality.title = reality['name'];
+                                    }
+                                    if (_this.isSupported(reality)) {
                                         _this.desiredRealityMap.set(session, reality);
                                         _this.desiredRealityMapInverse.set(reality, session);
                                     } else {
-                                        session.sendError({ message: 'Reality of type "' + reality.type + '" is not available on this platform' });
+                                        session.sendError({ message: 'Reality of type "' + reality.uri + '" is not available on this platform' });
                                         return;
                                     }
                                 } else {
@@ -20297,6 +20327,15 @@ $__System.register('12', ['1d', 'a'], function (exports_1, context_1) {
         return result;
     }
     exports_1("decomposePerspectiveProjectionMatrix", decomposePerspectiveProjectionMatrix);
+    /**
+     * Convert an Entity's position and orientation properties to a new reference frame.
+     * The properties must be constant properties.
+     * @param entity The entity to convert.
+     * @param time The time which to retrieve the pose up the reference chain.
+     * @param referenceFrame The reference frame to convert the position and oriention to.
+     * @return a boolean indicating success or failure.  Will be false if either property is
+     * not constant, or if either property cannot be converted to the new frame.
+     */
     function convertEntityReferenceFrame(entity, time, frame) {
         if (!entity.position || !(entity.position instanceof cesium_imports_1.ConstantPositionProperty) || !entity.orientation || !(entity.orientation instanceof cesium_imports_1.ConstantProperty)) {
             return false;
@@ -20434,10 +20473,12 @@ $__System.register('12', ['1d', 'a'], function (exports_1, context_1) {
                 };
                 CommandQueue.prototype._executeNextCommand = function () {
                     var _this = this;
+                    this._currentCommand = undefined;
                     this._currentCommandPending = undefined;
                     if (this._paused) return;
                     var item = this._queue.shift();
                     if (!item) return;
+                    this._currentCommand = item.command;
                     this._currentCommandPending = item.execute().then(this._executeNextCommand.bind(this)).catch(function (e) {
                         _this.errorEvent.raiseEvent(e);
                         _this._executeNextCommand();
@@ -20596,8 +20637,6 @@ $__System.register('12', ['1d', 'a'], function (exports_1, context_1) {
             }();
             exports_1("MessageChannelFactory", MessageChannelFactory);
             scratchPerspectiveOffCenterFrustum = new cesium_imports_1.PerspectiveOffCenterFrustum();
-            // convert an entity with ConstantPosition and ConstantOrientation properties from
-            // one frame to another
             scratchCartesian = new cesium_imports_1.Cartesian3();
             scratchOrientation = new cesium_imports_1.Quaternion();
         }
@@ -20615,7 +20654,7 @@ $__System.register('1', ['2', 'c', 'a', '7', '10', 'f', 'b', '9', '14', '11', 'd
             _c = _b.container,
             container = _c === void 0 ? new DI.Container() : _c;
         var role;
-        if (typeof window === 'undefined') {
+        if (typeof HTMLElement === 'undefined') {
             role = common_1.Role.MANAGER;
         } else if (navigator.userAgent.indexOf('Argon') > 0 || window.top !== window) {
             role = common_1.Role.APPLICATION;

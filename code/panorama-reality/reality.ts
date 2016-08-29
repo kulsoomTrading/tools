@@ -1,8 +1,6 @@
-/// <reference path="../../typings/index.d.ts"/>
-
-// When we distribute Argon typings, we can get rid of this, but for now
-// we need to shut up the Typescript compiler about missing Argon typings
-declare const Argon:any;
+/// <reference types="argon"/>
+/// <reference types="three"/>
+/// <reference types="tween.js"/>
 
 // save some local references to commonly used classes
 const Cartesian3 = Argon.Cesium.Cartesian3;
@@ -169,7 +167,7 @@ app.updateEvent.addEventListener(() => {
     // assuming we know the user's pose, set the position of our 
     // THREE user object to match it
     if (userPose.poseStatus & Argon.PoseStatus.KNOWN) {
-        userLocation.position.copy(userPose.position);
+        userLocation.position.copy(<any>userPose.position);
     }
     
     TWEEN.update();
@@ -188,11 +186,11 @@ app.renderEvent.addEventListener(() => {
     for (let subview of app.view.getSubviews()) {
         // set the position and orientation of the camera for 
         // this subview
-        camera.position.copy(subview.pose.position);
-        camera.quaternion.copy(subview.pose.orientation);
+        camera.position.copy(<any>subview.pose.position);
+        camera.quaternion.copy(<any>subview.pose.orientation);
         // the underlying system provide a full projection matrix
         // for the camera. 
-        camera.projectionMatrix.fromArray(subview.projectionMatrix);
+        camera.projectionMatrix.fromArray(<any>subview.projectionMatrix);
 
         // set the viewport for this view
         let {x,y,width,height} = subview.viewport;
@@ -259,7 +257,7 @@ app.reality.connectEvent.addEventListener((controlSession)=>{
     controlSession.on['edu.gatech.ael.panorama.deletePanorama'] = ({url}) => {
         panoramas.delete(url);
     }
-    controlSession.on['edu.gatech.ael.panorama.showPanorama'] = (options) => {
+    controlSession.on['edu.gatech.ael.panorama.showPanorama'] = (options:ShowPanoramaOptions) => {
         showPanorama(options);
     }
 })

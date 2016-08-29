@@ -1,10 +1,17 @@
 {
   "devDependencies": {
+    "@types/dat-gui": "^0.5.28",
+    "@types/googlemaps": "^3.20.30",
+    "@types/three": "0.0.19",
+    "@types/tween.js": "0.0.27",
     "static-server": "^2.0.1",
-    "typescript": "^1.9.0-dev.20160504"
+    "typescript": "^2.0.0"
   },
   "scripts": {
     "serve": "static-server -p 1337",
-    "build": "tsc -p code/geopose && tsc -p code/vuforia && tsc -p code/vuforiaDecals && tsc -p code/directionsHTML && tsc -p code/directionsWebGL && tsc -p code/panorama-reality && tsc -p code/panorama && tsc -p code/streetview-reality && tsc -p code/streetview  "
+    "build": "tsc -p geopose && tsc -p vuforia && tsc -p directionsHTML && tsc -p directionsWebGL"
+  },
+  "dependencies": {
+    "argon": "github:argonjs/argon#develop"
   }
 }
