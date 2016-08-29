@@ -158,7 +158,7 @@ function toFixed(value, precision) {
 // the updateEvent is called each time the 3D world should be
 // rendered, before the renderEvent.  The state of your application
 // should be updated here.
-app.updateEvent.addEventListener(() => {
+app.updateEvent.addEventListener((frame) => {
     // get the position and orientation (the "pose") of the user
     // in the local coordinate frame.
     const userPose = app.context.getEntityPose(app.context.user);
@@ -174,7 +174,7 @@ app.updateEvent.addEventListener(() => {
     // the first time through, we create a geospatial position for
     // the box somewhere near us 
     if (!boxInit) {
-        const frame = app.context.getDefaultReferenceFrame();
+        const defaultFrame = app.context.getDefaultReferenceFrame();
 
         // set the box's position to 10 meters away from the user.
         // First, clone the userPose postion, and add 10 to the X
@@ -182,25 +182,16 @@ app.updateEvent.addEventListener(() => {
         boxPos.x += 10;
         // set the value of the box Entity to this local position, by
         // specifying the frame of reference to our local frame
-        boxGeoEntity.position.setValue(boxPos, frame);        
+        boxGeoEntity.position.setValue(boxPos, defaultFrame);        
 
         // orient the box according to the local world frame
         boxGeoEntity.orientation.setValue(Cesium.Quaternion.IDENTITY);
 
         // now, we want to move the box's coordinates to the FIXED frame, so
         // the box doesn't move if the local coordinate system origin changes.
-        // Get box position in global coordinates and reset it's
-        // position to be independent of the user location, in the 
-        // global frame of reference
-        const boxPoseFIXED = app.context.getEntityPose(boxGeoEntity, ReferenceFrame.FIXED);
-
-        if (boxPoseFIXED.poseStatus & Argon.PoseStatus.KNOWN) {
-            boxInit = true;
-            boxGeoEntity.position.setValue(boxPoseFIXED.position, ReferenceFrame.FIXED);
-            boxGeoEntity.orientation.setValue(boxPoseFIXED.orientation);
-
-            // once everything is done, add it to the scene
-            scene.add(boxGeoObject);
+        if (Argon.convertEntityReferenceFrame(boxGeoEntity, frame.time, 
+                                              ReferenceFrame.FIXED)) {
+            scene.add(boxGeoObject);            
         }
     }
 
