@@ -100,7 +100,7 @@ scene.add(gatechGeoTarget);
 // Box texture from https://www.flickr.com/photos/photoshoproadmap/8640003215/sizes/l/in/photostream/
 //, licensed under https://creativecommons.org/licenses/by/2.0/legalcode
 var boxGeoObject = new THREE.Object3D;
-var box = new THREE.Object3D;
+var box = new THREE.Object3D();
 var loader = new THREE.TextureLoader();
 loader.load('box.png', function (texture) {
     var geometry = new THREE.BoxGeometry(1, 1, 1);
@@ -114,6 +114,13 @@ var boxGeoEntity = new Argon.Cesium.Entity({
     orientation: Cesium.Quaternion.IDENTITY
 });
 boxGeoObject.add(box);
+// Create a DIV to use to label the position and distance of the cube
+var boxLocDiv = document.getElementById("box-location");
+var boxLocDiv2 = boxLocDiv.cloneNode(true);
+var boxLabel = new THREE.CSS3DSprite([boxLocDiv, boxLocDiv2]);
+boxLabel.scale.set(0.02, 0.02, 0.02);
+boxLabel.position.set(0, 1.25, 0);
+boxGeoObject.add(boxLabel);
 // putting position and orientation in the constructor above is the 
 // equivalent of doing this:
 //
@@ -126,6 +133,7 @@ boxGeoObject.add(box);
 var boxInit = false;
 var boxCartographicDeg = [0, 0, 0];
 var lastInfoText = "";
+var lastBoxText = "";
 // make floating point output a little less ugly
 function toFixed(value, precision) {
     var power = Math.pow(10, precision || 0);
@@ -164,6 +172,7 @@ app.updateEvent.addEventListener(function (frame) {
         // the box doesn't move if the local coordinate system origin changes.
         if (Argon.convertEntityReferenceFrame(boxGeoEntity, frame.time, ReferenceFrame.FIXED)) {
             scene.add(boxGeoObject);
+            boxInit = true;
         }
     }
     // get the local coordinates of the local box, and set the THREE object
@@ -211,20 +220,22 @@ app.updateEvent.addEventListener(function (frame) {
     var distanceToBox = cameraPos.distanceTo(boxPos);
     var distanceToBuzz = cameraPos.distanceTo(buzzPos);
     // create some feedback text
-    var infoText = "Geospatial Argon example:\n";
-    // infoText = "frame: " + state.frameNumber;
-    // infoText += " argon time (" + toFixed(three.argon.time.secondsOfDay, 1) + ")";
-    // infoText += " three time (" + toFixed(three.Time.now, 1) + ")\n";
-    infoText += "eye (" + toFixed(gpsCartographicDeg[0], 6) + ", ";
-    infoText += toFixed(gpsCartographicDeg[1], 6) + ", " + toFixed(gpsCartographicDeg[2], 2) + ")\n";
-    infoText += "cube(" + toFixed(boxCartographicDeg[0], 6) + ", ";
-    infoText += toFixed(boxCartographicDeg[1], 6) + ", " + toFixed(boxCartographicDeg[2], 2) + ")\n";
-    infoText += "distance to box (" + toFixed(distanceToBox, 2) + ")";
-    infoText += " distance to GT (" + toFixed(distanceToBuzz, 2) + ")";
+    var infoText = "Geospatial Argon example:<br>";
+    infoText += "Your location is lla (" + toFixed(gpsCartographicDeg[0], 6) + ", ";
+    infoText += toFixed(gpsCartographicDeg[1], 6) + ", " + toFixed(gpsCartographicDeg[2], 2) + ")<br>";
+    infoText += " distance to Georgia Tech (" + toFixed(distanceToBuzz, 2) + ")";
+    var boxLabelText = "box lla = " + toFixed(boxCartographicDeg[0], 6) + ", ";
+    boxLabelText += toFixed(boxCartographicDeg[1], 6) + ", " + toFixed(boxCartographicDeg[2], 2) + "<br>";
+    boxLabelText += "box is " + toFixed(distanceToBox, 4) + " meters away";
     if (lastInfoText !== infoText) {
         locationElements[0].innerHTML = infoText;
         locationElements[1].innerHTML = infoText;
         lastInfoText = infoText;
+    }
+    if (lastBoxText !== boxLabelText) {
+        boxLocDiv.innerHTML = boxLabelText;
+        boxLocDiv2.innerHTML = boxLabelText;
+        lastBoxText = boxLabelText;
     }
 });
 // renderEvent is fired whenever argon wants the app to update its display
