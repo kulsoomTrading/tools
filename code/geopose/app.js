@@ -226,7 +226,7 @@ app.updateEvent.addEventListener(function (frame) {
     infoText += " distance to Georgia Tech (" + toFixed(distanceToBuzz, 2) + ")";
     var boxLabelText = "box lla = " + toFixed(boxCartographicDeg[0], 6) + ", ";
     boxLabelText += toFixed(boxCartographicDeg[1], 6) + ", " + toFixed(boxCartographicDeg[2], 2) + "<br>";
-    boxLabelText += "box is " + toFixed(distanceToBox, 4) + " meters away";
+    boxLabelText += "box is " + toFixed(distanceToBox, 2) + " meters away";
     if (lastInfoText !== infoText) {
         locationElements[0].innerHTML = infoText;
         locationElements[1].innerHTML = infoText;
