@@ -37,12 +37,11 @@ app.view.element.appendChild(renderer.domElement);
 app.view.element.appendChild(cssRenderer.domElement);
 app.view.element.appendChild(hud.domElement);
 // We put some elements in the index.html, for convenience. 
-// Here, we retrieve them, duplicate and move the information boxes to the 
-// the CSS3DArgonHUD hudElements.  We are explicitly creating the two
-// elements so we can update them both.
+// Here, we retrieve the hud element and use hud.appendChild to append it and a clone 
+// to the two CSS3DArgonHUD hudElements.  We are retrieve the two
+// elements with the 'location' class so we can update them both.
 var hudContent = document.getElementById('hud');
-hud.hudElements[0].appendChild(hudContent);
-hud.hudElements[1].appendChild(hudContent.cloneNode(true));
+hud.appendChild(hudContent);
 var locationElements = hud.domElement.getElementsByClassName('location');
 //  We also move the description box to the left Argon HUD.  
 // We don't duplicated it because we only use it in mono mode
@@ -223,10 +222,10 @@ app.updateEvent.addEventListener(function (frame) {
     var infoText = "Geospatial Argon example:<br>";
     infoText += "Your location is lla (" + toFixed(gpsCartographicDeg[0], 6) + ", ";
     infoText += toFixed(gpsCartographicDeg[1], 6) + ", " + toFixed(gpsCartographicDeg[2], 2) + ")<br>";
-    infoText += " distance to Georgia Tech (" + toFixed(distanceToBuzz, 2) + ")";
-    var boxLabelText = "box lla = " + toFixed(boxCartographicDeg[0], 6) + ", ";
-    boxLabelText += toFixed(boxCartographicDeg[1], 6) + ", " + toFixed(boxCartographicDeg[2], 2) + "<br>";
-    boxLabelText += "box is " + toFixed(distanceToBox, 2) + " meters away";
+    infoText += " distance to Georgia Tech (" + toFixed(distanceToBuzz, 2) + ")<br>";
+    infoText += "box is " + toFixed(distanceToBox, 2) + " meters away";
+    var boxLabelText = "a wooden box!<br>lla = " + toFixed(boxCartographicDeg[0], 6) + ", ";
+    boxLabelText += toFixed(boxCartographicDeg[1], 6) + ", " + toFixed(boxCartographicDeg[2], 2) + "";
     if (lastInfoText !== infoText) {
         locationElements[0].innerHTML = infoText;
         locationElements[1].innerHTML = infoText;
