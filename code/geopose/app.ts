@@ -247,11 +247,11 @@ app.updateEvent.addEventListener((frame) => {
 
     // we'll compute the distance to the cube, just for fun. If the cube could be further away,
     // we'd want to use Cesium.EllipsoidGeodesic, rather than Euclidean distance, but this is fine here.
-	var cameraPos = camera.getWorldPosition();
+	var userPos = userLocation.getWorldPosition();
     var buzzPos = buzz.getWorldPosition();
     var boxPos = box.getWorldPosition();
-    var distanceToBox = cameraPos.distanceTo( boxPos );
-    var distanceToBuzz = cameraPos.distanceTo( buzzPos );
+    var distanceToBox = userPos.distanceTo( boxPos );
+    var distanceToBuzz = userPos.distanceTo( buzzPos );
 
     // create some feedback text
     var infoText = "Geospatial Argon example:<br>"
