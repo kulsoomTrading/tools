@@ -158,9 +158,9 @@ const myMysteriousLabel = new THREE.Object3D();
 
 // create a label  
 var loader = new THREE.FontLoader();
-loader.load( '../resources/fonts/helvetiker_regular.typeface.js', function ( font:THREE.Font ) {    
+loader.load( '../resources/fonts/helvetiker_regular.typeface.js', function ( font ) {    
     const textOptions = {
-        font: font,
+        font: <any>font,
         size: 15,
         height: 10,
         curveSegments: 10,

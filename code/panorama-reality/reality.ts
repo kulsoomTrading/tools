@@ -112,7 +112,7 @@ function onFrame(time, index:number) {
 
     // Rotate the eye according to the device orientation
     // (the eye should be positioned at the current panorama)
-    eyeEntity.orientation.setValue(deviceOrientation);
+    (<any>eyeEntity.orientation).setValue(deviceOrientation);
 
     // By raising a frame state event, we are describing to the  manager when and where we
     // are in the world, what direction we are looking, and how we are able to render. 

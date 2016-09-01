@@ -338,7 +338,7 @@ function shoot() {
     material.color.setHex( Math.random() * 0xffffff );
 
     // mesh is in headModel coordinates, to p & r have also been moved into headModel coords
-    var m2 = new THREE.Mesh( new THREE.DecalGeometry( mesh, p, r, s, false ), material );
+    var m2 = new THREE.Mesh( new (<any>THREE).DecalGeometry( mesh, p, r, s, false ), material );
     decals.push( m2 );
     headModel.add( m2 );
 }

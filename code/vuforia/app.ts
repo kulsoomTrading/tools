@@ -64,9 +64,9 @@ argonTextObject.position.z = -250;
 userLocation.add(argonTextObject);
 
 var loader = new THREE.FontLoader();
-loader.load( '../resources/fonts/helvetiker_bold.typeface.js', function ( font:THREE.Font ) {
+loader.load( '../resources/fonts/helvetiker_bold.typeface.js', function ( font ) {
     var textGeometry = new THREE.TextGeometry( "argon.js", {
-        font: font,
+        font: <any>font,
         size: 40,
         height: 5,
         curveSegments: 3,
@@ -75,11 +75,11 @@ loader.load( '../resources/fonts/helvetiker_bold.typeface.js', function ( font:T
         bevelEnabled: true
     });
     textGeometry.center();
-    var tessellateModifier = new THREE.TessellateModifier( 8 );
+    var tessellateModifier = new (<any>THREE).TessellateModifier( 8 );
     for ( var i = 0; i < 6; i ++ ) {
         tessellateModifier.modify( textGeometry );
     }
-    var explodeModifier = new THREE.ExplodeModifier();
+    var explodeModifier = new (<any>THREE).ExplodeModifier();
     explodeModifier.modify( textGeometry );
     var numFaces = textGeometry.faces.length;
     

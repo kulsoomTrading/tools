@@ -170,7 +170,7 @@ app.updateEvent.addEventListener((frame) => {
     // assuming we know the user's pose, set the position of our 
     // THREE user object to match it
     if (userPose.poseStatus & Argon.PoseStatus.KNOWN) {
-        userLocation.position.copy(userPose.position);
+        userLocation.position.copy(<any>userPose.position);
     } else {
         // if we don't know the user pose we can't do anything
         return;
@@ -187,10 +187,10 @@ app.updateEvent.addEventListener((frame) => {
         boxPos.x += 10;
         // set the value of the box Entity to this local position, by
         // specifying the frame of reference to our local frame
-        boxGeoEntity.position.setValue(boxPos, defaultFrame);        
+        (<any>boxGeoEntity.position).setValue(boxPos, defaultFrame);        
 
         // orient the box according to the local world frame
-        boxGeoEntity.orientation.setValue(Cesium.Quaternion.IDENTITY);
+        (<any>boxGeoEntity.orientation).setValue(Cesium.Quaternion.IDENTITY);
 
         // now, we want to move the box's coordinates to the FIXED frame, so
         // the box doesn't move if the local coordinate system origin changes.
@@ -203,12 +203,12 @@ app.updateEvent.addEventListener((frame) => {
 
     // get the local coordinates of the local box, and set the THREE object
     var boxPose = app.context.getEntityPose(boxGeoEntity);
-    boxGeoObject.position.copy(boxPose.position);        
-    boxGeoObject.quaternion.copy(boxPose.orientation);
+    boxGeoObject.position.copy(<any>boxPose.position);        
+    boxGeoObject.quaternion.copy(<any>boxPose.orientation);
 
     // get the local coordinates of the GT box, and set the THREE object
     var geoPose = app.context.getEntityPose(gatechGeoEntity);
-    gatechGeoTarget.position.copy(geoPose.position);        
+    gatechGeoTarget.position.copy(<any>geoPose.position);        
 
     // rotate the boxes at a constant speed, independent of frame rates     
     // to make it a little less boring
@@ -299,11 +299,11 @@ app.renderEvent.addEventListener(() => {
         var frustum = subview.frustum;
         // set the position and orientation of the camera for 
         // this subview
-        camera.position.copy(subview.pose.position);
-        camera.quaternion.copy(subview.pose.orientation);
+        camera.position.copy(<any>subview.pose.position);
+        camera.quaternion.copy(<any>subview.pose.orientation);
         // the underlying system provide a full projection matrix
         // for the camera. 
-        camera.projectionMatrix.fromArray(subview.projectionMatrix);
+        camera.projectionMatrix.fromArray(<any>subview.projectionMatrix);
 
         // set the viewport for this view
         let {x,y,width,height} = subview.viewport;
