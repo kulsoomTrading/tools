@@ -82,10 +82,6 @@ var currentSphere = 0;
 var perspectiveProjection = new Argon.Cesium.PerspectiveFrustum();
 perspectiveProjection.fov = Math.PI / 2;
 
-// For this example, we want to control the panorama using the device orientation.
-// Since we are using geolocated panoramas, we can disable location updates
-app.device.locationUpdatesEnabled = false;
-
 // Create an entity to represent the eye
 const eyeEntity = new Argon.Cesium.Entity({
     orientation: new Argon.Cesium.ConstantProperty(Quaternion.IDENTITY)
@@ -101,8 +97,11 @@ const scratchArray = [];
 // drive updates for the entire system. 
 function onFrame(time, index:number) {
     
+    // For this example, we want to control the panorama using the device orientation.
+    // Since we are using geolocated panoramas, we only need orientation updates
+    app.device.update({orientation:true});
+    
     // Get the current display-aligned device orientation relative to the device geolocation
-    app.device.update();
     const deviceOrientation = Argon.getEntityOrientation(
         app.device.displayEntity, 
         time, 
@@ -114,39 +113,14 @@ function onFrame(time, index:number) {
     // (the eye should be positioned at the current panorama)
     (<any>eyeEntity.orientation).setValue(deviceOrientation);
 
-    // By raising a frame state event, we are describing to the  manager when and where we
-    // are in the world, what direction we are looking, and how we are able to render. 
-    app.reality.publishFrame({
+    // By publishing a view state event, we are describing where we
+    // are in the world, what direction we are looking, and how are rendering 
+    app.reality.publishViewState({
         time,
-        index,
-        // A reality should pass an "eye" configuration to the manager. The manager will 
-        // then construct an appropriate "view" configuration using the eye properties we 
-        // send it and other factors unknown to the reality. 
-        // For example, the manager may decide to ask applications (including this reality),
-        // to render in stereo or in mono, based on wheter or not the user is using a 
-        // stereo viewer. 
-        // Technically, a reality can instead pass a view configuration to the manager, but 
-        // the best practice is to use an eye configuration. Passing a view configuration 
-        // is effectively the same thing as telling the manager:
-        //      "I am going to render this way, like it or not, don't tell me otherwise"
-        // Thus, a view configuration should only be used if absolutely necessary.
-        eye: {
-            // We must provide a pose representing where we are in world, 
-            // and what we are looking at. The viewing direction is always the
-            // -Z axis, assuming a right-handed cordinate system with Y pointing up
-            // in the camera's local coordinate system. 
-            pose: Argon.getSerializedEntityPose(eyeEntity, time),
-            // The stereo multiplier tells the manager how we wish to render stereo
-            // in relation to the user's interpupillary distance (typically around 0.063m).
-            // In this case, since we are using a single panoramic image,
-            // we can only render from the center of the panorama (a stereo view 
-            // would have the same image in the left and right eyes): thus, we may prefer to use 
-            // a stereo multiplier of 0. On the other hand, if our panorama presents a 
-            // background that can be considered "far away" or at "infinity", we may prefer to 
-            // allow stereo by passing a non-zero value as the multiplier. 
-            stereoMultiplier:0
-        }
-    })
+        pose: Argon.getSerializedEntityPose(eyeEntity, time),
+        viewport: app.device.state.viewport,
+        subviews: app.device.state.subviews
+    });
 
     app.timer.requestFrame(onFrame);
 }

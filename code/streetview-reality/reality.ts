@@ -11,7 +11,7 @@ const CesiumMath = Argon.Cesium.CesiumMath;
 // set up Argon (unlike regular apps, we call initReality instead of init)
 const app = Argon.initReality({
     configuration: {
-        'reality.handlesZoom':true,
+        // 'reality.handlesZoom':true,
         'app.disablePinchZoom':true
     }
 });
@@ -28,13 +28,13 @@ function clampFov(fov:number, aspectRatio:number) {
     return aspectRatio < 1 ? adjustedFovY : adjustedFovY * aspectRatio;
 }
 
-app.reality.onZoom = function(data) {
-    const fov = Argon.RealityService.prototype.onZoom.call(app.reality, data);
-    const viewport = app.view.getViewport();
-    if (!viewport) return fov;
-    const aspectRatio = viewport.width / viewport.height;
-    return clampFov(fov, aspectRatio);
-}
+// app.device.onZoom = function(data) {
+//     const fov = Argon.DeviceService.prototype.onZoom.call(app.reality, data);
+//     const viewport = app.view.getViewport();
+//     if (!viewport) return fov;
+//     const aspectRatio = viewport.width / viewport.height;
+//     return clampFov(fov, aspectRatio);
+// }
 
 const mapElement = document.createElement('div');
 const subviewElements = [document.createElement('div'), document.createElement('div')];
@@ -88,7 +88,6 @@ class MapToggleControl {
         controlText.innerHTML = 'Show Map';
         controlUI.appendChild(controlText);
 
-        // Setup the click event listeners: simply set the map to Chicago.
         controlUI.addEventListener('click', () => {
             this.showing = !this.showing;
         });
@@ -123,10 +122,16 @@ google.maps.streetViewViewer = 'photosphere';
 window.addEventListener('load', ()=>{
     
     map = new google.maps.Map(mapElement);
+
+    var options = <google.maps.StreetViewPanoramaOptions> {
+        zoomControl:false,
+        motionTracking: false,
+        motionTrackingControl: false
+    }
     
     streetviews = [
-        new google.maps.StreetViewPanorama(subviewElements[0]), 
-        new google.maps.StreetViewPanorama(subviewElements[1])
+        new google.maps.StreetViewPanorama(subviewElements[0], options), 
+        new google.maps.StreetViewPanorama(subviewElements[1], options)
     ];
 
     map.setStreetView(streetviews[0]);
@@ -139,7 +144,7 @@ window.addEventListener('load', ()=>{
     // update the pano entity with the appropriate pose
     const elevationService = new google.maps.ElevationService();
     let elevation = 0;
-    panoEntity.position.setValue()
+    
     google.maps.event.addListener(streetviews[0], 'position_changed', ()=>{
         const position = streetviews[0].getPosition();
         // update the position with previous elevation
@@ -170,33 +175,38 @@ window.addEventListener('load', ()=>{
 
     const streetViewService = new google.maps.StreetViewService();
 
-    navigator.geolocation.getCurrentPosition( (position)=>{
-        const coords = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
-        streetViewService.getPanorama({
-            location: coords,
-            radius: 1500, //Number.POSITIVE_INFINITY,
-            preference: google.maps.StreetViewPreference.NEAREST,
-        }, (data, status)=>{
-            if (status === google.maps.StreetViewStatus.OK) {
-                currentPanoData = data;
-                map.setCenter(data.location.latLng);
-                map.setZoom(18);
-                map.setOptions({streetViewControl: true})
-                elevation = position.coords.altitude || 0;
-                streetviews[0].setPano(data.location.pano);
-                // streetviews[1].setPano(data.location.pano);
+    function setStreetViewPosition(lat:number, lng:number, alt:number) {
+        const coords = new google.maps.LatLng(lat, lng);
+            streetViewService.getPanorama({
+                location: coords,
+                radius: 1500, //Number.POSITIVE_INFINITY,
+                preference: google.maps.StreetViewPreference.NEAREST,
+            }, (data, status)=>{
+                if (status === google.maps.StreetViewStatus.OK) {
+                    currentPanoData = data;
+                    map.setCenter(data.location.latLng);
+                    map.setZoom(18);
+                    map.setOptions({streetViewControl: true})
+                    elevation = alt || 0;
+                    streetviews[0].setPano(data.location.pano);
+                    // streetviews[1].setPano(data.location.pano);
 
-                // Position the eye as a child of the pano entity
-                eyeEntity.position = new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, panoEntity);
-            } else if (status === google.maps.StreetViewStatus.ZERO_RESULTS) {
-                // unable to find nearby panorama (what should we do?)
-                alert('Unable to locate nearby streetview imagery.');
-            } else {
-                alert('Error retrieving panorama from streetview service');
-            }
-        })
+                    // Position the eye as a child of the pano entity
+                    eyeEntity.position = new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, panoEntity);
+                } else if (status === google.maps.StreetViewStatus.ZERO_RESULTS) {
+                    // unable to find nearby panorama (what should we do?)
+                    alert('Unable to locate nearby streetview imagery.');
+                } else {
+                    alert('Error retrieving panorama from streetview service');
+                }
+            })
+    }
+
+    navigator.geolocation.getCurrentPosition( (position)=>{
+        setStreetViewPosition(position.coords.latitude, position.coords.longitude, position.coords.altitude)
     }, (e)=>{
-        alert(e.message);
+        console.error(e.message);
+        setStreetViewPosition(33.7756, -84.3963, 297);
     }, {
         enableHighAccuracy:true
     })
@@ -244,9 +254,6 @@ const scratchArray = [];
 const x90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, Math.PI / 2);
 const x90Neg = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, - Math.PI / 2);
 
-// disable location updates
-app.device.locationUpdatesEnabled = false;
-
 // keep track of our orientation mode
 let deviceOrientationControlEnabled = true;
 // was the last pose based on device orientation?
@@ -255,9 +262,10 @@ let manualPov = false;
 // Reality views must raise frame events at regular intervals in order to 
 // drive updates for the entire system. 
 function onFrame(time, index:number) {
+    
+    app.device.update({location:true, orientation:true});
 
     // Get the current display-aligned device orientation relative to the device geolocation
-    app.device.update();
     const deviceOrientation = Argon.getEntityOrientation(
         app.device.displayEntity, 
         time, 
@@ -293,19 +301,26 @@ function onFrame(time, index:number) {
         manualPov = true;
     }
 
-    let viewport = undefined;
+    let viewport = app.device.state.viewport;
+    let subviews = app.device.state.subviews;
 
-    if (mapToggleControl.showing) {
+    if (subviews.length === 1 && 
+        !app.device.state.strictViewport && 
+        !app.device.state.strictSubviewViewports &&
+        mapToggleControl.showing) {
         if (document.documentElement.clientWidth < document.documentElement.clientHeight) {
-            viewport = app.reality.getMaximumViewport();
+            viewport = app.device.getMaximumViewport();
             viewport.height /= 2;
             viewport.y = viewport.height;
+            subviews[0].viewport = {x:0,y:0, width:viewport.width, height:viewport.height};
+            
             mapElement.style.width = '100%';
             mapElement.style.height = '50%';
             mapElement.style.bottom = '0px';
         } else {
-            viewport = app.reality.getMaximumViewport();
+            viewport = app.device.getMaximumViewport();
             viewport.width /= 2;
+            subviews[0].viewport = {x:0,y:0, width:viewport.width, height:viewport.height};
             mapElement.style.width = '50%';
             mapElement.style.height = '100%';
             mapElement.style.right = '0px';
@@ -314,53 +329,24 @@ function onFrame(time, index:number) {
 
     let frustum = undefined;
 
-    if (app.focus.hasFocus) {
-        const zoomLevel = streetviews[0].getZoom();
-        const fovX = 90 * Math.pow(2,-zoomLevel+1) * CesiumMath.RADIANS_PER_DEGREE;
-        const v = viewport || app.reality.getMaximumViewport(); 
-        const aspect = v.width / v.height;
-        frustum = {
-            fov: aspect < 1 ? fovX / aspect : fovX, aspect
-        }
-    }
-        
-    // By raising a frame state event, we are describing to the  manager when and where we
-    // are in the world, what direction we are looking, and how we are able to render. 
-    app.reality.publishFrame({
+    // if (app.focus.hasFocus) {
+    //     const zoomLevel = streetviews[0].getZoom();
+    //     const fovX = 90 * Math.pow(2,-zoomLevel+1) * CesiumMath.RADIANS_PER_DEGREE;
+    //     const v = viewport || app.device.state.viewport; 
+    //     const aspect = v.width / v.height;
+    //     frustum = {
+    //         fov: aspect < 1 ? fovX / aspect : fovX, aspect
+    //     }
+    // }
+    
+    // By publishing a view state event, we are describing where we
+    // are in the world, what direction we are looking, and how are rendering 
+    app.reality.publishViewState({
         time,
-        index,
-        // A reality should pass an "eye" configuration to the manager. The manager will 
-        // then construct an appropriate "view" configuration using the eye properties we 
-        // send it and other factors unknown to the reality. 
-        // For example, the manager may decide to ask applications (including this reality),
-        // to render in stereo or in mono, based on wheter or not the user is using a 
-        // stereo viewer. 
-        // Technically, a reality can instead pass a view configuration to the manager, but 
-        // the best practice is to use an eye configuration. Passing a view configuration 
-        // is effectively the same thing as telling the manager:
-        //      "I am going to render this way, like it or not, don't tell me otherwise"
-        // Thus, a view configuration should only be used if absolutely necessary.
-        eye: {
-            // We provide a viewport when the map is visible
-            viewport,
-            // We provide a frustum when the user is manipulating the streetview directly
-            frustum,
-            // We must provide a pose representing where we are in world, 
-            // and what we are looking at. The viewing direction is always the
-            // -Z axis, assuming a right-handed cordinate system with Y pointing up
-            // in the camera's local coordinate system. 
-            pose: Argon.getSerializedEntityPose(eyeEntity, time),
-            // The stereo multiplier tells the manager how we wish to render stereo
-            // in relation to the user's interpupillary distance (typically around 0.063m).
-            // In this case, since we are using a single panoramic image,
-            // we can only render from the center of the panorama (a stereo view 
-            // would have the same image in the left and right eyes): thus, we may prefer to use 
-            // a stereo multiplier of 0. On the other hand, if our panorama presents a 
-            // background that can be considered "far away" or at "infinity", we may prefer to 
-            // allow stereo by passing a non-zero value as the multiplier. 
-            stereoMultiplier:0,
-        }
-    })
+        pose: Argon.getSerializedEntityPose(eyeEntity, time),
+        viewport,
+        subviews
+    });
 
     app.timer.requestFrame(onFrame);
 }
@@ -373,10 +359,10 @@ let canvas:HTMLElement;
 let compassControl:HTMLElement;
 
 // set the reality into a reasonable state when not in focus
-app.blurEvent.addEventListener(() => {
-    mapToggleControl.showing = false;
-    deviceOrientationControlEnabled = true; // ?
-})
+// app.blurEvent.addEventListener(() => {
+//     mapToggleControl.showing = false;
+//     deviceOrientationControlEnabled = false; // ?
+// })
 
 // renderEvent is fired whenever argon wants the app to update its display
 app.renderEvent.addEventListener(() => {
@@ -430,6 +416,11 @@ app.renderEvent.addEventListener(() => {
         mapElement.style.visibility = 'hidden';
     }
 
+    if (subviews.length === 1) {
+        subviewElements[1].style.visibility = 'hidden';
+        (subviewElements[1].querySelector('canvas') as HTMLElement).style.visibility = 'hidden';
+    }
+
     for (let subview of subviews) {
         if (subview.index > 1) break;
 
@@ -442,19 +433,15 @@ app.renderEvent.addEventListener(() => {
         subviewElement.style.bottom = y + 'px';
         subviewElement.style.width = width + 'px';
         subviewElement.style.height = height + 'px';
-        google.maps.event.trigger(streetview, 'resize');
+        subviewElement.style.visibility = 'visible';
+        (subviewElement.querySelector('canvas') as HTMLElement).style.visibility = 'visible';
+        // google.maps.event.trigger(streetview, 'resize');
 
         // get the heading / pitch / roll
         const rotMatrix = Matrix3.fromQuaternion(subview.pose.orientation, scratchMatrix3);
         const eulerZYX = rotationMatrixToEulerZXY(rotMatrix, scratchCartesian);
-
-        // set the point of view appropriatley
-        if (!manualPov) {
-            streetview.setPov({
-                heading: eulerZYX.y * CesiumMath.DEGREES_PER_RADIAN,
-                pitch: - eulerZYX.x * CesiumMath.DEGREES_PER_RADIAN
-            });
-
+        
+        if (!app.focus.hasFocus) {
             // when in device orientation mode, hide pretty much all the UI
             subviewElement.style.visibility = 'hidden';
             (subviewElement.querySelector('canvas') as HTMLElement).style.visibility = 'visible';
@@ -463,22 +450,32 @@ app.renderEvent.addEventListener(() => {
             for (let i = 0; i < alwaysShownElements.length; i++) {
                 (alwaysShownElements.item(i) as HTMLElement).style.visibility = 'visible';
             }
-        } else {
-            subviewElement.style.visibility = 'visible';
-            (subviewElement.querySelector('canvas') as HTMLElement).style.visibility = 'visible';
         }
 
         // set the fov
+        
+        const fovy = subview.frustum.fovy * Argon.Cesium.CesiumMath.DEGREES_PER_RADIAN;
+        const fovx = subview.frustum.aspectRatio * fovy;
+        let zoomLevel = 1 - Math.log2(fovx / 90)
+        
+        // apply the zoom level
+        // if (streetview.getZoom() !== zoomLevel)
+        //     streetview.setZoom(zoomLevel); 
+        
+        // streetview.setPov({
+        //     heading: eulerZYX.y * CesiumMath.DEGREES_PER_RADIAN,
+        //     pitch: - eulerZYX.x * CesiumMath.DEGREES_PER_RADIAN,
+        // });
+        // streetview.setZoom(zoomLevel);
+
         if (!manualPov) {
-            const fovy = subview.frustum.fovy * Argon.Cesium.CesiumMath.DEGREES_PER_RADIAN;
-            const fovx = subview.frustum.aspectRatio * fovy;
-            let zoomLevel = 1 - Math.log2(fovx / 90)
-            // raise zoomLevel to 1.05 power because streetview is rendering slightly lower fov 
-            // than expected, especially when zoomed in. 
-            zoomLevel = Math.pow(zoomLevel,1.05);
-            // apply the zoom level
-            if (streetview.getZoom() !== zoomLevel)
-                streetview.setZoom(zoomLevel); 
+            streetview.setOptions({
+                pov: {
+                    heading: eulerZYX.y * CesiumMath.DEGREES_PER_RADIAN,
+                    pitch: - eulerZYX.x * CesiumMath.DEGREES_PER_RADIAN
+                },
+                zoom: zoomLevel
+            });
         }
 
         // apply the roll directly to the DOM elements... 
