@@ -330,7 +330,7 @@ function init() {
   app.view.element.appendChild(renderer.domElement);
   app.view.element.appendChild(hud.domElement);
 
-  // move the menu to the Argon HUD.  We don't duplicated it because we only
+  // move the menu to the Argon HUD.  We don't duplicate it because we only
   // use it in mono mode
   var hudContainer = document.getElementById( 'hud' );
   hud.hudElements[0].appendChild(hudContainer);
@@ -499,7 +499,7 @@ function renderFunc() {
         // the underlying system provide a full projection matrix
         // for the camera.  Use it, and then update the FOV of the 
         // camera from it (needed by the CSS Perspective DIV)
-        camera.projectionMatrix.fromArray(subview.projectionMatrix);
+        camera.projectionMatrix.fromArray(subview.frustum.projectionMatrix);
         camera.fov = THREE.Math.radToDeg(frustum.fovy);
 
         // set the viewport for this view

@@ -31,17 +31,6 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setPixelRatio(window.devicePixelRatio);
 app.view.element.appendChild(renderer.domElement);
 
-// to easily control stuff on the display
-const hud = new (<any>THREE).CSS3DArgonHUD();
-
-// We put some elements in the index.html, for convenience. 
-// Here, we retrieve the description box and move it to the 
-// the CSS3DArgonHUD hudElements[0].  We only put it in the left
-// hud since we'll be hiding it in stereo
-var description = document.getElementById( 'description' );
-hud.hudElements[0].appendChild(description);
-app.view.element.appendChild(hud.domElement);
-
 // Tell argon what local coordinate system you want.  The default coordinate
 // frame used by Argon is Cesium's FIXED frame, which is centered at the center
 // of the earth and oriented with the earth's axes.  
@@ -70,6 +59,11 @@ scene.add( sunMoonLights.lights );
 // add some ambient so things aren't so harshly illuminated
 var ambientlight = new THREE.AmbientLight( 0x404040 ); // soft white ambient light 
 scene.add(ambientlight);
+
+// install a reality that the user can select from
+app.reality.install(Argon.resolveURL('../streetview-reality/index.html'));
+
+app.reality.request(Argon.RealityViewer.EMPTY);
 
 // create 6 3D words for the 6 directions.  
 var loader = new THREE.FontLoader();
@@ -139,7 +133,6 @@ app.renderEvent.addEventListener(() => {
     // both views if we are in stereo viewing mode
     const viewport = app.view.getViewport();
     renderer.setSize(viewport.width, viewport.height);
-    hud.setSize(viewport.width, viewport.height);
     
     // there is 1 subview in monocular mode, 2 in stereo mode    
     for (let subview of app.view.getSubviews()) {
@@ -149,7 +142,7 @@ app.renderEvent.addEventListener(() => {
         camera.quaternion.copy(subview.pose.orientation);
         // the underlying system provide a full projection matrix
         // for the camera. 
-        camera.projectionMatrix.fromArray(subview.projectionMatrix);
+        camera.projectionMatrix.fromArray(subview.frustum.projectionMatrix);
 
         // set the viewport for this view
         let {x,y,width,height} = subview.viewport;
@@ -159,11 +152,5 @@ app.renderEvent.addEventListener(() => {
         renderer.setScissor(x,y,width,height);
         renderer.setScissorTest(true);
         renderer.render(scene, camera);
-
-        // adjust the hud, but only in mono
-        if (monoMode) {
-            hud.setViewport(x,y,width,height, subview.index);
-            hud.render(subview.index);
-        }
     }
 })

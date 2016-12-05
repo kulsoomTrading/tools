@@ -7,7 +7,11 @@ var ReferenceFrame = Argon.Cesium.ReferenceFrame;
 var JulianDate = Argon.Cesium.JulianDate;
 var CesiumMath = Argon.Cesium.CesiumMath;
 // set up Argon
-var app = Argon.init();
+var app = Argon.init({
+    configuration: {
+        needsGeopose: true
+    }
+});
 //app.view.element.style.zIndex = 0;
 // set up THREE.  Create a scene, a perspective camera and an object
 // for the user's location
@@ -264,7 +268,7 @@ app.renderEvent.addEventListener(function () {
         camera.quaternion.copy(subview.pose.orientation);
         // the underlying system provide a full projection matrix
         // for the camera. 
-        camera.projectionMatrix.fromArray(subview.projectionMatrix);
+        camera.projectionMatrix.fromArray(subview.frustum.projectionMatrix);
         // set the viewport for this view
         var _b = subview.viewport, x = _b.x, y = _b.y, width = _b.width, height = _b.height;
         // set the CSS rendering up, by computing the FOV, and render this view

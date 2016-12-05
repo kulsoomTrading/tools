@@ -1,8 +1,8 @@
-/// <reference types="@argonjs/argon" />
+/// <reference types="@argonjs/argon"/>
 /// <reference types="three"/>
 
 // set up Argon
-const app = Argon.init();
+const app = Argon.init('#myPanoApp');
 
 // set up THREE.  Create a scene, a perspective camera and an object
 // for the user's location
@@ -42,8 +42,7 @@ var ambientlight = new THREE.AmbientLight( 0x404040 ); // soft white ambient lig
 scene.add(ambientlight);
 
 // set our desired reality 
-app.reality.setDesired({
-    title: 'My Panorama Tour',
+app.reality.request({
     uri: Argon.resolveURL('../panorama-reality/index.html')
 })
 
@@ -229,7 +228,7 @@ app.renderEvent.addEventListener(() => {
         camera.quaternion.copy(<any>subview.pose.orientation);
         // the underlying system provide a full projection matrix
         // for the camera. 
-        camera.projectionMatrix.fromArray(<any>subview.projectionMatrix);
+        camera.projectionMatrix.fromArray(<any>subview.frustum.projectionMatrix);
 
         // set the viewport for this view
         let {x,y,width,height} = subview.viewport;

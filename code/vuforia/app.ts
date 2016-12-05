@@ -13,6 +13,7 @@ const camera = new THREE.PerspectiveCamera();
 const userLocation = new THREE.Object3D();
 scene.add(camera);
 scene.add(userLocation);
+scene.autoUpdate = false;
 
 // We use the standard WebGLRenderer when we only need WebGL-based content
 const renderer = new THREE.WebGLRenderer({ 
@@ -290,6 +291,9 @@ app.context.updateEvent.addEventListener(() => {
     if (userPose.poseStatus & Argon.PoseStatus.KNOWN) {
         userLocation.position.copy(<any>userPose.position);
     }
+
+    // udpate our scene matrices
+    scene.updateMatrixWorld(false);
 });
     
 // renderEvent is fired whenever argon wants the app to update its display
@@ -297,18 +301,21 @@ app.renderEvent.addEventListener(() => {
     // update the rendering stats
     stats.update();
     
+    // get the subviews for the current frame
+    const subviews = app.view.getSubviews();
+
     // if we have 1 subView, we're in mono mode.  If more, stereo.
-    var monoMode = (app.view.getSubviews()).length == 1;
+    var monoMode = subviews.length == 1;
 
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
-    // both views if we are in stereo viewing mode
+    // both subviews if we are in stereo viewing mode
     const viewport = app.view.getViewport();
     renderer.setSize(viewport.width, viewport.height);
     hud.setSize(viewport.width, viewport.height);
     
     // there is 1 subview in monocular mode, 2 in stereo mode    
-    for (let subview of app.view.getSubviews()) {
+    for (let subview of subviews) {
         // set the position and orientation of the camera for 
         // this subview
         camera.position.copy(<any>subview.pose.position);
@@ -317,7 +324,7 @@ app.renderEvent.addEventListener(() => {
         // for the camera. 
         camera.projectionMatrix.fromArray(<any>subview.projectionMatrix);
 
-        // set the viewport for this view
+        // set the viewport for this subview
         let {x,y,width,height} = subview.viewport;
         renderer.setViewport(x,y,width,height);
 

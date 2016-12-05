@@ -303,7 +303,7 @@ app.renderEvent.addEventListener(() => {
         camera.quaternion.copy(<any>subview.pose.orientation);
         // the underlying system provide a full projection matrix
         // for the camera. 
-        camera.projectionMatrix.fromArray(<any>subview.projectionMatrix);
+        camera.projectionMatrix.fromArray(<any>subview.frustum.projectionMatrix);
 
         // set the viewport for this view
         let {x,y,width,height} = subview.viewport;

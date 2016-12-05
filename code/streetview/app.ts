@@ -3,8 +3,8 @@
 // set up Argon
 const app = Argon.init();
 
-// set our desired reality 
-app.reality.setDesired({
-    title: 'My Nearest Streetview',
+// request our desired reality (and install if not already installed)
+app.reality.request({
     uri: Argon.resolveURL('../streetview-reality/index.html')
 })
+

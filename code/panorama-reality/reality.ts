@@ -7,13 +7,11 @@ const Cartesian3 = Argon.Cesium.Cartesian3;
 const Quaternion = Argon.Cesium.Quaternion;
 const CesiumMath = Argon.Cesium.CesiumMath;
 
-// set up Argon (unlike regular apps, we call initReality instead of init)
-// Defining a protocol allows apps to communicate with the reality in a 
+// set up Argon (unlike regular apps, we call initRealityViewer instead of init)
+// Defining a protocol allows apps to communicate with the reality in a
 // reliable way. 
-const app = Argon.initReality({
-    configuration: {
-        protocols: ['ael.gatech.panorama@v1'] 
-    }
+const app = Argon.initRealityViewer({
+    protocols: ['ael.gatech.panorama@v1']
 });
 
 // set up THREE.  Create a scene, a perspective camera and an object
@@ -78,56 +76,86 @@ panoSpheres.forEach((mesh)=>{
 })
 var currentSphere = 0;
 
-// We need to define a projection matrix for our reality view
-var perspectiveProjection = new Argon.Cesium.PerspectiveFrustum();
-perspectiveProjection.fov = Math.PI / 2;
-
-// Create an entity to represent the eye
-const eyeEntity = new Argon.Cesium.Entity({
-    orientation: new Argon.Cesium.ConstantProperty(Quaternion.IDENTITY)
+// Create an entity to represent the virtual eye
+const virtualEye = new Argon.Cesium.Entity({
+    orientation: new Argon.Cesium.ConstantProperty(Quaternion.fromAxisAngle(Cartesian3.UNIT_X, Argon.Cesium.CesiumMath.PI_OVER_TWO))
 })
 
 // Creating a lot of garbage slows everything down. Not fun.
 // Let's create some recyclable objects that we can use later.
 const scratchCartesian = new Cartesian3;
 const scratchQuaternion = new Quaternion;
-const scratchArray = [];
+const scratchQuaternionDragPitch = new Quaternion;
+const scratchQuaternionDragYaw = new Quaternion;
+const frustum = new Argon.Cesium.PerspectiveFrustum();
+
+const aggregator = new Argon.Cesium.CameraEventAggregator(<any>document.documentElement);
 
 // Reality views must raise frame events at regular intervals in order to 
 // drive updates for the entire system. 
-function onFrame(time, index:number) {
+function onFrame(time) {
+    app.device.requestFrame(onFrame);
+
+    if (frustum.fov === undefined || app.device.strict) {
+        Argon.decomposePerspectiveProjectionMatrix(app.device.subviews[0].projectionMatrix, frustum);
+    }
     
-    // For this example, we want to control the panorama using the device orientation.
-    // Since we are using geolocated panoramas, we only need orientation updates
-    app.device.update({orientation:true});
-    
-    // Get the current display-aligned device orientation relative to the device geolocation
+    // Get the current device orientation
     const deviceOrientation = Argon.getEntityOrientation(
-        app.device.displayEntity, 
+        app.device.eye, 
         time, 
-        app.device.geolocationEntity, 
+        app.device.stage, 
         scratchQuaternion
     );
 
-    // Rotate the eye according to the device orientation
-    // (the eye should be positioned at the current panorama)
-    (<any>eyeEntity.orientation).setValue(deviceOrientation);
+    if (deviceOrientation) {
+        // Rotate our virtual eye according to the device orientation
+        // (the eye should be positioned at the current panorama)
+        (<any>virtualEye.orientation).setValue(deviceOrientation);
+    }
+
+    if (!app.device.strict) {
+        if (aggregator.isMoving(Argon.Cesium.CameraEventType.WHEEL)) {
+            const wheelMovement = aggregator.getMovement(Argon.Cesium.CameraEventType.WHEEL);
+            const diff = wheelMovement.endPosition.y;
+            frustum.fov = Math.min(Math.max(frustum.fov - diff * 0.02, Math.PI/8), Math.PI-Math.PI/8);
+        }
+        if (aggregator.isMoving(Argon.Cesium.CameraEventType.PINCH)) {
+            const pinchMovement = aggregator.getMovement(Argon.Cesium.CameraEventType.PINCH);
+            const diff = pinchMovement.distance.endPosition.y - pinchMovement.distance.startPosition.y;
+            frustum.fov = Math.min(Math.max(frustum.fov - diff * 0.02, Math.PI/8), Math.PI-Math.PI/8);
+        }
+        if (!deviceOrientation && aggregator.isMoving(Argon.Cesium.CameraEventType.LEFT_DRAG)) {
+            const dragMovement = aggregator.getMovement(Argon.Cesium.CameraEventType.LEFT_DRAG);
+            const currentOrientation = Argon.getEntityOrientationInReferenceFrame(virtualEye, time, currentPano.entity, scratchQuaternion);
+            // const dragPitch = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, frustum.fov * (dragMovement.endPosition.y - dragMovement.startPosition.y) / app.view.getViewport().height, scratchQuaternionDragPitch);
+            const dragYaw = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, frustum.fov * (dragMovement.endPosition.x - dragMovement.startPosition.x) / app.view.getViewport().width, scratchQuaternionDragYaw);
+            // const drag = Quaternion.multiply(dragPitch, dragYaw, dragYaw);
+
+            const newOrientation = Quaternion.multiply(currentOrientation, dragYaw, dragYaw);
+            (<any>virtualEye.orientation).setValue(newOrientation);
+        }
+        frustum.aspectRatio = app.device.subviews[0].viewport.width / app.device.subviews[0].viewport.height;
+        app.device.subviews.forEach((s)=>{
+            Argon.Cesium.Matrix4.clone(frustum.projectionMatrix, s.projectionMatrix);
+        });
+    }
+
+    aggregator.reset();
 
     // By publishing a view state event, we are describing where we
     // are in the world, what direction we are looking, and how are rendering 
     app.reality.publishViewState({
         time,
-        pose: Argon.getSerializedEntityPose(eyeEntity, time),
-        viewport: app.device.state.viewport,
-        subviews: app.device.state.subviews
+        pose: Argon.getSerializedEntityPose(virtualEye, time),
+        viewport: app.device.viewport,
+        subviews: app.device.subviews,
+        geolocationAccuracy: undefined,
+        altitudeAccuracy: undefined,
+        compassAccuracy: undefined
     });
-
-    app.timer.requestFrame(onFrame);
 }
-// We can use requestAnimationFrame, or the builtin Argon.TimerService (app.timer),
-// The TimerService is more convenient as it will provide the current time 
-// as a Cesium.JulianDate object which can be used directly when raising a frame event. 
-app.timer.requestFrame(onFrame)
+app.device.requestFrame(onFrame)
 
 
 // the updateEvent is called each time the 3D world should be
@@ -156,7 +184,7 @@ app.renderEvent.addEventListener(() => {
     const viewport = app.view.getViewport();
     renderer.setSize(viewport.width, viewport.height);
     
-    // there is 1 subview in monocular mode, 2 in stereo mode    
+    // there is 1 subview in monocular mode, 2 in stereo mode
     for (let subview of app.view.getSubviews()) {
         // set the position and orientation of the camera for 
         // this subview
@@ -164,7 +192,7 @@ app.renderEvent.addEventListener(() => {
         camera.quaternion.copy(<any>subview.pose.orientation);
         // the underlying system provide a full projection matrix
         // for the camera. 
-        camera.projectionMatrix.fromArray(<any>subview.projectionMatrix);
+        camera.projectionMatrix.fromArray(<any>subview.frustum.projectionMatrix);
 
         // set the viewport for this view
         let {x,y,width,height} = subview.viewport;
@@ -259,7 +287,7 @@ function showPanorama(options:ShowPanoramaOptions) {
     if (!panoIn) throw new Error('Unknown pano: '+ url + ' (did you forget to add the panorama first?)')
     currentPano = panoIn;
 
-    eyeEntity.position = new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, currentPano.entity);
+    virtualEye.position = new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, currentPano.entity);
     
     // get the threejs objects for rendering our panoramas
     const sphereOut = panoSpheres[currentSphere];

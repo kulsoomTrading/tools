@@ -20,12 +20,14 @@ THREE.CSS3DArgonHUD = function () {
 	hudElements[0].style.display = 'none'; // start hidden
 	hudElements[0].style.position = 'absolute';
 	hudElements[0].style.overflow = 'hidden';
+	hudElements[0].style.pointerEvents = 'none';
 	domElement.appendChild( hudElements[0] );
 
 	hudElements[1] = document.createElement( 'div' );
 	hudElements[1].style.display = 'none'; // start hidden
 	hudElements[1].style.position = 'absolute';
 	hudElements[1].style.overflow = 'hidden';
+	hudElements[1].style.pointerEvents = 'none';
 	domElement.appendChild( hudElements[1] );
 
 	this.appendChild = function (element, element2) {
