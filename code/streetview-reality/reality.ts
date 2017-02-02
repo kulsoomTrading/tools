@@ -34,12 +34,9 @@ subviewElements[0].style.height = '100%';
 subviewElements[1].style.width = '100%';
 subviewElements[1].style.height = '100%';
 subviewElements[1].style.pointerEvents = 'none';
-(app.view.element as HTMLElement).appendChild(subviewElements[0]);
-(app.view.element as HTMLElement).appendChild(subviewElements[1]);
-app.view.containerElementPromise.then(function (container) {
-    container.appendChild(mapElement);
-    initStreetview();
-})
+app.viewport.element.appendChild(subviewElements[0]);
+app.viewport.element.appendChild(subviewElements[1]);
+app.viewport.element.appendChild(mapElement);
 
 const resize = ()=> {
     google.maps.event.trigger(map, 'resize');
@@ -122,7 +119,7 @@ const mapToggleControl = new MapToggleControl();
 const initStreetview = () => {
 
     // The photosphere is a much nicer viewer
-    google.maps.streetViewViewer = 'photosphere';
+    // google.maps.streetViewViewer = 'photosphere';
 
     map = new google.maps.Map(mapElement);
 
@@ -167,7 +164,7 @@ const initStreetview = () => {
         })
     })
 
-    app.view.viewportChangeEvent.addEventListener(resize)
+    app.viewport.changeEvent.addEventListener(resize)
 
     const streetViewService = new google.maps.StreetViewService();
 
@@ -212,6 +209,8 @@ const initStreetview = () => {
     }, 1000);
 };
 
+initStreetview();
+
 // Tell argon what local coordinate system you want.  The default coordinate
 // frame used by Argon is Cesium's FIXED frame, which is centered at the center
 // of the earth and oriented with the earth's axes.  
@@ -226,10 +225,6 @@ const initStreetview = () => {
 // that here.  The other option Argon supports is localOriginEastNorthUp, which is
 // more similar to what is used in the geospatial industry
 app.context.setDefaultReferenceFrame(app.context.localOriginEastUpSouth);
-
-// We need to define a projection matrix for our reality view
-var perspectiveProjection = new Argon.Cesium.PerspectiveFrustum();
-perspectiveProjection.fov = Math.PI / 2;
 
 // Create an entity to represent the panorama
 const panoEntity = new Argon.Cesium.Entity({
@@ -257,24 +252,26 @@ const x90Neg = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, - Math.PI / 2);
 
 let lastZoomLevel:number;
 
+const viewport = <Argon.Viewport>{};
+const subviews = <Argon.SerializedSubview[]>[];
+
 // Reality views must raise frame events at regular intervals in order to 
 // drive updates for the entire system. 
 function onFrame(time) {
     // keep the loop going
-    app.device.requestFrame(onFrame);
+    app.view.requestAnimationFrame(onFrame);
 
     if (!streetviews) {
         return;
     }
 
-    const viewport = app.device.viewport;
-    const subviews = app.device.subviews;
+    const suggestedViewState = app.view.suggestedViewState;
 
-    if (frustum.fov === undefined || app.device.strict) {
-        Argon.decomposePerspectiveProjectionMatrix(subviews[0].projectionMatrix, frustum);
-    }
+    Argon.Viewport.clone(suggestedViewState.viewport, viewport);
+    Argon.SerializedSubviewList.clone(suggestedViewState.subviews, subviews);
+    Argon.decomposePerspectiveProjectionMatrix(subviews[0].projectionMatrix, frustum);
 
-    if (app.device.strict || subviews.length > 1) {
+    if (suggestedViewState.strict || subviews.length > 1) {
         mapToggleControl.element.style.display = 'none';
     } else {
         mapToggleControl.element.style.display = 'auto';
@@ -306,7 +303,9 @@ function onFrame(time) {
     }
     
     const subviewViewport = subviews[0].viewport;
-    const subviewAspect = subviewViewport.width / subviewViewport.height;
+    let subviewAspect = subviewViewport.width / subviewViewport.height;
+    subviewAspect = isFinite(subviewAspect) || subviewAspect !== 0 ? 
+        subviewAspect : 1;
 
     // Get the current pov from streetview
     let orientationValue: Argon.Cesium.Quaternion;
@@ -321,13 +320,20 @@ function onFrame(time) {
     // get the current fov
     let zoomLevel = streetviews[0].getZoom();
 
-    if (!zoomLevel) zoomLevel = lastZoomLevel;
+    // google streetview uses a non-rectilinear projection which reduces
+    // distortion at high fov (which is nice), but we do not yet have
+    // a way to specify non-rectilinar projections to apps, so we are limiting
+    // the streetview fov to a smaller fov 
+    const MAX_ZOOM_LEVEL = 1.5;
 
-    if (!zoomLevel || app.device.strict) {
+    if (!zoomLevel || zoomLevel <= MAX_ZOOM_LEVEL || suggestedViewState.strict) {
         // calculate streetview zoom level
-        const fovyDegrees = frustum.fovy * Argon.Cesium.CesiumMath.DEGREES_PER_RADIAN;
-        const fovxDegrees = subviewAspect * fovyDegrees;
-        zoomLevel = 1 - Math.log2(fovxDegrees / 90);
+        const fovyRad = frustum.fovy;
+        const fovxRad = Math.atan(Math.tan(fovyRad * 0.5) * subviewAspect) * 2.0;
+        zoomLevel = 1 - Math.log2(fovxRad * Argon.Cesium.CesiumMath.DEGREES_PER_RADIAN / 90);
+        
+        if (zoomLevel < MAX_ZOOM_LEVEL) zoomLevel = MAX_ZOOM_LEVEL; 
+        
         streetviews.forEach((streetview) => {
             streetview.setOptions({
                 zoom: zoomLevel
@@ -338,8 +344,9 @@ function onFrame(time) {
     lastZoomLevel = zoomLevel;
 
     let fovx = 90 * Math.pow(2, -zoomLevel + 1) * CesiumMath.RADIANS_PER_DEGREE;
-    // fovx = Math.min(Math.max(fovx, MIN_FOV_RAD), MAX_FOV_RAD); // sometimes getZoom returns strange values :)
-    frustum.fov = subviewAspect < 1 ? fovx / subviewAspect : fovx;
+    frustum.fov = subviewAspect < 1 ? 
+        Math.atan(Math.tan(fovx * 0.5) / subviewAspect) * 2.0 : 
+        fovx;
     frustum.aspectRatio = subviewAspect;
 
     // set the subview fov to match the actual fov
@@ -347,20 +354,19 @@ function onFrame(time) {
         s.projectionMatrix = Matrix4.clone(frustum.projectionMatrix, s.projectionMatrix);
     });
 
-    const pose = Argon.getSerializedEntityPose(eyeEntity, time);
-
-    // Publish a view state event with all the info for the current view
-    app.reality.publishViewState({
+    const frameState = app.context.createFrameState(
         time,
-        pose,
         viewport,
         subviews,
-        geolocationAccuracy: 5, // assuming streetview pano geolocation is within 5m accurate
-        altitudeAccuracy: undefined,
-        compassAccuracy: 5 // assuming accurate within 5 degrees
-    });
+        eyeEntity,
+        5, // assuming streetview pano geolocation is within 5m accurate
+        undefined, // unknown vertical accuracy
+        5 // assuming accurate within 5 degrees
+    );
+    
+    app.context.submitFrameState(frameState);
 }
-app.device.requestFrame(onFrame)
+app.view.requestAnimationFrame(onFrame)
 
 let compassControl: HTMLElement;
 

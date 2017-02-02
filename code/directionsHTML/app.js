@@ -13,7 +13,7 @@ scene.add(userLocation);
 // includes both 3D elements and a place to put things that appear 
 // fixed to the screen (heads-up-display) 
 var renderer = new THREE.CSS3DArgonRenderer();
-app.view.element.appendChild(renderer.domElement);
+app.viewport.element.appendChild(renderer.domElement);
 // to easily control stuff on the display
 var hud = new THREE.CSS3DArgonHUD();
 // We put some elements in the index.html, for convenience. 
@@ -22,7 +22,7 @@ var hud = new THREE.CSS3DArgonHUD();
 // hud since we'll be hiding it in stereo
 var description = document.getElementById('description');
 hud.hudElements[0].appendChild(description);
-app.view.element.appendChild(hud.domElement);
+app.viewport.element.appendChild(hud.domElement);
 // Tell argon what local coordinate system you want.  The default coordinate
 // frame used by Argon is Cesium's FIXED frame, which is centered at the center
 // of the earth and oriented with the earth's axes.  
@@ -148,7 +148,7 @@ app.renderEvent.addEventListener(function () {
     // only schedule a new callback if the old one has completed
     if (!rAFpending) {
         rAFpending = true;
-        viewport = app.view.getViewport();
+        viewport = app.viewport.current;
         subViews = app.view.getSubviews();
         window.requestAnimationFrame(renderFunc);
     }
@@ -173,7 +173,7 @@ function renderFunc() {
         // the underlying system provide a full projection matrix
         // for the camera.  Use it, and then update the FOV of the 
         // camera from it (needed by the CSS Perspective DIV)
-        camera.projectionMatrix.fromArray(subview.projectionMatrix);
+        camera.projectionMatrix.fromArray(subview.frustum.projectionMatrix);
         camera.fov = subview.frustum.fovy * 180 / Math.PI;
         // set the viewport for this view
         var _a = subview.viewport, x = _a.x, y = _a.y, width = _a.width, height = _a.height;

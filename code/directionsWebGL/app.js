@@ -20,7 +20,7 @@ var renderer = new THREE.WebGLRenderer({
 });
 // account for the pixel density of the device
 renderer.setPixelRatio(window.devicePixelRatio);
-app.view.element.appendChild(renderer.domElement);
+app.viewport.element.appendChild(renderer.domElement);
 // Tell argon what local coordinate system you want.  The default coordinate
 // frame used by Argon is Cesium's FIXED frame, which is centered at the center
 // of the earth and oriented with the earth's axes.  
@@ -48,8 +48,7 @@ scene.add(sunMoonLights.lights);
 var ambientlight = new THREE.AmbientLight(0x404040); // soft white ambient light 
 scene.add(ambientlight);
 // install a reality that the user can select from
-app.reality.install(Argon.resolveURL('../streetview-reality/index.html'));
-app.reality.request(Argon.RealityViewer.EMPTY);
+app.reality.install(Argon.resolveURL('../streetview-reality/index.html?v=2'));
 // create 6 3D words for the 6 directions.  
 var loader = new THREE.FontLoader();
 loader.load('../resources/fonts/helvetiker_regular.typeface.js', function (font) {
@@ -103,8 +102,8 @@ app.updateEvent.addEventListener(function () {
         userLocation.position.copy(userPose.position);
     }
     // get sun and moon positions, add/remove lights as necessary
-    var date = app.context.getTime();
-    sunMoonLights.update(date, app.context.getDefaultReferenceFrame());
+    var date = app.context.time;
+    sunMoonLights.update(date, app.context.defaultReferenceFrame);
 });
 // renderEvent is fired whenever argon wants the app to update its display
 app.renderEvent.addEventListener(function () {
@@ -113,7 +112,7 @@ app.renderEvent.addEventListener(function () {
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
-    var viewport = app.view.getViewport();
+    var viewport = app.viewport.current;
     renderer.setSize(viewport.width, viewport.height);
     // there is 1 subview in monocular mode, 2 in stereo mode    
     for (var _i = 0, _a = app.view.getSubviews(); _i < _a.length; _i++) {

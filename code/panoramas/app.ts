@@ -42,9 +42,7 @@ var ambientlight = new THREE.AmbientLight( 0x404040 ); // soft white ambient lig
 scene.add(ambientlight);
 
 // set our desired reality 
-app.reality.request({
-    uri: Argon.resolveURL('../panorama-reality/index.html')
-})
+app.reality.request(Argon.resolveURL('../panorama-reality/index.html'))
 
 // the information needed for each panorama to be used.  Panoramas need to be geolocated to be
 // used with the Reality, since a Reality must provide the position and orientation of the camera
@@ -217,7 +215,7 @@ app.renderEvent.addEventListener(() => {
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
-    const viewport = app.view.getViewport();
+    const viewport = app.viewport.current;
     renderer.setSize(viewport.width, viewport.height);
     
     // there is 1 subview in monocular mode, 2 in stereo mode    

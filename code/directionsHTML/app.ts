@@ -1,10 +1,6 @@
 /// <reference types="@argonjs/argon"/>
 /// <reference types="three"/>
 
-// When we distribute Argon typings, we can get rid of this, but for now
-// we need to shut up the Typescript compiler about missing Argon typings
-declare const Argon:any;
-
 // set up Argon
 const app = Argon.init();
 
@@ -20,7 +16,7 @@ scene.add(userLocation);
 // includes both 3D elements and a place to put things that appear 
 // fixed to the screen (heads-up-display) 
 const renderer = new (<any>THREE).CSS3DArgonRenderer();
-app.view.element.appendChild(renderer.domElement);
+app.viewport.element.appendChild(renderer.domElement);
 
 // to easily control stuff on the display
 const hud = new (<any>THREE).CSS3DArgonHUD();
@@ -31,7 +27,7 @@ const hud = new (<any>THREE).CSS3DArgonHUD();
 // hud since we'll be hiding it in stereo
 var description = document.getElementById( 'description' );
 hud.hudElements[0].appendChild(description);
-app.view.element.appendChild(hud.domElement);
+app.viewport.element.appendChild(hud.domElement);
 
 // Tell argon what local coordinate system you want.  The default coordinate
 // frame used by Argon is Cesium's FIXED frame, which is centered at the center
@@ -171,7 +167,7 @@ app.updateEvent.addEventListener(() => {
     // assuming we know the user's pose, set the position of our 
     // THREE user object to match it
     if (userPose.poseStatus & Argon.PoseStatus.KNOWN) {
-        userLocation.position.copy(userPose.position);
+        userLocation.position.copy(<any>userPose.position);
     }
 })
     
@@ -188,7 +184,7 @@ app.renderEvent.addEventListener(() => {
     // only schedule a new callback if the old one has completed
     if (!rAFpending) {
         rAFpending = true;
-        viewport = app.view.getViewport();
+        viewport = app.viewport.current;
         subViews = app.view.getSubviews();
         window.requestAnimationFrame(renderFunc);
     }

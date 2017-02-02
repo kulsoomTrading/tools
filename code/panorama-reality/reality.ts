@@ -18,9 +18,7 @@ const app = Argon.initRealityViewer({
 // for the user's location
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera();
-const userLocation = new THREE.Object3D;
 scene.add(camera);
-scene.add(userLocation);
 
 // We use the standard WebGLRenderer when we only need WebGL-based content
 const renderer = new THREE.WebGLRenderer({ 
@@ -30,7 +28,7 @@ const renderer = new THREE.WebGLRenderer({
 
 // account for the pixel density of the device
 renderer.setPixelRatio(window.devicePixelRatio);
-app.view.element.appendChild(renderer.domElement);
+app.viewport.element.appendChild(renderer.domElement);
 
 // Tell argon what local coordinate system you want.  The default coordinate
 // frame used by Argon is Cesium's FIXED frame, which is centered at the center
@@ -45,7 +43,7 @@ app.view.element.appendChild(renderer.domElement);
 // The EUS frame cooresponds to the typical 3D computer graphics coordinate frame, so we use
 // that here.  The other option Argon supports is localOriginEastNorthUp, which is
 // more similar to what is used in the geospatial industry
-app.context.setDefaultReferenceFrame(app.context.localOriginEastUpSouth);
+app.context.defaultReferenceFrame = app.context.localOriginEastUpSouth;
 
 interface PanoramaInfo {
     url: string,
@@ -72,7 +70,7 @@ panoSpheres.forEach((mesh)=>{
     const material = new THREE.MeshBasicMaterial();
     material.transparent = true;
     mesh.material = material;
-    userLocation.add(mesh);
+    scene.add(mesh);
 })
 var currentSphere = 0;
 
@@ -91,87 +89,86 @@ const frustum = new Argon.Cesium.PerspectiveFrustum();
 
 const aggregator = new Argon.Cesium.CameraEventAggregator(<any>document.documentElement);
 
+const subviews = new Array<Argon.SerializedSubview>();
+
 // Reality views must raise frame events at regular intervals in order to 
 // drive updates for the entire system. 
 function onFrame(time) {
-    app.device.requestFrame(onFrame);
+    app.view.requestAnimationFrame(onFrame);
 
-    if (frustum.fov === undefined || app.device.strict) {
-        Argon.decomposePerspectiveProjectionMatrix(app.device.subviews[0].projectionMatrix, frustum);
-    }
+    const suggestedViewState = app.view.suggestedViewState;
+    if (!suggestedViewState) return;
+
+    Argon.SerializedSubviewList.clone(suggestedViewState.subviews, subviews);
     
-    // Get the current device orientation
-    const deviceOrientation = Argon.getEntityOrientation(
-        app.device.eye, 
+    // Get the physical device orientation
+    const physicalEyeOrientation = Argon.getEntityOrientation(
+        app.view.physicalEye,
         time, 
-        app.device.stage, 
+        app.location.physicalStage, 
         scratchQuaternion
     );
 
-    if (deviceOrientation) {
+    if (physicalEyeOrientation) {
         // Rotate our virtual eye according to the device orientation
         // (the eye should be positioned at the current panorama)
-        (<any>virtualEye.orientation).setValue(deviceOrientation);
+        (<any>virtualEye.orientation).setValue(physicalEyeOrientation);
     }
 
-    if (!app.device.strict) {
+    if (!suggestedViewState.strict) {
+        Argon.decomposePerspectiveProjectionMatrix(subviews[0].projectionMatrix, frustum);
+        frustum.fov = app.view.subviews[0].frustum.fov;
+
         if (aggregator.isMoving(Argon.Cesium.CameraEventType.WHEEL)) {
             const wheelMovement = aggregator.getMovement(Argon.Cesium.CameraEventType.WHEEL);
             const diff = wheelMovement.endPosition.y;
             frustum.fov = Math.min(Math.max(frustum.fov - diff * 0.02, Math.PI/8), Math.PI-Math.PI/8);
         }
+
         if (aggregator.isMoving(Argon.Cesium.CameraEventType.PINCH)) {
             const pinchMovement = aggregator.getMovement(Argon.Cesium.CameraEventType.PINCH);
             const diff = pinchMovement.distance.endPosition.y - pinchMovement.distance.startPosition.y;
             frustum.fov = Math.min(Math.max(frustum.fov - diff * 0.02, Math.PI/8), Math.PI-Math.PI/8);
         }
-        if (!deviceOrientation && aggregator.isMoving(Argon.Cesium.CameraEventType.LEFT_DRAG)) {
+
+        if (!physicalEyeOrientation && aggregator.isMoving(Argon.Cesium.CameraEventType.LEFT_DRAG)) {
             const dragMovement = aggregator.getMovement(Argon.Cesium.CameraEventType.LEFT_DRAG);
             const currentOrientation = Argon.getEntityOrientationInReferenceFrame(virtualEye, time, currentPano.entity, scratchQuaternion);
-            // const dragPitch = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, frustum.fov * (dragMovement.endPosition.y - dragMovement.startPosition.y) / app.view.getViewport().height, scratchQuaternionDragPitch);
-            const dragYaw = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, frustum.fov * (dragMovement.endPosition.x - dragMovement.startPosition.x) / app.view.getViewport().width, scratchQuaternionDragYaw);
+            // const dragPitch = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, frustum.fov * (dragMovement.endPosition.y - dragMovement.startPosition.y) / app.viewport.current.height, scratchQuaternionDragPitch);
+            const dragYaw = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, frustum.fov * (dragMovement.endPosition.x - dragMovement.startPosition.x) / app.viewport.current.width, scratchQuaternionDragYaw);
             // const drag = Quaternion.multiply(dragPitch, dragYaw, dragYaw);
 
             const newOrientation = Quaternion.multiply(currentOrientation, dragYaw, dragYaw);
             (<any>virtualEye.orientation).setValue(newOrientation);
         }
-        frustum.aspectRatio = app.device.subviews[0].viewport.width / app.device.subviews[0].viewport.height;
-        app.device.subviews.forEach((s)=>{
+        
+        subviews.forEach((s)=>{
+            const aspect = s.viewport.width / s.viewport.height;
+            frustum.aspectRatio = isFinite(aspect) && aspect !== 0 ? aspect : 1;
             Argon.Cesium.Matrix4.clone(frustum.projectionMatrix, s.projectionMatrix);
         });
     }
 
     aggregator.reset();
 
-    // By publishing a view state event, we are describing where we
-    // are in the world, what direction we are looking, and how are rendering 
-    app.reality.publishViewState({
+    // By publishing a view state, we are describing where we
+    // are in the world, what direction we are looking, and how we are rendering 
+    const frameState = app.context.createFrameState(
         time,
-        pose: Argon.getSerializedEntityPose(virtualEye, time),
-        viewport: app.device.viewport,
-        subviews: app.device.subviews,
-        geolocationAccuracy: undefined,
-        altitudeAccuracy: undefined,
-        compassAccuracy: undefined
-    });
+        suggestedViewState.viewport,
+        subviews,
+        virtualEye
+    );
+
+    app.context.submitFrameState(frameState);
 }
-app.device.requestFrame(onFrame)
+app.view.requestAnimationFrame(onFrame)
 
 
 // the updateEvent is called each time the 3D world should be
 // rendered, before the renderEvent.  The state of your application
 // should be updated here.
 app.updateEvent.addEventListener(() => {
-    // get the position and orientation (the "pose") of the user
-    // in the local coordinate frame.
-    const userPose = app.context.getEntityPose(app.context.user);
-
-    // assuming we know the user's pose, set the position of our 
-    // THREE user object to match it
-    if (userPose.poseStatus & Argon.PoseStatus.KNOWN) {
-        userLocation.position.copy(<any>userPose.position);
-    }
-    
     TWEEN.update();
 })
 
@@ -181,17 +178,15 @@ app.renderEvent.addEventListener(() => {
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
-    const viewport = app.view.getViewport();
+    const viewport = app.viewport.current;
     renderer.setSize(viewport.width, viewport.height);
     
     // there is 1 subview in monocular mode, 2 in stereo mode
     for (let subview of app.view.getSubviews()) {
-        // set the position and orientation of the camera for 
-        // this subview
-        camera.position.copy(<any>subview.pose.position);
+        // set camera orientation, ignoring the position since panoramas do not support free
+        // movement
         camera.quaternion.copy(<any>subview.pose.orientation);
-        // the underlying system provide a full projection matrix
-        // for the camera. 
+        // set the projection matrix
         camera.projectionMatrix.fromArray(<any>subview.frustum.projectionMatrix);
 
         // set the viewport for this view
@@ -324,6 +319,8 @@ function showPanorama(options:ShowPanoramaOptions) {
     outTween.to({opacity:0}, transition.duration).onUpdate(()=>{
         outMaterial.needsUpdate = true;
     }).easing(easing).start();
+    outMaterial.opacity = 1;
+    outMaterial.needsUpdate = true;
 }
 
 function resolve(path:string, obj, safe:boolean=true) {

@@ -29,22 +29,20 @@ subviewElements[0].style.height = '100%';
 subviewElements[1].style.width = '100%';
 subviewElements[1].style.height = '100%';
 subviewElements[1].style.pointerEvents = 'none';
-app.view.element.appendChild(subviewElements[0]);
-app.view.element.appendChild(subviewElements[1]);
-app.view.containerElementPromise.then(function (container) {
-    container.appendChild(mapElement);
-    initStreetview();
-});
+app.viewport.element.appendChild(subviewElements[0]);
+app.viewport.element.appendChild(subviewElements[1]);
+app.viewport.element.appendChild(mapElement);
 var resize = function () {
     google.maps.event.trigger(map, 'resize');
     setTimeout(function () { return google.maps.event.trigger(map, 'resize'); }, 100);
-    var _loop_1 = function(streetview) {
+    var _loop_1 = function (streetview) {
         google.maps.event.trigger(streetview, 'resize');
         setTimeout(function () { return google.maps.event.trigger(streetview, 'resize'); }, 50);
         setTimeout(function () { return google.maps.event.trigger(streetview, 'resize'); }, 100);
         setTimeout(function () { return google.maps.event.trigger(streetview, 'resize'); }, 200);
         setTimeout(function () { return google.maps.event.trigger(streetview, 'resize'); }, 300);
         setTimeout(function () { return google.maps.event.trigger(streetview, 'resize'); }, 500);
+        // ^ because sometimes it doesn't resize right away??
     };
     for (var _i = 0, streetviews_1 = streetviews; _i < streetviews_1.length; _i++) {
         var streetview = streetviews_1[_i];
@@ -111,7 +109,7 @@ var currentPanoData;
 var mapToggleControl = new MapToggleControl();
 var initStreetview = function () {
     // The photosphere is a much nicer viewer
-    google.maps.streetViewViewer = 'photosphere';
+    // google.maps.streetViewViewer = 'photosphere';
     map = new google.maps.Map(mapElement);
     var options = {
         zoomControl: false,
@@ -148,14 +146,14 @@ var initStreetview = function () {
             }
         });
     });
-    app.view.viewportChangeEvent.addEventListener(resize);
+    app.viewport.changeEvent.addEventListener(resize);
     var streetViewService = new google.maps.StreetViewService();
     function setStreetViewPosition(lat, lng, alt) {
         var coords = new google.maps.LatLng(lat, lng);
         streetViewService.getPanorama({
             location: coords,
             radius: 1500,
-            preference: google.maps.StreetViewPreference.NEAREST,
+            preference: google.maps.StreetViewPreference.NEAREST
         }, function (data, status) {
             if (status === google.maps.StreetViewStatus.OK) {
                 currentPanoData = data;
@@ -189,6 +187,7 @@ var initStreetview = function () {
         });
     }, 1000);
 };
+initStreetview();
 // Tell argon what local coordinate system you want.  The default coordinate
 // frame used by Argon is Cesium's FIXED frame, which is centered at the center
 // of the earth and oriented with the earth's axes.  
@@ -203,9 +202,6 @@ var initStreetview = function () {
 // that here.  The other option Argon supports is localOriginEastNorthUp, which is
 // more similar to what is used in the geospatial industry
 app.context.setDefaultReferenceFrame(app.context.localOriginEastUpSouth);
-// We need to define a projection matrix for our reality view
-var perspectiveProjection = new Argon.Cesium.PerspectiveFrustum();
-perspectiveProjection.fov = Math.PI / 2;
 // Create an entity to represent the panorama
 var panoEntity = new Argon.Cesium.Entity({
     position: new Argon.Cesium.ConstantPositionProperty(undefined, Argon.Cesium.ReferenceFrame.FIXED),
@@ -226,20 +222,21 @@ var frustum = new Argon.Cesium.PerspectiveFrustum();
 var x90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, Math.PI / 2);
 var x90Neg = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, -Math.PI / 2);
 var lastZoomLevel;
+var viewport = {};
+var subviews = [];
 // Reality views must raise frame events at regular intervals in order to 
 // drive updates for the entire system. 
 function onFrame(time) {
     // keep the loop going
-    app.device.requestFrame(onFrame);
+    app.view.requestAnimationFrame(onFrame);
     if (!streetviews) {
         return;
     }
-    var viewport = app.device.viewport;
-    var subviews = app.device.subviews;
-    if (frustum.fov === undefined || app.device.strict) {
-        Argon.decomposePerspectiveProjectionMatrix(subviews[0].projectionMatrix, frustum);
-    }
-    if (app.device.strict || subviews.length > 1) {
+    var suggestedViewState = app.view.suggestedViewState;
+    Argon.Viewport.clone(suggestedViewState.viewport, viewport);
+    Argon.SerializedSubviewList.clone(suggestedViewState.subviews, subviews);
+    Argon.decomposePerspectiveProjectionMatrix(subviews[0].projectionMatrix, frustum);
+    if (suggestedViewState.strict || subviews.length > 1) {
         mapToggleControl.element.style.display = 'none';
     }
     else {
@@ -273,6 +270,8 @@ function onFrame(time) {
     }
     var subviewViewport = subviews[0].viewport;
     var subviewAspect = subviewViewport.width / subviewViewport.height;
+    subviewAspect = isFinite(subviewAspect) || subviewAspect !== 0 ?
+        subviewAspect : 1;
     // Get the current pov from streetview
     var orientationValue;
     var pov = streetviews[0].getPov();
@@ -284,13 +283,18 @@ function onFrame(time) {
     eyeEntity.orientation.setValue(orientationValue);
     // get the current fov
     var zoomLevel = streetviews[0].getZoom();
-    if (!zoomLevel)
-        zoomLevel = lastZoomLevel;
-    if (!zoomLevel || app.device.strict) {
+    // google streetview uses a non-rectilinear projection which reduces
+    // distortion at high fov (which is nice), but we do not yet have
+    // a way to specify non-rectilinar projections to apps, so we are limiting
+    // the streetview fov to a smaller fov 
+    var MAX_ZOOM_LEVEL = 1.5;
+    if (!zoomLevel || zoomLevel <= MAX_ZOOM_LEVEL || suggestedViewState.strict) {
         // calculate streetview zoom level
-        var fovyDegrees = frustum.fovy * Argon.Cesium.CesiumMath.DEGREES_PER_RADIAN;
-        var fovxDegrees = subviewAspect * fovyDegrees;
-        zoomLevel = 1 - Math.log2(fovxDegrees / 90);
+        var fovyRad = frustum.fovy;
+        var fovxRad = Math.atan(Math.tan(fovyRad * 0.5) * subviewAspect) * 2.0;
+        zoomLevel = 1 - Math.log2(fovxRad * Argon.Cesium.CesiumMath.DEGREES_PER_RADIAN / 90);
+        if (zoomLevel < MAX_ZOOM_LEVEL)
+            zoomLevel = MAX_ZOOM_LEVEL;
         streetviews.forEach(function (streetview) {
             streetview.setOptions({
                 zoom: zoomLevel
@@ -299,26 +303,21 @@ function onFrame(time) {
     }
     lastZoomLevel = zoomLevel;
     var fovx = 90 * Math.pow(2, -zoomLevel + 1) * CesiumMath.RADIANS_PER_DEGREE;
-    // fovx = Math.min(Math.max(fovx, MIN_FOV_RAD), MAX_FOV_RAD); // sometimes getZoom returns strange values :)
-    frustum.fov = subviewAspect < 1 ? fovx / subviewAspect : fovx;
+    frustum.fov = subviewAspect < 1 ?
+        Math.atan(Math.tan(fovx * 0.5) / subviewAspect) * 2.0 :
+        fovx;
     frustum.aspectRatio = subviewAspect;
     // set the subview fov to match the actual fov
     subviews.forEach(function (s) {
         s.projectionMatrix = Matrix4.clone(frustum.projectionMatrix, s.projectionMatrix);
     });
-    var pose = Argon.getSerializedEntityPose(eyeEntity, time);
-    // Publish a view state event with all the info for the current view
-    app.reality.publishViewState({
-        time: time,
-        pose: pose,
-        viewport: viewport,
-        subviews: subviews,
-        geolocationAccuracy: 5,
-        altitudeAccuracy: undefined,
-        compassAccuracy: 5 // assuming accurate within 5 degrees
-    });
+    var frameState = app.context.createFrameState(time, viewport, subviews, eyeEntity, 5, // assuming streetview pano geolocation is within 5m accurate
+    undefined, // unknown vertical accuracy
+    5 // assuming accurate within 5 degrees
+    );
+    app.context.submitFrameState(frameState);
 }
-app.device.requestFrame(onFrame);
+app.view.requestAnimationFrame(onFrame);
 var compassControl;
 var timeoutId;
 var ensureUIVisible = function () {

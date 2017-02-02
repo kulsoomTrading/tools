@@ -6,7 +6,7 @@
     "@types/three": "0.0.19",
     "@types/tween.js": "0.0.27",
     "static-server": "^2.0.1",
-    "typescript": "^2.0.0"
+    "typescript": "^2.1.4"
   },
   "scripts": {
     "serve": "static-server -p 1337",

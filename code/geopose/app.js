@@ -7,11 +7,7 @@ var ReferenceFrame = Argon.Cesium.ReferenceFrame;
 var JulianDate = Argon.Cesium.JulianDate;
 var CesiumMath = Argon.Cesium.CesiumMath;
 // set up Argon
-var app = Argon.init({
-    configuration: {
-        needsGeopose: true
-    }
-});
+var app = Argon.init();
 //app.view.element.style.zIndex = 0;
 // set up THREE.  Create a scene, a perspective camera and an object
 // for the user's location
@@ -37,9 +33,9 @@ var renderer = new THREE.WebGLRenderer({
 renderer.setPixelRatio(window.devicePixelRatio);
 // Assuming the z-orders are the same, the order of sibling elements
 // in the DOM determines which content is in front (top->bottom = back->front)
-app.view.element.appendChild(renderer.domElement);
-app.view.element.appendChild(cssRenderer.domElement);
-app.view.element.appendChild(hud.domElement);
+app.viewport.element.appendChild(renderer.domElement);
+app.viewport.element.appendChild(cssRenderer.domElement);
+app.viewport.element.appendChild(hud.domElement);
 // We put some elements in the index.html, for convenience. 
 // Here, we retrieve the hud element and use hud.appendChild to append it and a clone 
 // to the two CSS3DArgonHUD hudElements.  We are retrieve the two
@@ -246,7 +242,7 @@ app.renderEvent.addEventListener(function () {
     // set the renderers to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
-    var viewport = app.view.getViewport();
+    var viewport = app.viewport.current;
     renderer.setSize(viewport.width, viewport.height);
     cssRenderer.setSize(viewport.width, viewport.height);
     hud.setSize(viewport.width, viewport.height);

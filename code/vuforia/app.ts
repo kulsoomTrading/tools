@@ -154,8 +154,8 @@ app.vuforia.isAvailable().then(function(available) {
         return;
     } 
 
-    // tell argon to initialize vuforia for our app, using our license information.
-    app.vuforia.init({
+// tell argon to initialize vuforia for our app, using our license information.
+app.vuforia.init({
         encryptedLicenseData: 
 `-----BEGIN PGP MESSAGE-----
 Version: OpenPGP.js v2.3.2

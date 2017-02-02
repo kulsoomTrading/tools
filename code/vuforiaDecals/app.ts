@@ -448,12 +448,17 @@ WEIir2WXzhypwLkG/dn+ZJW1ezOvTb4gVVILHrWhNh8=
     // in the web directory, even though we just provide the .xml file url here 
     api.objectTracker.createDataSet("../resources/datasets/ArgonTutorial.xml").then( (dataSet)=>{
         // the data set has been succesfully downloaded
+        console.log('Created DataSet ' + dataSet.id)
 
         // tell vuforia to load the dataset.  
         dataSet.load().then(()=>{
+            console.log('Loaded DataSet ' + dataSet.id)
+
             // when it is loaded, we retrieve a list of trackables defined in the
             // dataset and set up the content for the target
             const trackables = dataSet.getTrackables();
+
+            console.log('Trackables: ' + Object.keys(trackables))
             
             // tell argon we want to track a specific trackable.  Each trackable
             // has a Cesium entity associated with it, and is expressed in a 
@@ -497,14 +502,14 @@ WEIir2WXzhypwLkG/dn+ZJW1ezOvTb4gVVILHrWhNh8=
 }).catch(()=>{
     // if we're not running in Argon, we'll position the headModel in front of the camera
     // in the world, so we see something and can test
-    if (app.session.isManager) {
+    if (app.session.isRealityManager) {
         app.context.updateEvent.addEventListener(() => {
             const userPose = app.context.getEntityPose(app.context.user);
 
             if (userPose.poseStatus & Argon.PoseStatus.KNOWN) {
                 headModel.position.copy(<any>userPose.position);
                 headModel.quaternion.copy(<any>userPose.orientation);
-                headModel.translateZ(-1);
+                headModel.translateZ(-0.5);
                 headModel.rotateX(-Math.PI/2);
             }
             
@@ -526,7 +531,7 @@ app.renderEvent.addEventListener(() => {
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
-    const viewport = app.view.getViewport();
+    const viewport = app.viewport.current;
     renderer.setSize(viewport.width, viewport.height);
     hud.setSize(viewport.width, viewport.height);
     
@@ -537,7 +542,7 @@ app.renderEvent.addEventListener(() => {
         camera.quaternion.copy(<any>subview.pose.orientation);
         // the underlying system provide a full projection matrix
         // for the camera. 
-        camera.projectionMatrix.fromArray(<any>subview.projectionMatrix);
+        camera.projectionMatrix.fromArray(<any>subview.frustum.projectionMatrix);
 
         // set the viewport for this view
         let {x,y,width,height} = subview.viewport;

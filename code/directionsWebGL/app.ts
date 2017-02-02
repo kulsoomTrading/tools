@@ -1,10 +1,6 @@
 /// <reference types="@argonjs/argon"/>
 /// <reference types="three"/>
 
-// When we distribute Argon typings, we can get rid of this, but for now
-// we need to shut up the Typescript compiler about missing Argon typings
-declare const Argon:any;
-
 // any time we use an INERTIAL frame in Cesium, it needs to know where to find it's
 // ASSET folder on the web.  The SunMoonLights computation uses INERTIAL frames, so
 // so we need to put the assets on the web and point Cesium at them
@@ -29,7 +25,7 @@ const renderer = new THREE.WebGLRenderer({
 
 // account for the pixel density of the device
 renderer.setPixelRatio(window.devicePixelRatio);
-app.view.element.appendChild(renderer.domElement);
+app.viewport.element.appendChild(renderer.domElement);
 
 // Tell argon what local coordinate system you want.  The default coordinate
 // frame used by Argon is Cesium's FIXED frame, which is centered at the center
@@ -61,9 +57,7 @@ var ambientlight = new THREE.AmbientLight( 0x404040 ); // soft white ambient lig
 scene.add(ambientlight);
 
 // install a reality that the user can select from
-app.reality.install(Argon.resolveURL('../streetview-reality/index.html'));
-
-app.reality.request(Argon.RealityViewer.EMPTY);
+app.reality.install(Argon.resolveURL('../streetview-reality/index.html?v=2'));
 
 // create 6 3D words for the 6 directions.  
 var loader = new THREE.FontLoader();
@@ -115,12 +109,12 @@ app.updateEvent.addEventListener(() => {
     // assuming we know the user's pose, set the position of our 
     // THREE user object to match it
     if (userPose.poseStatus & Argon.PoseStatus.KNOWN) {
-        userLocation.position.copy(userPose.position);
+        userLocation.position.copy(<any>userPose.position);
     }
 
     // get sun and moon positions, add/remove lights as necessary
-    var date = app.context.getTime();
-	sunMoonLights.update(date,app.context.getDefaultReferenceFrame());
+    var date = app.context.time;
+	sunMoonLights.update(date,app.context.defaultReferenceFrame);
 })
 
 // renderEvent is fired whenever argon wants the app to update its display
@@ -131,18 +125,18 @@ app.renderEvent.addEventListener(() => {
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
-    const viewport = app.view.getViewport();
+    const viewport = app.viewport.current;
     renderer.setSize(viewport.width, viewport.height);
     
     // there is 1 subview in monocular mode, 2 in stereo mode    
     for (let subview of app.view.getSubviews()) {
         // set the position and orientation of the camera for 
         // this subview
-        camera.position.copy(subview.pose.position);
-        camera.quaternion.copy(subview.pose.orientation);
+        camera.position.copy(<any>subview.pose.position);
+        camera.quaternion.copy(<any>subview.pose.orientation);
         // the underlying system provide a full projection matrix
         // for the camera. 
-        camera.projectionMatrix.fromArray(subview.frustum.projectionMatrix);
+        camera.projectionMatrix.fromArray(<any>subview.frustum.projectionMatrix);
 
         // set the viewport for this view
         let {x,y,width,height} = subview.viewport;

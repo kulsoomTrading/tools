@@ -300,11 +300,14 @@ app.vuforia.init({
     // in the web directory, even though we just provide the .xml file url here 
     api.objectTracker.createDataSet("../resources/datasets/ArgonTutorial.xml").then(function (dataSet) {
         // the data set has been succesfully downloaded
+        console.log('Created DataSet ' + dataSet.id);
         // tell vuforia to load the dataset.  
         dataSet.load().then(function () {
+            console.log('Loaded DataSet ' + dataSet.id);
             // when it is loaded, we retrieve a list of trackables defined in the
             // dataset and set up the content for the target
             var trackables = dataSet.getTrackables();
+            console.log('Trackables: ' + Object.keys(trackables));
             // tell argon we want to track a specific trackable.  Each trackable
             // has a Cesium entity associated with it, and is expressed in a 
             // coordinate frame relative to the camera.  Because they are Cesium
@@ -340,16 +343,16 @@ app.vuforia.init({
         // activate the dataset.
         api.objectTracker.activateDataSet(dataSet);
     });
-}).catch(function () {
+})["catch"](function () {
     // if we're not running in Argon, we'll position the headModel in front of the camera
     // in the world, so we see something and can test
-    if (app.session.isManager) {
+    if (app.session.isRealityManager) {
         app.context.updateEvent.addEventListener(function () {
             var userPose = app.context.getEntityPose(app.context.user);
             if (userPose.poseStatus & Argon.PoseStatus.KNOWN) {
                 headModel.position.copy(userPose.position);
                 headModel.quaternion.copy(userPose.orientation);
-                headModel.translateZ(-1);
+                headModel.translateZ(-0.5);
                 headModel.rotateX(-Math.PI / 2);
             }
             if (userPose.poseStatus & Argon.PoseStatus.FOUND) {
@@ -367,7 +370,7 @@ app.renderEvent.addEventListener(function () {
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
-    var viewport = app.view.getViewport();
+    var viewport = app.viewport.current;
     renderer.setSize(viewport.width, viewport.height);
     hud.setSize(viewport.width, viewport.height);
     for (var _i = 0, _a = app.view.getSubviews(); _i < _a.length; _i++) {
@@ -378,7 +381,7 @@ app.renderEvent.addEventListener(function () {
         camera.quaternion.copy(subview.pose.orientation);
         // the underlying system provide a full projection matrix
         // for the camera. 
-        camera.projectionMatrix.fromArray(subview.projectionMatrix);
+        camera.projectionMatrix.fromArray(subview.frustum.projectionMatrix);
         // set the viewport for this view
         var _b = subview.viewport, x = _b.x, y = _b.y, width = _b.width, height = _b.height;
         renderer.setViewport(x, y, width, height);

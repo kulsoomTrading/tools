@@ -11,6 +11,7 @@ var camera = new THREE.PerspectiveCamera();
 var userLocation = new THREE.Object3D();
 scene.add(camera);
 scene.add(userLocation);
+scene.autoUpdate = false;
 // We use the standard WebGLRenderer when we only need WebGL-based content
 var renderer = new THREE.WebGLRenderer({
     alpha: true,
@@ -163,13 +164,13 @@ app.vuforia.isAvailable().then(function (available) {
                         userLocation.add(argonTextObject);
                     }
                 });
-            }).catch(function (err) {
+            })["catch"](function (err) {
                 console.log("could not load dataset: " + err.message);
             });
             // activate the dataset.
             api.objectTracker.activateDataSet(dataSet);
         });
-    }).catch(function (err) {
+    })["catch"](function (err) {
         console.log("vuforia failed to initialize: " + err.message);
     });
 });
@@ -185,22 +186,26 @@ app.context.updateEvent.addEventListener(function () {
     if (userPose.poseStatus & Argon.PoseStatus.KNOWN) {
         userLocation.position.copy(userPose.position);
     }
+    // udpate our scene matrices
+    scene.updateMatrixWorld(false);
 });
 // renderEvent is fired whenever argon wants the app to update its display
 app.renderEvent.addEventListener(function () {
     // update the rendering stats
     stats.update();
+    // get the subviews for the current frame
+    var subviews = app.view.getSubviews();
     // if we have 1 subView, we're in mono mode.  If more, stereo.
-    var monoMode = (app.view.getSubviews()).length == 1;
+    var monoMode = subviews.length == 1;
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
-    // both views if we are in stereo viewing mode
+    // both subviews if we are in stereo viewing mode
     var viewport = app.view.getViewport();
     renderer.setSize(viewport.width, viewport.height);
     hud.setSize(viewport.width, viewport.height);
     // there is 1 subview in monocular mode, 2 in stereo mode    
-    for (var _i = 0, _a = app.view.getSubviews(); _i < _a.length; _i++) {
-        var subview = _a[_i];
+    for (var _i = 0, subviews_1 = subviews; _i < subviews_1.length; _i++) {
+        var subview = subviews_1[_i];
         // set the position and orientation of the camera for 
         // this subview
         camera.position.copy(subview.pose.position);
@@ -208,8 +213,8 @@ app.renderEvent.addEventListener(function () {
         // the underlying system provide a full projection matrix
         // for the camera. 
         camera.projectionMatrix.fromArray(subview.projectionMatrix);
-        // set the viewport for this view
-        var _b = subview.viewport, x = _b.x, y = _b.y, width = _b.width, height = _b.height;
+        // set the viewport for this subview
+        var _a = subview.viewport, x = _a.x, y = _a.y, width = _a.width, height = _a.height;
         renderer.setViewport(x, y, width, height);
         // set the webGL rendering parameters and render this view
         renderer.setScissor(x, y, width, height);
