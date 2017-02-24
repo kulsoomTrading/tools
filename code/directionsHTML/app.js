@@ -13,7 +13,7 @@ scene.add(userLocation);
 // includes both 3D elements and a place to put things that appear 
 // fixed to the screen (heads-up-display) 
 var renderer = new THREE.CSS3DArgonRenderer();
-app.viewport.element.appendChild(renderer.domElement);
+app.view.element.appendChild(renderer.domElement);
 // to easily control stuff on the display
 var hud = new THREE.CSS3DArgonHUD();
 // We put some elements in the index.html, for convenience. 
@@ -22,7 +22,7 @@ var hud = new THREE.CSS3DArgonHUD();
 // hud since we'll be hiding it in stereo
 var description = document.getElementById('description');
 hud.hudElements[0].appendChild(description);
-app.viewport.element.appendChild(hud.domElement);
+app.view.element.appendChild(hud.domElement);
 // Tell argon what local coordinate system you want.  The default coordinate
 // frame used by Argon is Cesium's FIXED frame, which is centered at the center
 // of the earth and oriented with the earth's axes.  
@@ -148,11 +148,12 @@ app.renderEvent.addEventListener(function () {
     // only schedule a new callback if the old one has completed
     if (!rAFpending) {
         rAFpending = true;
-        viewport = app.viewport.current;
-        subViews = app.view.getSubviews();
+        viewport = app.view.viewport;
+        subViews = app.view.subviews;
         window.requestAnimationFrame(renderFunc);
     }
 });
+var n = 3;
 // the animation callback.  
 function renderFunc() {
     // if we have 1 subView, we're in mono mode.  If more, stereo.
@@ -163,6 +164,8 @@ function renderFunc() {
     // both views if we are in stereo viewing mode
     renderer.setSize(viewport.width, viewport.height);
     hud.setSize(viewport.width, viewport.height);
+    if (n-- > 0)
+        console.log(JSON.stringify(app.context.serializedFrameState));
     // there is 1 subview in monocular mode, 2 in stereo mode
     for (var _i = 0, subViews_1 = subViews; _i < subViews_1.length; _i++) {
         var subview = subViews_1[_i];

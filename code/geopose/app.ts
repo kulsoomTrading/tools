@@ -12,6 +12,9 @@ const CesiumMath = Argon.Cesium.CesiumMath;
 const app = Argon.init();
 //app.view.element.style.zIndex = 0;
 
+// this app uses geoposed content, so subscribe to geolocation updates
+app.context.subscribeGeolocation();
+
 // set up THREE.  Create a scene, a perspective camera and an object
 // for the user's location
 const scene = new THREE.Scene();
@@ -38,9 +41,9 @@ renderer.setPixelRatio(window.devicePixelRatio);
 
 // Assuming the z-orders are the same, the order of sibling elements
 // in the DOM determines which content is in front (top->bottom = back->front)
-app.viewport.element.appendChild(renderer.domElement);
-app.viewport.element.appendChild(cssRenderer.domElement);
-app.viewport.element.appendChild(hud.domElement);
+app.view.element.appendChild(renderer.domElement);
+app.view.element.appendChild(cssRenderer.domElement);
+app.view.element.appendChild(hud.domElement);
 
 // We put some elements in the index.html, for convenience. 
 // Here, we retrieve the hud element and use hud.appendChild to append it and a clone 
@@ -281,21 +284,21 @@ app.renderEvent.addEventListener(() => {
     // set the renderers to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
-    const viewport = app.viewport.current;
+    const viewport = app.view.viewport;
     renderer.setSize(viewport.width, viewport.height);
     cssRenderer.setSize(viewport.width, viewport.height);
     hud.setSize(viewport.width, viewport.height);
 
     // There is 1 subview in monocular mode, 2 in stereo mode.
     // If we are in mono view, show the description.  If not, hide it, 
-    if (app.view.getSubviews().length > 1) {
+    if (app.view.subviews.length > 1) {
       holder.style.display = 'none';
     } else {
       holder.style.display = 'block';
     }
 
     // there is 1 subview in monocular mode, 2 in stereo mode    
-    for (let subview of app.view.getSubviews()) {
+    for (let subview of app.view.subviews) {
         var frustum = subview.frustum;
         // set the position and orientation of the camera for 
         // this subview

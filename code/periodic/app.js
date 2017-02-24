@@ -456,16 +456,10 @@ app.updateEvent.addEventListener(function () {
 // animation callback.
 var viewport = null;
 var subViews = null;
-var rAFpending = false;
-
 app.renderEvent.addEventListener(function () {
-    // only schedule a new callback if the old one has completed
-    if (!rAFpending) {
-      rAFpending = true;
-      viewport = app.view.getViewport();
-      subViews = app.view.getSubviews();
-      window.requestAnimationFrame(renderFunc);
-    }
+    viewport = app.view.getViewport();
+    subViews = app.view.getSubviews();
+    renderFunc();
 });
 
 // the animation callback.  

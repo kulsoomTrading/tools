@@ -20,7 +20,7 @@ var renderer = new THREE.WebGLRenderer({
 });
 // account for the pixel density of the device
 renderer.setPixelRatio(window.devicePixelRatio);
-app.viewport.element.appendChild(renderer.domElement);
+app.view.element.appendChild(renderer.domElement);
 // Tell argon what local coordinate system you want.  The default coordinate
 // frame used by Argon is Cesium's FIXED frame, which is centered at the center
 // of the earth and oriented with the earth's axes.  
@@ -108,14 +108,14 @@ app.updateEvent.addEventListener(function () {
 // renderEvent is fired whenever argon wants the app to update its display
 app.renderEvent.addEventListener(function () {
     // if we have 1 subView, we're in mono mode.  If more, stereo.
-    var monoMode = (app.view.getSubviews()).length == 1;
+    var monoMode = (app.view.subviews).length == 1;
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
-    var viewport = app.viewport.current;
+    var viewport = app.view.viewport;
     renderer.setSize(viewport.width, viewport.height);
     // there is 1 subview in monocular mode, 2 in stereo mode    
-    for (var _i = 0, _a = app.view.getSubviews(); _i < _a.length; _i++) {
+    for (var _i = 0, _a = app.view.subviews; _i < _a.length; _i++) {
         var subview = _a[_i];
         // set the position and orientation of the camera for 
         // this subview

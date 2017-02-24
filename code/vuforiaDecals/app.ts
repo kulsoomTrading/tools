@@ -526,16 +526,16 @@ var monoMode = false;
 // renderEvent is fired whenever argon wants the app to update its display
 app.renderEvent.addEventListener(() => {
     // if we have 1 subView, we're in mono mode.  If more, stereo.
-    monoMode = (app.view.getSubviews()).length == 1;
+    monoMode = (app.view.subviews).length == 1;
 
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
-    const viewport = app.viewport.current;
+    const viewport = app.view.viewport;
     renderer.setSize(viewport.width, viewport.height);
     hud.setSize(viewport.width, viewport.height);
     
-    for (let subview of app.view.getSubviews()) {
+    for (let subview of app.view.subviews) {
         // set the position and orientation of the camera for 
         // this subview
         camera.position.copy(<any>subview.pose.position);

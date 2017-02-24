@@ -47,6 +47,7 @@ button:active {
   position:absolute;
   bottom: 0px;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .argon-focus #description {
@@ -59,13 +60,6 @@ button:active {
   transition: visibility 0s linear 0.8s, opacity 0.8s;
   visibility: visible;
   opacity: 0;
-}
-
-#myPanoApp {
-  position: relative;
-  max-width: 600px;
-  height: 400px;
-  margin: auto;
 }
 
 h1 {
@@ -85,28 +79,36 @@ body {
   visibility: hidden;
 }
 
-.argon-immersive #mypanoApp {
-  visibility: visible;
+#my-view-container {
+  position: relative;
+  max-width: 600px;
+  height: 400px;
+  margin: auto;
+}
+
+#my-pano-argon-app {
+  width: 100%;
+  height: 100%;
 }
 
     </style>
 </head>
   <body>
     <h1>My Travel Blog</h1>
-    <div id="myPanoApp">
-      <div>
+    <div id="my-view-container">
+      <div id="my-pano-argon-app">
         <div id="menu" style="visibility:collapse"></div>
-        <div onclick="hideMe(this)" id="description">
+        <div id="description" onclick="hideMe(this)">
           <h2>Requesting a Custom Reality</h2>
           <h5>(tap to dismiss)</h5>
           <p>This example demonstrates the use of custom reality views, a feature which enables multiple apps to together augment a custom view of reality. In this case, the app requests a reality created for rendering panoramas. </p>  
         </div>
+        <script>
+          function hideMe(elem) {
+              elem.style.display = 'none';
+          }	
+        </script>
       </div>
-      <script>
-        function hideMe(elem) {
-            elem.style.display = 'none';
-        }	
-      </script>
     </div>
     <article>
       <p>

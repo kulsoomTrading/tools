@@ -16,7 +16,7 @@ scene.add(userLocation);
 // includes both 3D elements and a place to put things that appear 
 // fixed to the screen (heads-up-display) 
 const renderer = new (<any>THREE).CSS3DArgonRenderer();
-app.viewport.element.appendChild(renderer.domElement);
+app.view.element.appendChild(renderer.domElement);
 
 // to easily control stuff on the display
 const hud = new (<any>THREE).CSS3DArgonHUD();
@@ -27,7 +27,7 @@ const hud = new (<any>THREE).CSS3DArgonHUD();
 // hud since we'll be hiding it in stereo
 var description = document.getElementById( 'description' );
 hud.hudElements[0].appendChild(description);
-app.viewport.element.appendChild(hud.domElement);
+app.view.element.appendChild(hud.domElement);
 
 // Tell argon what local coordinate system you want.  The default coordinate
 // frame used by Argon is Cesium's FIXED frame, which is centered at the center
@@ -184,8 +184,8 @@ app.renderEvent.addEventListener(() => {
     // only schedule a new callback if the old one has completed
     if (!rAFpending) {
         rAFpending = true;
-        viewport = app.viewport.current;
-        subViews = app.view.getSubviews();
+        viewport = app.view.viewport;
+        subViews = app.view.subviews;
         window.requestAnimationFrame(renderFunc);
     }
 });

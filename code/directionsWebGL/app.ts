@@ -25,7 +25,7 @@ const renderer = new THREE.WebGLRenderer({
 
 // account for the pixel density of the device
 renderer.setPixelRatio(window.devicePixelRatio);
-app.viewport.element.appendChild(renderer.domElement);
+app.view.element.appendChild(renderer.domElement);
 
 // Tell argon what local coordinate system you want.  The default coordinate
 // frame used by Argon is Cesium's FIXED frame, which is centered at the center
@@ -57,7 +57,7 @@ var ambientlight = new THREE.AmbientLight( 0x404040 ); // soft white ambient lig
 scene.add(ambientlight);
 
 // install a reality that the user can select from
-app.reality.install(Argon.resolveURL('../streetview-reality/index.html?v=2'));
+app.reality.install(Argon.resolveURL('../streetview-reality/index.html'));
 
 // create 6 3D words for the 6 directions.  
 var loader = new THREE.FontLoader();
@@ -120,16 +120,16 @@ app.updateEvent.addEventListener(() => {
 // renderEvent is fired whenever argon wants the app to update its display
 app.renderEvent.addEventListener(() => {
     // if we have 1 subView, we're in mono mode.  If more, stereo.
-    var monoMode = (app.view.getSubviews()).length == 1;
+    var monoMode = (app.view.subviews).length == 1;
 
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
-    const viewport = app.viewport.current;
+    const viewport = app.view.viewport;
     renderer.setSize(viewport.width, viewport.height);
     
     // there is 1 subview in monocular mode, 2 in stereo mode    
-    for (let subview of app.view.getSubviews()) {
+    for (let subview of app.view.subviews) {
         // set the position and orientation of the camera for 
         // this subview
         camera.position.copy(<any>subview.pose.position);

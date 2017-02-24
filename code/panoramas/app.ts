@@ -2,7 +2,7 @@
 /// <reference types="three"/>
 
 // set up Argon
-const app = Argon.init('#myPanoApp');
+const app = Argon.init('#my-pano-argon-app');
 
 // set up THREE.  Create a scene, a perspective camera and an object
 // for the user's location
@@ -20,7 +20,7 @@ const renderer = new THREE.WebGLRenderer({
 
 // account for the pixel density of the device
 renderer.setPixelRatio(window.devicePixelRatio);
-app.view.element.appendChild(renderer.domElement);
+app.view.element.insertBefore(renderer.domElement, app.view.element.firstChild);
 
 // Tell argon what local coordinate system you want.  The default coordinate
 // frame used by Argon is Cesium's FIXED frame, which is centered at the center
@@ -215,11 +215,11 @@ app.renderEvent.addEventListener(() => {
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
-    const viewport = app.viewport.current;
+    const viewport = app.view.viewport;
     renderer.setSize(viewport.width, viewport.height);
     
     // there is 1 subview in monocular mode, 2 in stereo mode    
-    for (let subview of app.view.getSubviews()) {
+    for (let subview of app.view.subviews) {
         // set the position and orientation of the camera for 
         // this subview
         camera.position.copy(<any>subview.pose.position);
