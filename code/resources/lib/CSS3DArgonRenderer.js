@@ -211,9 +211,9 @@ THREE.CSS3DArgonRenderer = function () {
 			epsilon( - elements[ 9 ] ) + ',' +
 			epsilon( elements[ 10 ] ) + ',' +
 			epsilon( elements[ 11 ] ) + ',' +
-			epsilon( elements[ 12 ] ) + ',' +
-			epsilon( - elements[ 13 ] ) + ',' +
-			epsilon( elements[ 14 ] ) + ',' +
+			epsilon( elements[ 12 ] * 100 ) + ',' +
+			epsilon( - elements[ 13 ] * 100 ) + ',' +
+			epsilon( elements[ 14 ] * 100 ) + ',' +
 			epsilon( elements[ 15 ] ) +
 		')';
 
