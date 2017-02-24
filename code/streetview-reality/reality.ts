@@ -272,7 +272,7 @@ const handleFrameState = (suggestedFrameState:Argon.SuggestedFrameState) => {
     if (suggestedFrameState.strict || subviews.length > 1) {
         mapToggleControl.element.style.display = 'none';
     } else {
-        mapToggleControl.element.style.display = 'auto';
+        mapToggleControl.element.style.display = '';
         if (mapToggleControl.showing) {
             const subviewViewport = subviews[0].viewport;
             if (viewport.width < viewport.height) {

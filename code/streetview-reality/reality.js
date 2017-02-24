@@ -241,7 +241,7 @@ var handleFrameState = function (suggestedFrameState) {
         mapToggleControl.element.style.display = 'none';
     }
     else {
-        mapToggleControl.element.style.display = 'auto';
+        mapToggleControl.element.style.display = '';
         if (mapToggleControl.showing) {
             var subviewViewport_1 = subviews[0].viewport;
             if (viewport.width < viewport.height) {
