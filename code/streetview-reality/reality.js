@@ -283,7 +283,7 @@ var handleFrameState = function (suggestedFrameState) {
     // a way to specify non-rectilinar projections to apps, so content 
     // may not perfectly match the streetview imagagery at a large fov
     // const MIN_ZOOM_LEVEL = 1.5;
-    if (!zoomLevel || suggestedFrameState.strict || app.session.manager.version[0] === 0) {
+    if (!isFinite(zoomLevel) || suggestedFrameState.strict || app.session.manager.version[0] === 0) {
         var targetFrustum = Argon.decomposePerspectiveProjectionMatrix(subviews[0].projectionMatrix, frustum);
         // calculate streetview zoom level
         var fovyRad = targetFrustum.fovy;
@@ -291,6 +291,8 @@ var handleFrameState = function (suggestedFrameState) {
         zoomLevel = 1 - Math.log2(fovxRad * Argon.Cesium.CesiumMath.DEGREES_PER_RADIAN / 90);
     }
     // if (zoomLevel < MIN_ZOOM_LEVEL) zoomLevel = MIN_ZOOM_LEVEL;
+    if (zoomLevel === 0)
+        zoomLevel = 0.00000001; // because PerspectiveFrustum can't handle 180deg fov
     lastZoomLevel = zoomLevel;
     var fovx = 90 * Math.pow(2, 1 - zoomLevel) * CesiumMath.RADIANS_PER_DEGREE;
     frustum.fov = subviewAspect < 1 ?
