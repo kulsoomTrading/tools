@@ -9,10 +9,6 @@ var CesiumMath = Argon.Cesium.CesiumMath;
 var Matrix4 = Argon.Cesium.Matrix4;
 // set up Argon (unlike regular apps, we call initReality instead of init)
 var app = Argon.initRealityViewer();
-var MIN_VERTICAL_FOV = 15 * Argon.Cesium.CesiumMath.RADIANS_PER_DEGREE;
-var MAX_VERTICAL_FOV = 90 * Argon.Cesium.CesiumMath.RADIANS_PER_DEGREE;
-var MIN_FOV_RAD = 0.1;
-var MAX_FOV_RAD = Math.PI - 0.1;
 var showUI = false;
 var mapElement = document.createElement('div');
 var subviewElements = [document.createElement('div'), document.createElement('div')];
@@ -144,7 +140,6 @@ var initStreetview = function () {
                     var positionValue_1 = Cartesian3.fromDegrees(position.lng(), position.lat(), elevation, undefined, scratchCartesian);
                     panoEntity.position.setValue(positionValue_1, Argon.Cesium.ReferenceFrame.FIXED);
                 }
-                1;
             }
         });
     });
@@ -236,7 +231,6 @@ var handleFrameState = function (suggestedFrameState) {
     var time = suggestedFrameState.time;
     Argon.Viewport.clone(suggestedFrameState.viewport, viewport);
     Argon.SerializedSubviewList.clone(suggestedFrameState.subviews, subviews);
-    Argon.decomposePerspectiveProjectionMatrix(subviews[0].projectionMatrix, frustum);
     if (suggestedFrameState.strict || subviews.length > 1) {
         mapToggleControl.element.style.display = 'none';
     }
@@ -283,27 +277,22 @@ var handleFrameState = function (suggestedFrameState) {
     orientationValue = Quaternion.fromHeadingPitchRoll(-heading, 0, pitch + Math.PI / 2, scratchQuaternion);
     eyeEntity.orientation.setValue(orientationValue);
     // get the current fov
-    var zoomLevel = streetviews[0].getZoom();
+    var zoomLevel = pov['zoom'] || streetviews[0].getZoom();
     // google streetview uses a non-rectilinear projection which reduces
     // distortion at high fov (which is nice), but we do not yet have
-    // a way to specify non-rectilinar projections to apps, so we are limiting
-    // the streetview fov to a smaller fov 
-    var MAX_ZOOM_LEVEL = 1.5;
-    if (!zoomLevel || zoomLevel <= MAX_ZOOM_LEVEL || suggestedFrameState.strict) {
+    // a way to specify non-rectilinar projections to apps, so content 
+    // may not perfectly match the streetview imagagery at a large fov
+    // const MIN_ZOOM_LEVEL = 1.5;
+    if (!zoomLevel || suggestedFrameState.strict || app.session.manager.version[0] === 0) {
+        var targetFrustum = Argon.decomposePerspectiveProjectionMatrix(subviews[0].projectionMatrix, frustum);
         // calculate streetview zoom level
-        var fovyRad = frustum.fovy;
+        var fovyRad = targetFrustum.fovy;
         var fovxRad = Math.atan(Math.tan(fovyRad * 0.5) * subviewAspect) * 2.0;
         zoomLevel = 1 - Math.log2(fovxRad * Argon.Cesium.CesiumMath.DEGREES_PER_RADIAN / 90);
-        if (zoomLevel < MAX_ZOOM_LEVEL)
-            zoomLevel = MAX_ZOOM_LEVEL;
-        streetviews.forEach(function (streetview) {
-            streetview.setOptions({
-                zoom: zoomLevel
-            });
-        });
     }
+    // if (zoomLevel < MIN_ZOOM_LEVEL) zoomLevel = MIN_ZOOM_LEVEL;
     lastZoomLevel = zoomLevel;
-    var fovx = 90 * Math.pow(2, -zoomLevel + 1) * CesiumMath.RADIANS_PER_DEGREE;
+    var fovx = 90 * Math.pow(2, 1 - zoomLevel) * CesiumMath.RADIANS_PER_DEGREE;
     frustum.fov = subviewAspect < 1 ?
         Math.atan(Math.tan(fovx * 0.5) / subviewAspect) * 2.0 :
         fovx;
@@ -363,7 +352,7 @@ app.renderEvent.addEventListener(function () {
         subviewElements[1].style.visibility = 'visible';
         streetviews[1].setPano(streetviews[0].getPano());
         streetviews[1].setPov(streetviews[0].getPov());
-        streetviews[1].setZoom(streetviews[0].getZoom());
+        streetviews[1].setZoom(streetviews[0].getPov()['zoom'] || streetviews[0].getZoom());
     }
     if (mapToggleControl.showing) {
         mapElement.style.visibility = 'visible';
