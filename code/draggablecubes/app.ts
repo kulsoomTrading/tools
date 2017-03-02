@@ -219,40 +219,42 @@ function onDocumentTouchStart( event ) {
         var date = app.context.getTime();
 
         var oldpose = app.context.getEntityPose(object.entity);
+        console.log("------");
         console.log("touch FIXED pos=" + oldpose.position)
         console.log("touch FIXED quat=" + oldpose.orientation)
         console.log("touch FIXED _value pos=" + object.entity.position._value)
         console.log("touch FIXED _value quat=" + object.entity.orientation._value)
+        console.log("------");
 
         if (!Argon.convertEntityReferenceFrame(object.entity, date, deviceEntity)) {
             console.log("touch convert fail")
             return;
         }
-        var newpose = app.context.getEntityPose(object.entity);
-        console.log("touch DEVICE pos=" + newpose.position);
-        console.log("touch DEVICE quat=" + newpose.orientation)
-        console.log("touch DEVICE _value pos=" + object.entity.position._value);
-        console.log("touch DEVICE _value quat=" + object.entity.orientation._value)
+        // var newpose = app.context.getEntityPose(object.entity);
+        // console.log("touch DEVICE pos=" + newpose.position);
+        // console.log("touch DEVICE quat=" + newpose.orientation)
+        // console.log("touch DEVICE _value pos=" + object.entity.position._value);
+        // console.log("touch DEVICE _value quat=" + object.entity.orientation._value)
 
-        if (!Argon.convertEntityReferenceFrame(object.entity, date, ReferenceFrame.FIXED)) {
-            console.log("touch convert fail")
-            return;
-        }
-        newpose = app.context.getEntityPose(object.entity);
-        console.log("touch back to FIXED pos=" + newpose.position);
-        console.log("touch back to FIXED quat=" + newpose.orientation)
-        console.log("touch back to FIXED _value pos=" + object.entity.position._value);
-        console.log("touch back to FIXED _value quat=" + object.entity.orientation._value)
+        // if (!Argon.convertEntityReferenceFrame(object.entity, date, ReferenceFrame.FIXED)) {
+        //     console.log("touch convert fail")
+        //     return;
+        // }
+        // newpose = app.context.getEntityPose(object.entity);
+        // console.log("touch back to FIXED pos=" + newpose.position);
+        // console.log("touch back to FIXED quat=" + newpose.orientation)
+        // console.log("touch back to FIXED _value pos=" + object.entity.position._value);
+        // console.log("touch back to FIXED _value quat=" + object.entity.orientation._value)
 
-        if (!Argon.convertEntityReferenceFrame(object.entity, date, deviceEntity)) {
-            console.log("touch convert fail")
-            return;
-        }
-        newpose = app.context.getEntityPose(object.entity);
-        console.log("touch back to DEVICE pos=" + newpose.position);
-        console.log("touch back to DEVICE quat=" + newpose.orientation)
-        console.log("touch back to DEVICE pos=" + object.entity.position._value);
-        console.log("touch back to DEVICE quat=" + object.entity.orientation._value)
+        // if (!Argon.convertEntityReferenceFrame(object.entity, date, deviceEntity)) {
+        //     console.log("touch convert fail")
+        //     return;
+        // }
+        // newpose = app.context.getEntityPose(object.entity);
+        // console.log("touch back to DEVICE pos=" + newpose.position);
+        // console.log("touch back to DEVICE quat=" + newpose.orientation)
+        // console.log("touch back to DEVICE pos=" + object.entity.position._value);
+        // console.log("touch back to DEVICE quat=" + object.entity.orientation._value)
 
         SELECTED = object;
     }
@@ -278,8 +280,12 @@ function onDocumentTouchEnd( event ) {
             return;
         }
         var boxPose = app.context.getEntityPose(SELECTED.entity);
+        console.log("------");
         console.log("touch released, pos=" + boxPose.position);
         console.log("touch released, quat=" + boxPose.orientation);
+        console.log("touch released _value pos=" + SELECTED.entity.position._value)
+        console.log("touch released _value quat=" + SELECTED.entity.orientation._value)
+        console.log("------");
         SELECTED.position.copy(boxPose.position);
         SELECTED.quaternion.copy(boxPose.orientation);
         SELECTED = null;
@@ -390,8 +396,6 @@ app.updateEvent.addEventListener((frame) => {
         var newpose = boxPose;
         console.log("touch back to DEVICE pos=" + newpose.position);
         console.log("touch back to DEVICE quat=" + newpose.orientation)
-        console.log("touch back to DEVICE pos=" + SELECTED.entity.position._value);
-        console.log("touch back to DEVICE quat=" + SELECTED.entity.orientation._value)
     }
 });
 
