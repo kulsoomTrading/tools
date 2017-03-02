@@ -21,6 +21,13 @@ var camera = new THREE.PerspectiveCamera();
 var userLocation = new THREE.Object3D;
 scene.add(camera);
 scene.add(userLocation);
+var boxScene = new THREE.Object3D;
+scene.add(boxScene);
+var boxEntity = new Argon.Cesium.Entity({
+    name: "box scene",
+    position: Cartesian3.ZERO,
+    orientation: Cesium.Quaternion.IDENTITY
+});
 // We use the standard WebGLRenderer when we only need WebGL-based content
 var renderer = new THREE.WebGLRenderer({
     alpha: true,
@@ -139,12 +146,17 @@ for (var i = 0; i < 50; i++) {
     object.scale.z = Math.random() * 3 + 1;
     object.castShadow = true;
     object.receiveShadow = true;
-    scene.add(object);
+    boxScene.add(object);
     object.entity = new Argon.Cesium.Entity({
         name: "box " + i,
         position: Cartesian3.ZERO,
         orientation: Cesium.Quaternion.IDENTITY
     });
+    // set the value of the box Entity to this local position, by
+    // specifying the frame of reference to our local frame
+    object.entity.position.setValue(object.position, boxEntity);
+    // orient the box according to the local world frame
+    object.entity.orientation.setValue(object.quaternion);
     objects.push(object);
 }
 renderer.domElement.addEventListener('keydown', onDocumentTouchStart, false);
@@ -179,12 +191,14 @@ function onDocumentTouchStart(event) {
         console.log("touch intersect");
         var object = intersects[0].object;
         var date = app.context.getTime();
+        var defaultFrame = app.context.getDefaultReferenceFrame();
         var oldpose = app.context.getEntityPose(object.entity);
         console.log("------");
         console.log("touch FIXED pos=" + oldpose.position);
         console.log("touch FIXED quat=" + oldpose.orientation);
         console.log("touch FIXED _value pos=" + object.entity.position._value);
         console.log("touch FIXED _value quat=" + object.entity.orientation._value);
+        //Cartesian3.subtract(oldpose.position, accumulatedPositionValue, accumulatedPositionValue);
         if (!Argon.convertEntityReferenceFrame(object.entity, date, deviceEntity)) {
             console.log("touch convert fail");
             return;
@@ -195,6 +209,7 @@ function onDocumentTouchStart(event) {
         console.log("touch DEVICE _value pos=" + object.entity.position._value);
         console.log("touch DEVICE _value quat=" + object.entity.orientation._value);
         console.log("------");
+        console.log("default ref frame to cube in ");
         // if (!Argon.convertEntityReferenceFrame(object.entity, date, ReferenceFrame.FIXED)) {
         //     console.log("touch convert fail")
         //     return;
@@ -213,6 +228,8 @@ function onDocumentTouchStart(event) {
         // console.log("touch back to DEVICE quat=" + newpose.orientation)
         // console.log("touch back to DEVICE pos=" + object.entity.position._value);
         // console.log("touch back to DEVICE quat=" + object.entity.orientation._value)
+        boxScene.remove(object);
+        userLocation.add(object);
         SELECTED = object;
     }
 }
@@ -232,7 +249,10 @@ function onDocumentTouchEnd(event) {
     event.preventDefault();
     if (SELECTED) {
         var date = app.context.getTime();
-        if (!Argon.convertEntityReferenceFrame(SELECTED.entity, date, ReferenceFrame.FIXED)) {
+        // if (!Argon.convertEntityReferenceFrame(SELECTED.entity, date, ReferenceFrame.FIXED)) {
+        //     return;
+        // }
+        if (!Argon.convertEntityReferenceFrame(SELECTED.entity, date, boxEntity)) {
             return;
         }
         var boxPose = app.context.getEntityPose(SELECTED.entity);
@@ -242,8 +262,11 @@ function onDocumentTouchEnd(event) {
         console.log("touch released _value pos=" + SELECTED.entity.position._value);
         console.log("touch released _value quat=" + SELECTED.entity.orientation._value);
         console.log("------");
+        var boxPose = app.context.getEntityPose(SELECTED.entity, boxEntity);
         SELECTED.position.copy(boxPose.position);
         SELECTED.quaternion.copy(boxPose.orientation);
+        userLocation.remove(SELECTED);
+        boxScene.add(SELECTED);
         SELECTED = null;
     }
 }
@@ -274,13 +297,18 @@ var boxInit = false;
 // since these don't move, we only update them when the origin changes
 app.context.localOriginChangeEvent.addEventListener(function () {
     if (boxInit) {
-        // get the local coordinates of the local boxes, and set the THREE objects
-        for (var i = 0; i < objects.length; i++) {
-            var object = objects[i];
-            var boxPose = app.context.getEntityPose(object.entity);
-            object.position.copy(boxPose.position);
-            object.quaternion.copy(boxPose.orientation);
-        }
+        // // get the local coordinates of the local boxes, and set the THREE objects
+        // for (var i =0; i<objects.length; i++) {
+        //     var object = objects[i];
+        //     var boxPose = app.context.getEntityPose(object.entity);
+        //     object.position.copy(boxPose.position);
+        //     object.quaternion.copy(boxPose.orientation);
+        // }
+        var boxPose = app.context.getEntityPose(boxEntity);
+        console.log("**** new frame of reference");
+        console.log(boxEntity.name + " is at " + boxPose.position);
+        boxScene.position.copy(boxPose.position);
+        boxScene.quaternion.copy(boxPose.orientation);
     }
 });
 // the updateEvent is called each time the 3D world should be
@@ -304,27 +332,47 @@ app.updateEvent.addEventListener(function (frame) {
     // the box somewhere near us
     if (!boxInit) {
         var defaultFrame = app.context.getDefaultReferenceFrame();
-        for (var i = 0; i < objects.length; i++) {
-            var object = objects[i];
-            // initial position is relative to user
-            object.position.add(userPose.position);
-            // set the value of the box Entity to this local position, by
-            // specifying the frame of reference to our local frame
-            object.entity.position.setValue(object.position, defaultFrame);
-            // orient the box according to the local world frame
-            object.entity.orientation.setValue(object.quaternion);
-            // now, we want to move the box's coordinates to the FIXED frame, so
-            // the box doesn't move if the local coordinate system origin changes.
-            if (!Argon.convertEntityReferenceFrame(object.entity, frame.time, ReferenceFrame.FIXED)) {
-                break;
-            }
-            var boxPose = app.context.getEntityPose(object.entity);
-            console.log(object.entity.name + " is at " + boxPose.position);
-            object.position.copy(boxPose.position);
-            object.quaternion.copy(boxPose.orientation);
+        // for (var i =0; i<objects.length; i++) {
+        //     var object = objects[i];
+        //     // initial position is relative to user
+        //     object.position.add(userPose.position);
+        //     // set the value of the box Entity to this local position, by
+        //     // specifying the frame of reference to our local frame
+        //     object.entity.position.setValue(object.position, defaultFrame);
+        //     // orient the box according to the local world frame
+        //     object.entity.orientation.setValue(object.quaternion);
+        //     // now, we want to move the box's coordinates to the FIXED frame, so
+        //     // the box doesn't move if the local coordinate system origin changes.
+        //     if (!Argon.convertEntityReferenceFrame(object.entity, frame.time,
+        //                                         ReferenceFrame.FIXED)) {
+        //         break;
+        //     }
+        //     var boxPose = app.context.getEntityPose(object.entity);
+        //     console.log(object.entity.name + " is at " + boxPose.position);
+        //     object.position.copy(boxPose.position);
+        //     object.quaternion.copy(boxPose.orientation);
+        //     // The above should work for all boxes, no none of them.
+        //     boxInit = true;
+        // }
+        boxScene.position.add(userPose.position);
+        boxEntity.position.setValue(boxScene.position, defaultFrame);
+        boxEntity.orientation.setValue(boxScene.quaternion);
+        if (Argon.convertEntityReferenceFrame(boxEntity, frame.time, ReferenceFrame.FIXED)) {
+            var boxPose = app.context.getEntityPose(boxEntity);
+            console.log(boxEntity.name + " is at " + boxPose.position);
+            boxScene.position.copy(boxPose.position);
+            boxScene.quaternion.copy(boxPose.orientation);
             // The above should work for all boxes, no none of them.
             boxInit = true;
         }
+    }
+    else {
+        var boxPose = app.context.getEntityPose(boxEntity);
+        if (boxPose.position.x != boxScene.position.x || boxPose.position.y != boxScene.position.y || boxPose.position.z != boxScene.position.z) {
+            console.log(boxEntity.name + " is at " + boxPose.position);
+        }
+        boxScene.position.copy(boxPose.position);
+        boxScene.quaternion.copy(boxPose.orientation);
     }
     handleDeviceMove();
     // if one is selected, update it's pose since it's attached to the camera
@@ -333,8 +381,8 @@ app.updateEvent.addEventListener(function (frame) {
         SELECTED.position.copy(boxPose.position);
         SELECTED.quaternion.copy(boxPose.orientation);
         var newpose = boxPose;
-        console.log("touch back to DEVICE pos=" + newpose.position);
-        console.log("touch back to DEVICE quat=" + newpose.orientation);
+        //  console.log("touch back to DEVICE pos=" + newpose.position);
+        //  console.log("touch back to DEVICE quat=" + newpose.orientation)
     }
 });
 // renderEvent is fired whenever argon wants the app to update its display
