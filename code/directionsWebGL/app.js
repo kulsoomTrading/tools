@@ -48,7 +48,7 @@ scene.add(sunMoonLights.lights);
 var ambientlight = new THREE.AmbientLight(0x404040); // soft white ambient light 
 scene.add(ambientlight);
 // install a reality that the user can select from
-app.reality.install(Argon.resolveURL('../streetview-reality/index.html?v=2'));
+app.reality.install(Argon.resolveURL('../streetview-reality/index.html'));
 // create 6 3D words for the 6 directions.  
 var loader = new THREE.FontLoader();
 loader.load('../resources/fonts/helvetiker_regular.typeface.js', function (font) {

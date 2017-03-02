@@ -1,0 +1,54 @@
+<html>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+<head>
+    <title>Draggagle Cubes WebGL</title>
+    <script src="../resources/lib/three/three.min.js"></script>
+    <script src="../resources/lib/CSS3DArgonHUD.js"></script>
+    <script src="../resources/lib/argon.js"></script>
+    <script src="../resources/lib/ArgonSunMoon.js"></script>
+    <script src="../resources/lib/stats.min.js"></script>
+    <style>
+#description {
+  pointer-events: auto;
+  font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+  padding: 10px;
+  background-color:rgba(255,255,255,0.7);
+  -webkit-backdrop-filter: blur(5px);
+  position:absolute;
+  bottom: 0px;
+}
+
+.argon-focus #description {
+  transition: opacity 0.8s;
+  visibility: visible;
+  opacity: 1; 
+}
+
+.argon-no-focus #description {
+  transition: visibility 0s linear 0.8s, opacity 0.8s;
+  visibility: visible;
+  opacity: 0;
+}
+canvas {
+  pointer-events: auto !important;
+}
+  </style>
+</head>
+  <body>
+    <div id="argon">
+      <div onclick="hideMe(this)" id="description">
+        <h2>Draggable Cubes in the World</h2>
+        <h5>(click to dismiss)</h5>
+        <p>This example repurposes the THREE.js draggablecubes example. The cubes have been put 
+          around you in the world. When selected, a cube will then move as the 
+          device moves, keeping it's position relative to the device.</p>  
+      </div>
+    </div>
+  </body>
+	<script>
+		function hideMe(elem) {
+		    elem.style.display = 'none';
+		}	
+	</script>
+  <script src="app.js"></script>
+</html>

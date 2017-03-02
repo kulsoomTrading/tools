@@ -21,7 +21,7 @@ app.view.element.appendChild(renderer.domElement);
 // to easily control stuff on the display
 const hud = new (<any>THREE).CSS3DArgonHUD();
 
-// We put some elements in the index.html, for convenience. 
+// We put some elements in the index.html, for convenience.
 // Here, we retrieve the description box and move it to the 
 // the CSS3DArgonHUD hudElements[0].  We only put it in the left
 // hud since we'll be hiding it in stereo
