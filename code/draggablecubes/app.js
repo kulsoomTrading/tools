@@ -185,16 +185,16 @@ function onDocumentTouchStart(event) {
         console.log("touch FIXED quat=" + oldpose.orientation);
         console.log("touch FIXED _value pos=" + object.entity.position._value);
         console.log("touch FIXED _value quat=" + object.entity.orientation._value);
-        console.log("------");
         if (!Argon.convertEntityReferenceFrame(object.entity, date, deviceEntity)) {
             console.log("touch convert fail");
             return;
         }
-        // var newpose = app.context.getEntityPose(object.entity);
-        // console.log("touch DEVICE pos=" + newpose.position);
-        // console.log("touch DEVICE quat=" + newpose.orientation)
-        // console.log("touch DEVICE _value pos=" + object.entity.position._value);
-        // console.log("touch DEVICE _value quat=" + object.entity.orientation._value)
+        var newpose = app.context.getEntityPose(object.entity);
+        console.log("touch DEVICE pos=" + newpose.position);
+        console.log("touch DEVICE quat=" + newpose.orientation);
+        console.log("touch DEVICE _value pos=" + object.entity.position._value);
+        console.log("touch DEVICE _value quat=" + object.entity.orientation._value);
+        console.log("------");
         // if (!Argon.convertEntityReferenceFrame(object.entity, date, ReferenceFrame.FIXED)) {
         //     console.log("touch convert fail")
         //     return;
