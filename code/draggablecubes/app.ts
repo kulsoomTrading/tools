@@ -117,44 +117,6 @@ scene.add(ambientlight);
 // install a reality that the user can select from
 app.reality.install(Argon.resolveURL('../streetview-reality/index.html'));
 
-// create 6 3D words for the 6 directions.
-var loader = new THREE.FontLoader();
-loader.load( '../resources/fonts/helvetiker_regular.typeface.js', function ( font: any ) {    
-    const textOptions = {
-        font: font,
-        size: 15,
-        height: 10,
-        curveSegments: 10,
-        bevelThickness: 1,
-        bevelSize: 1,
-        bevelEnabled: true
-    }
-    
-    var textMaterial = new THREE.MeshStandardMaterial({
-        color: 0x5588ff
-    })
-    
-    function createDirectionLabel(text, position, rotation) {
-        var textGeometry = new THREE.TextGeometry(text, textOptions);
-        textGeometry.center();
-        var textMesh = new THREE.Mesh(textGeometry, textMaterial);
-        if (position.x) textMesh.position.x = position.x;
-        if (position.y) textMesh.position.y = position.y;
-        if (position.z) textMesh.position.z = position.z;
-        if (rotation.x) textMesh.rotation.x = rotation.x;
-        if (rotation.y) textMesh.rotation.y = rotation.y;
-        if (rotation.z) textMesh.rotation.z = rotation.z;
-        userLocation.add(textMesh);
-    }
-    
-    createDirectionLabel("North", {z:-100}, {});
-    createDirectionLabel("South", {z:100}, {y:Math.PI});
-    createDirectionLabel("East", {x:100}, {y:-Math.PI/2});
-    createDirectionLabel("West", {x:-100}, {y:Math.PI/2});
-    createDirectionLabel("Up", {y:100}, {x:Math.PI/2});
-    createDirectionLabel("Down", {y:-100}, {x:-Math.PI/2});
-})
-
 var objects = [];
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
