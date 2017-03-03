@@ -64,12 +64,16 @@ const hud = new (<any>THREE).CSS3DArgonHUD();
 // Here, we retrieve the description box and move it to the
 // the CSS3DArgonHUD hudElements[0].  We only put it in the left
 // hud since we'll be hiding it in stereo
+var crosshair = document.getElementById( 'crosshair-wrapper' );
+hud.appendChild(crosshair);
+
 var description = document.getElementById( 'description' );
 hud.hudElements[0].appendChild(description);
 app.view.element.appendChild(hud.domElement);
 
 var stats = new Stats();
 hud.hudElements[0].appendChild(stats.dom);
+
 
 // Tell argon what local coordinate system you want.  The default coordinate
 // frame used by Argon is Cesium's FIXED frame, which is centered at the center
