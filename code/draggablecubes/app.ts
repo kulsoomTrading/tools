@@ -229,6 +229,8 @@ app.view.uiEvent.addEventListener((evt: any) => {
     var event = evt.event;
 
     if (event.defaultPrevented) {
+        console.log ("event was consumed");
+        console.log (event);
         return; // Should do nothing if the key event was already consumed.
     }
 
@@ -312,6 +314,7 @@ app.view.uiEvent.addEventListener((evt: any) => {
                 if (event.type == "mousedown") {
                     // ignore mouse down events for selection in crosshair mode, they must
                     // use the keyboard
+                    console.log("mousedown ignored")
                     evt.forwardEvent();
                     return;
                 }
@@ -328,6 +331,7 @@ app.view.uiEvent.addEventListener((evt: any) => {
                 mouse.x = ( tx / window.innerWidth ) * 2 - 1;
                 mouse.y = - ( ty / window.innerHeight ) * 2 + 1;
             }
+            console.log("mousedown")
 
 
             if(handleSelection()) {
@@ -359,14 +363,15 @@ app.view.uiEvent.addEventListener((evt: any) => {
 
         case 'pointerup':
         case 'mouseup':
-            console.log("release")
 
             if (isCrosshair && event.type == "mouseup") {
                 // ignore mouse up events for selection in crosshair mode, they must
                 // use the keyboard
+                console.log("release ignored")
                 evt.forwardEvent();
                 return;
             }
+            console.log("release")
 
             if ( SELECTED ) {
                 if (handleRelease()) {

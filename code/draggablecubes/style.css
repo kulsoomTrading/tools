@@ -38,6 +38,7 @@ a {
 	top: 5px;
 	width: 100%;
 	text-align: center;
+  pointer-events: auto;
 }
 
 button {

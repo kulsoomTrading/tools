@@ -183,6 +183,8 @@ function onDocumentKeyEnd(event) {
 app.view.uiEvent.addEventListener(function (evt) {
     var event = evt.event;
     if (event.defaultPrevented) {
+        console.log("event was consumed");
+        console.log(event);
         return; // Should do nothing if the key event was already consumed.
     }
     // handle mouse movement
@@ -257,6 +259,7 @@ app.view.uiEvent.addEventListener(function (evt) {
                 if (event.type == "mousedown") {
                     // ignore mouse down events for selection in crosshair mode, they must
                     // use the keyboard
+                    console.log("mousedown ignored");
                     evt.forwardEvent();
                     return;
                 }
@@ -274,6 +277,7 @@ app.view.uiEvent.addEventListener(function (evt) {
                 mouse.x = (tx / window.innerWidth) * 2 - 1;
                 mouse.y = -(ty / window.innerHeight) * 2 + 1;
             }
+            console.log("mousedown");
             if (handleSelection()) {
                 if (event.type == "touchstart") {
                     touchID = event.changedTouches[ti].identifier;
@@ -304,13 +308,14 @@ app.view.uiEvent.addEventListener(function (evt) {
                 return;
         case 'pointerup':
         case 'mouseup':
-            console.log("release");
             if (isCrosshair && event.type == "mouseup") {
                 // ignore mouse up events for selection in crosshair mode, they must
                 // use the keyboard
+                console.log("release ignored");
                 evt.forwardEvent();
                 return;
             }
+            console.log("release");
             if (SELECTED) {
                 if (handleRelease()) {
                     if (event.type == "touchend" && !isCrosshair) {
