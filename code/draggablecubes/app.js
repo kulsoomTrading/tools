@@ -48,12 +48,12 @@ var isCrosshair = true;
 var button = document.getElementById('controls');
 button.addEventListener('click', function (event) {
     if (isCrosshair) {
-        button.innerText = "Click to enable crosshair";
+        button.innerText = "Click to switch to crosshair selection";
         isCrosshair = false;
         crosshair.setAttribute('class', 'crosshair hide-crosshair');
     }
     else {
-        button.innerText = "Click to disable crosshair";
+        button.innerText = "Click to switch to touch selection";
         isCrosshair = true;
         crosshair.setAttribute('class', 'crosshair show-crosshair');
     }
@@ -185,6 +185,7 @@ app.view.uiEvent.addEventListener(function (evt) {
     if (event.defaultPrevented) {
         console.log("event was consumed");
         console.log(event);
+        evt.forwardEvent();
         return; // Should do nothing if the key event was already consumed.
     }
     // handle mouse movement
@@ -200,8 +201,10 @@ app.view.uiEvent.addEventListener(function (evt) {
                     break;
             }
             // if we didn't find a move for the first touch, skip
-            if (ti == event.changedTouches.length)
+            if (ti == event.changedTouches.length) {
+                evt.forwardEvent();
                 return;
+            }
         case "mousemove":
             // if crosshair interaction, mousemove passed on
             if (isCrosshair) {
@@ -304,8 +307,10 @@ app.view.uiEvent.addEventListener(function (evt) {
                     break;
             }
             // if we didn't find a move for the first touch, skip
-            if (ti == event.changedTouches.length)
+            if (ti == event.changedTouches.length) {
+                evt.forwardEvent();
                 return;
+            }
         case 'pointerup':
         case 'mouseup':
             if (isCrosshair && event.type == "mouseup") {
