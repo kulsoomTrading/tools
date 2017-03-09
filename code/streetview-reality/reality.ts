@@ -252,18 +252,17 @@ const subviews = <Argon.SerializedSubview[]>[];
 
 // Reality views must raise frame events at regular intervals in order to 
 // drive updates for the entire system.
-const handleFrameState = (suggestedFrameState:Argon.SuggestedFrameState) => {
-    app.device.requestFrameState().then(handleFrameState);
+app.device.frameStateEvent.addEventListener((frameState)=>{
 
-    if (suggestedFrameState.viewport.width === 0 || suggestedFrameState.viewport.height === 0) return;
+    if (frameState.viewport.width === 0 || frameState.viewport.height === 0) return;
 
     if (!streetviews) initStreetview();
 
-    const time = suggestedFrameState.time;
-    Argon.Viewport.clone(suggestedFrameState.viewport, viewport);
-    Argon.SerializedSubviewList.clone(suggestedFrameState.subviews, subviews);
+    const time = frameState.time;
+    Argon.Viewport.clone(frameState.viewport, viewport);
+    Argon.SerializedSubviewList.clone(frameState.subviews, subviews);
 
-    if (suggestedFrameState.strict || subviews.length > 1) {
+    if (frameState.strict || subviews.length > 1) {
         mapToggleControl.element.style.display = 'none';
     } else {
         mapToggleControl.element.style.display = '';
@@ -318,7 +317,7 @@ const handleFrameState = (suggestedFrameState:Argon.SuggestedFrameState) => {
     // may not perfectly match the streetview imagagery at a large fov
     // const MIN_ZOOM_LEVEL = 1.5;
 
-    if (!isFinite(zoomLevel) || suggestedFrameState.strict || app.session.manager.version[0] === 0) {
+    if (!isFinite(zoomLevel) || frameState.strict || app.session.manager.version[0] === 0) {
         const targetFrustum = Argon.decomposePerspectiveProjectionMatrix(subviews[0].projectionMatrix, frustum)
 
         // calculate streetview zoom level
@@ -353,17 +352,15 @@ const handleFrameState = (suggestedFrameState:Argon.SuggestedFrameState) => {
         geoHorizontalAccuracy: 5 // assume accurate within 5 meters
     }
 
-    const frameState = app.device.createFrameState(
+    const contextFrameState = app.device.createContextFrameState(
         time,
         viewport,
         subviews,
         eyeEntity
     );
     
-    app.context.submitFrameState(frameState);
-};
-
-app.device.requestFrameState().then(handleFrameState);
+    app.context.submitFrameState(contextFrameState);
+});
 
 let compassControl: HTMLElement;
 

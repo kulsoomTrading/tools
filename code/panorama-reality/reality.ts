@@ -93,12 +93,9 @@ const subviews = new Array<Argon.SerializedSubview>();
 
 // Reality views must raise frame events at regular intervals in order to 
 // drive updates for the entire system
-const handleFrameState = (suggestedFrameState:Argon.SuggestedFrameState) => {
-
-    app.device.requestFrameState().then(handleFrameState);
-
-    const time = suggestedFrameState.time;
-    Argon.SerializedSubviewList.clone(suggestedFrameState.subviews, subviews);
+app.device.frameStateEvent.addEventListener((frameState)=>{
+    const time = frameState.time;
+    Argon.SerializedSubviewList.clone(frameState.subviews, subviews);
     
     // Get the physical device orientation
     const deviceUserOrientation = Argon.getEntityOrientation(
@@ -114,7 +111,7 @@ const handleFrameState = (suggestedFrameState:Argon.SuggestedFrameState) => {
         (<any>virtualEye.orientation).setValue(deviceUserOrientation);
     }
 
-    if (!suggestedFrameState.strict) {
+    if (!frameState.strict) {
         Argon.decomposePerspectiveProjectionMatrix(subviews[0].projectionMatrix, frustum);
         frustum.fov = app.view.subviews[0].frustum.fov;
 
@@ -152,17 +149,15 @@ const handleFrameState = (suggestedFrameState:Argon.SuggestedFrameState) => {
 
     // By publishing a view state, we are describing where we
     // are in the world, what direction we are looking, and how we are rendering 
-    const frameState = app.device.createFrameState(
+    const contextFrameState = app.device.createContextFrameState(
         time,
-        suggestedFrameState.viewport,
+        frameState.viewport,
         subviews,
         virtualEye
     );
 
-    app.context.submitFrameState(frameState);
-};
-
-app.device.requestFrameState().then(handleFrameState);
+    app.context.submitFrameState(contextFrameState);
+});
 
 
 // the updateEvent is called each time the 3D world should be

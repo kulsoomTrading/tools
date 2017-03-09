@@ -150,7 +150,7 @@ var initStreetview = function () {
         streetViewService.getPanorama({
             location: coords,
             radius: 1500,
-            preference: google.maps.StreetViewPreference.NEAREST
+            preference: google.maps.StreetViewPreference.NEAREST,
         }, function (data, status) {
             if (status === google.maps.StreetViewStatus.OK) {
                 currentPanoData = data;
@@ -222,16 +222,15 @@ var viewport = {};
 var subviews = [];
 // Reality views must raise frame events at regular intervals in order to 
 // drive updates for the entire system.
-var handleFrameState = function (suggestedFrameState) {
-    app.device.requestFrameState().then(handleFrameState);
-    if (suggestedFrameState.viewport.width === 0 || suggestedFrameState.viewport.height === 0)
+app.device.frameStateEvent.addEventListener(function (frameState) {
+    if (frameState.viewport.width === 0 || frameState.viewport.height === 0)
         return;
     if (!streetviews)
         initStreetview();
-    var time = suggestedFrameState.time;
-    Argon.Viewport.clone(suggestedFrameState.viewport, viewport);
-    Argon.SerializedSubviewList.clone(suggestedFrameState.subviews, subviews);
-    if (suggestedFrameState.strict || subviews.length > 1) {
+    var time = frameState.time;
+    Argon.Viewport.clone(frameState.viewport, viewport);
+    Argon.SerializedSubviewList.clone(frameState.subviews, subviews);
+    if (frameState.strict || subviews.length > 1) {
         mapToggleControl.element.style.display = 'none';
     }
     else {
@@ -283,12 +282,15 @@ var handleFrameState = function (suggestedFrameState) {
     // a way to specify non-rectilinar projections to apps, so content 
     // may not perfectly match the streetview imagagery at a large fov
     // const MIN_ZOOM_LEVEL = 1.5;
-    if (!isFinite(zoomLevel) || suggestedFrameState.strict || app.session.manager.version[0] === 0) {
+    if (!isFinite(zoomLevel) || frameState.strict || app.session.manager.version[0] === 0) {
         var targetFrustum = Argon.decomposePerspectiveProjectionMatrix(subviews[0].projectionMatrix, frustum);
         // calculate streetview zoom level
         var fovyRad = targetFrustum.fovy;
         var fovxRad = Math.atan(Math.tan(fovyRad * 0.5) * subviewAspect) * 2.0;
         zoomLevel = 1 - Math.log2(fovxRad * Argon.Cesium.CesiumMath.DEGREES_PER_RADIAN / 90);
+        // streetviews.forEach((streetview) => {
+        //     streetview.setZoom(zoomLevel);
+        // });
     }
     // if (zoomLevel < MIN_ZOOM_LEVEL) zoomLevel = MIN_ZOOM_LEVEL;
     if (zoomLevel === 0)
@@ -308,10 +310,9 @@ var handleFrameState = function (suggestedFrameState) {
         geoVerticalAccuracy: undefined,
         geoHorizontalAccuracy: 5 // assume accurate within 5 meters
     };
-    var frameState = app.device.createFrameState(time, viewport, subviews, eyeEntity);
-    app.context.submitFrameState(frameState);
-};
-app.device.requestFrameState().then(handleFrameState);
+    var contextFrameState = app.device.createContextFrameState(time, viewport, subviews, eyeEntity);
+    app.context.submitFrameState(contextFrameState);
+});
 var compassControl;
 var timeoutId;
 var ensureUIVisible = function () {

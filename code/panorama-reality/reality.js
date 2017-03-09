@@ -67,10 +67,9 @@ var aggregator = new Argon.Cesium.CameraEventAggregator(document.documentElement
 var subviews = new Array();
 // Reality views must raise frame events at regular intervals in order to 
 // drive updates for the entire system
-var handleFrameState = function (suggestedFrameState) {
-    app.device.requestFrameState().then(handleFrameState);
-    var time = suggestedFrameState.time;
-    Argon.SerializedSubviewList.clone(suggestedFrameState.subviews, subviews);
+app.device.frameStateEvent.addEventListener(function (frameState) {
+    var time = frameState.time;
+    Argon.SerializedSubviewList.clone(frameState.subviews, subviews);
     // Get the physical device orientation
     var deviceUserOrientation = Argon.getEntityOrientation(app.device.user, time, app.device.stage, scratchQuaternion);
     if (deviceUserOrientation) {
@@ -78,7 +77,7 @@ var handleFrameState = function (suggestedFrameState) {
         // (the eye should be positioned at the current panorama)
         virtualEye.orientation.setValue(deviceUserOrientation);
     }
-    if (!suggestedFrameState.strict) {
+    if (!frameState.strict) {
         Argon.decomposePerspectiveProjectionMatrix(subviews[0].projectionMatrix, frustum);
         frustum.fov = app.view.subviews[0].frustum.fov;
         if (aggregator.isMoving(Argon.Cesium.CameraEventType.WHEEL)) {
@@ -109,10 +108,9 @@ var handleFrameState = function (suggestedFrameState) {
     aggregator.reset();
     // By publishing a view state, we are describing where we
     // are in the world, what direction we are looking, and how we are rendering 
-    var frameState = app.device.createFrameState(time, suggestedFrameState.viewport, subviews, virtualEye);
-    app.context.submitFrameState(frameState);
-};
-app.device.requestFrameState().then(handleFrameState);
+    var contextFrameState = app.device.createContextFrameState(time, frameState.viewport, subviews, virtualEye);
+    app.context.submitFrameState(contextFrameState);
+});
 // the updateEvent is called each time the 3D world should be
 // rendered, before the renderEvent.  The state of your application
 // should be updated here.
@@ -191,7 +189,7 @@ app.reality.connectEvent.addEventListener(function (controlSession) {
     };
     controlSession.on['edu.gatech.ael.panorama.deletePanorama'] = function (_a) {
         var url = _a.url;
-        panoramas["delete"](url);
+        panoramas.delete(url);
     };
     controlSession.on['edu.gatech.ael.panorama.showPanorama'] = function (options) {
         showPanorama(options);
