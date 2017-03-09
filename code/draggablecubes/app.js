@@ -41,6 +41,7 @@ hud.hudElements[0].appendChild(hudContainer);
 var description = document.getElementById('description');
 hud.hudElements[0].appendChild(description);
 app.view.element.appendChild(hud.domElement);
+// add a performance stats thing to the display
 var stats = new Stats();
 hud.hudElements[0].appendChild(stats.dom);
 // Add button event listener.  Toggle better interaction style.
@@ -118,6 +119,9 @@ var offset = new THREE.Vector3();
 var intersection = new THREE.Vector3();
 var INTERSECTED, SELECTED;
 var touchID; // which touch caused the selection?
+// need to keep track of if we've located the box scene at all, and if it's locked to the world
+var boxInit = false;
+var geoLocked = false;
 // set up 50 cubes, each with its own entity
 var geometry = new THREE.BoxGeometry(1, 1, 1);
 for (var i = 0; i < 50; i++) {
@@ -436,7 +440,6 @@ function handlePointerMove(x, y) {
         INTERSECTED = null;
     }
 }
-var boxInit = false;
 // since these don't move, we only update them when the origin changes
 app.context.localOriginChangeEvent.addEventListener(function () {
     if (boxInit) {
@@ -445,6 +448,10 @@ app.context.localOriginChangeEvent.addEventListener(function () {
         boxScene.position.copy(boxPose.position);
         boxScene.quaternion.copy(boxPose.orientation);
     }
+});
+// check if the reality has a geopose
+app.reality.changeEvent.addEventListener(function (data) {
+    console.log("Reality changed from '" + data.previous + "' to '" + data.current);
 });
 // the updateEvent is called each time the 3D world should be
 // rendered, before the renderEvent.  The state of your application
@@ -473,9 +480,41 @@ app.updateEvent.addEventListener(function (frame) {
         boxSceneEntity.position.setValue(userPose.position, defaultFrame);
         boxSceneEntity.orientation.setValue(userPose.orientation);
         boxInit = true;
-        // now convert the entity from our local reference frame to world coordinates if we can
-        if (Argon.convertEntityReferenceFrame(boxSceneEntity, frame.time, ReferenceFrame.FIXED)) {
-            // yay!  We're going to continue, either way, since we need it positioned somewhere!
+        geoLocked = false;
+        // we'll start by moving the boxes to the stage coordinates, which we should have and should
+        // be a good local coordinate system for any device
+        if (!Argon.convertEntityReferenceFrame(boxSceneEntity, frame.time, app.context.stage)) {
+            console.log("UNEXPECTED:  can't convert boxScene to STAGE coordinates.");
+        }
+    }
+    // if we were using geo coordinates, but can't any longer, recenter the scene on the user
+    if (geoLocked) {
+        // are the user and FIXED frames connected?
+        var userPoseFIXED = app.context.getEntityPose(app.context.user, ReferenceFrame.FIXED);
+        if (!(userPoseFIXED.poseStatus & Argon.PoseStatus.KNOWN)) {
+            // we'll start by moving the boxes to the stage coordinates, which we should have and should
+            // be a good local coordinate system for any device
+            boxSceneEntity.position.setValue(userPose.position, defaultFrame);
+            boxSceneEntity.orientation.setValue(userPose.orientation);
+            geoLocked = false;
+            if (Argon.convertEntityReferenceFrame(boxSceneEntity, frame.time, app.context.stage)) {
+                console.log("No longer have geospatial coordinates, moved boxes back to stage");
+            }
+            else {
+                console.log("No longer have geospatial coordinates, but FAILED to move boxes back to stage");
+            }
+        }
+    }
+    else {
+        // can the current box scene reach the FIXED frame?
+        var boxPoseFIXED = app.context.getEntityPose(boxSceneEntity, ReferenceFrame.FIXED);
+        if (boxPoseFIXED.poseStatus & Argon.PoseStatus.KNOWN) {
+            // now convert the entity from our local reference frame to world coordinates if we can
+            if (Argon.convertEntityReferenceFrame(boxSceneEntity, frame.time, ReferenceFrame.FIXED)) {
+                geoLocked = true;
+                console.log("Successfully positioned the boxes in the world");
+                // yay!  We're going to continue, either way, since we need it positioned somewhere!
+            }
         }
     }
     // get the pose of the boxscene in local coordinates, only need to do this when we
