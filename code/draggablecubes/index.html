@@ -7,60 +7,25 @@
     <script src="../resources/lib/argon.js"></script>
     <script src="../resources/lib/ArgonSunMoon.js"></script>
     <script src="../resources/lib/stats.min.js"></script>
-    <style>
-#description {
-  pointer-events: auto;
-  font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
-  padding: 10px;
-  background-color:rgba(255,255,255,0.7);
-  -webkit-backdrop-filter: blur(5px);
-  position:absolute;
-  bottom: 0px;
-}
-
-.argon-focus #description {
-  transition: opacity 0.8s;
-  visibility: visible;
-  opacity: 1; 
-}
-
-.argon-no-focus #description {
-  transition: visibility 0s linear 0.8s, opacity 0.8s;
-  visibility: visible;
-  opacity: 0;
-}
-canvas {
-  pointer-events: auto !important;
-}
-
-.crosshair {
-  width: 100%;
-  height: 100%;
-}
-
-#crosshair-wrapper {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-
-  height: 20px;
-  width: 20px;
-  transform: translateY(-50%) translateX(-50%);
-  -webkit-user-select: none;
-}
-  </style>
+  	<link rel="stylesheet" type="text/css" href="style.css">
 </head>
   <body>
     <div id="crosshair-wrapper">
       <img src="crosshair_small.png" class="crosshair"/>
     </div>
     <div id="argon">
+			<div id="hud" style="pointer-events:auto">
+				<div id="menu">
+					<button id="controls">Click to disable crosshair</button>
+				</div>
+			</div>
       <div onclick="hideMe(this)" id="description">
         <h2>Draggable Cubes in the World</h2>
         <h5>(click to dismiss)</h5>
         <p>This example repurposes the THREE.js draggablecubes example. The cubes have been put 
           around you in the world. When selected, a cube will then move as the 
-          device moves, keeping it's position relative to the device.</p>  
+          device moves, keeping it's position relative to the device.  You can use touch/mouse interaction,
+          or crosshair interaction.</p>
       </div>
     </div>
   </body>
