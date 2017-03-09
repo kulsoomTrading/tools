@@ -4,7 +4,7 @@
 // add a field to Object3D
 declare namespace THREE {
     export interface Object3D {
-        entity: any;
+        entity: Argon.Cesium.Entity;
     }
 }
 
@@ -26,22 +26,8 @@ const app = Argon.init();
 // this app uses geoposed content, so subscribe to geolocation updates
 app.context.subscribeGeolocation();
 
-// set up THREE.  Create a scene, a perspective camera and an object
-// for the user's location
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera();
-const userLocation = new THREE.Object3D;
-const boxScene = new THREE.Object3D;
-scene.add(camera);
-scene.add(userLocation);
-scene.add(boxScene);
-
-// an entity for the collection of boxes, which are rooted to the world together
-const boxSceneEntity = new Argon.Cesium.Entity({
-        name: "box scene",
-        position: Cartesian3.ZERO,
-        orientation: Cesium.Quaternion.IDENTITY
-});
+// install a secondary reality that the user can select from on the desktop
+app.reality.install(Argon.resolveURL('../streetview-reality/index.html'));
 
 // We use the standard WebGLRenderer when we only need WebGL-based content
 const renderer = new THREE.WebGLRenderer({
@@ -55,6 +41,7 @@ renderer.sortObjects = false;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 
+// add it to the view
 app.view.element.appendChild(renderer.domElement);
 
 // to easily control stuff on the display
@@ -67,13 +54,35 @@ const hud = new (<any>THREE).CSS3DArgonHUD();
 var crosshair = document.getElementById( 'crosshair-wrapper' );
 hud.appendChild(crosshair);
 
+var hudContainer = document.getElementById( 'hud' );
+hud.hudElements[0].appendChild(hudContainer);
+
 var description = document.getElementById( 'description' );
 hud.hudElements[0].appendChild(description);
+
 app.view.element.appendChild(hud.domElement);
 
 var stats = new Stats();
 hud.hudElements[0].appendChild(stats.dom);
 
+// Add button event listener.  Toggle better interaction style.
+var isCrosshair = true;
+var button = document.getElementById( 'controls' );
+button.addEventListener( 'click', function ( event ) {
+    if (isCrosshair) {
+        button.innerText = "Click to enable crosshair";
+        isCrosshair = false;
+        crosshair.setAttribute('class', 'crosshair hide-crosshair')
+    } else {
+        button.innerText = "Click to disable crosshair";
+        isCrosshair = true;
+        crosshair.setAttribute('class', 'crosshair show-crosshair')
+    }
+    // clear any highlight
+    if ( INTERSECTED ) INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
+    INTERSECTED = null;
+
+}, false );
 
 // Tell argon what local coordinate system you want.  The default coordinate
 // frame used by Argon is Cesium's FIXED frame, which is centered at the center
@@ -90,12 +99,26 @@ hud.hudElements[0].appendChild(stats.dom);
 // more similar to what is used in the geospatial industry
 app.context.setDefaultReferenceFrame(app.context.localOriginEastUpSouth);
 
-// get the user location, which we'll use for coordinate frame conversions
-var deviceEntity = app.context.user;
+
+// set up the scene, a perspective camera and objects for the user's location and the boxes
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera();
+const userLocation = new THREE.Object3D;
+const boxScene = new THREE.Object3D;
+scene.add(camera);
+scene.add(userLocation);
+scene.add(boxScene);
+
+// an entity for the collection of boxes, which are rooted to the world together
+const boxSceneEntity = new Argon.Cesium.Entity({
+        name: "box scene",
+        position: Cartesian3.ZERO,
+        orientation: Cesium.Quaternion.IDENTITY
+});
 
 // In this example, we are using the actual position of the sun and moon to create lights.
 // The SunMoonLights functions are created by ArgonSunMoon.js, and turn on the sun or moon
-// when they are above the horizon.  This package could be improved a lot (such as by 
+// when they are above the horizon.  This package could be improved a lot (such as by
 // adjusting the color of light based on distance above horizon, taking the phase of the
 // moon into account, etc) but it provides a simple starting point.
 const sunMoonLights = new (<any>THREE).SunMoonLights();
@@ -111,19 +134,21 @@ sunMoonLights.sun.shadow.mapSize.width = 2048;
 sunMoonLights.sun.shadow.mapSize.height = 2048;
 
 // add some ambient so things aren't so harshly illuminated
-var ambientlight = new THREE.AmbientLight( 0x404040 ); // soft white ambient light 
+var ambientlight = new THREE.AmbientLight( 0x404040 ); // soft white ambient light
 scene.add(ambientlight);
 
-// install a reality that the user can select from
-app.reality.install(Argon.resolveURL('../streetview-reality/index.html'));
-
+/////////////////////////
+// application variables.  This code started out as the three.js draggablecubes example
 var objects = [];
+var plane = new THREE.Plane();
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
 var offset = new THREE.Vector3();
 var intersection = new THREE.Vector3();
 var INTERSECTED, SELECTED;
+var touchID;  // which touch caused the selection?
 
+// set up 50 cubes, each with its own entity
 var geometry = new THREE.BoxGeometry( 1, 1, 1 );
 for ( var i = 0; i < 50; i ++ ) {
 
@@ -146,6 +171,7 @@ for ( var i = 0; i < 50; i ++ ) {
 
     boxScene.add( object );
 
+    // position the cube relative to the boxScene object and entity
     object.entity = new Argon.Cesium.Entity({
         name: "box " + i,
         position: Cartesian3.ZERO,
@@ -154,63 +180,266 @@ for ( var i = 0; i < 50; i ++ ) {
 
     // set the value of the box Entity to this local position, by
     // specifying the frame of reference to our local frame
-    object.entity.position.setValue(object.position, boxSceneEntity);
+    (object.entity.position as Argon.Cesium.ConstantPositionProperty) .setValue(object.position as any, boxSceneEntity);
 
     // orient the box according to the local world frame
-    object.entity.orientation.setValue(object.quaternion);
+    (object.entity.orientation  as Argon.Cesium.ConstantProperty).setValue(object.quaternion);
 
     objects.push( object );
 }
 
-renderer.domElement.addEventListener( 'keydown',  onDocumentTouchStart, false );
-renderer.domElement.addEventListener( 'keyup', onDocumentTouchEnd, false );
+document.addEventListener('keydown', onDocumentKeyStart, false);
+document.addEventListener('keyup', onDocumentKeyEnd, false);
 
-renderer.domElement.addEventListener( 'touchstart', onDocumentTouchStart, false );
-renderer.domElement.addEventListener( 'touchend', onDocumentTouchEnd, false );
-
-function onDocumentTouchStart( event ) {
-    console.log("touch")
+function onDocumentKeyStart(event) {
+    console.log("keyboard press");
     if (event.defaultPrevented) {
         return; // Should do nothing if the key event was already consumed.
     }
-    console.log("touch1")
+    if (event instanceof KeyboardEvent) {
+        if (!SELECTED && event.keyCode == " ".charCodeAt(0)) {
+            if (isCrosshair) {
+                mouse.x = mouse.y = 0;
 
-    if ( event instanceof TouchEvent) {
-        // ok!
-    } else if (event instanceof KeyboardEvent) {
-        if (event.key !== " ") {
-            return;
+                if(handleSelection()) {
+                    event.preventDefault();
+                }
+            }
         }
-    } else {
-        return;
     }
-    console.log("touch2")
+}
 
-    event.preventDefault();
-    mouse.x = mouse.y = 0;
+function onDocumentKeyEnd(event) {
+    console.log("keyboard release");
+    if (event.defaultPrevented) {
+        return; // Should do nothing if the key event was already consumed.
+    }
+    if (event instanceof KeyboardEvent) {
+        if (event.keyCode == " ".charCodeAt(0)) {
+            if (SELECTED && isCrosshair) {
+                if(handleRelease()) {
+                    event.preventDefault();
+                }
+            }
+        }
+    }
+}
 
+app.view.uiEvent.addEventListener((evt: any) => {
+    var event = evt.event;
+
+    if (event.defaultPrevented) {
+        return; // Should do nothing if the key event was already consumed.
+    }
+
+    // handle mouse movement
+    var ti, tx, ty;
+
+    switch (event.type) {
+        case "touchmove":
+            //console.log ("touch move: ");
+            //console.log(event);
+            event.preventDefault();
+            for (ti=0; ti < event.changedTouches.length; ti++) {
+                //console.log("changedTouches[" + i + "].identifier = " + e.changedTouches[i].identifier);
+                if (event.changedTouches[ti].identifier == touchID)
+                  break;
+            }
+            // if we didn't find a move for the first touch, skip
+            if (ti == event.changedTouches.length) return;
+
+        case "mousemove":
+            // if crosshair interaction, mousemove passed on
+            if (isCrosshair) {
+                evt.forwardEvent();
+                return;
+            }
+
+            if (event.type == "touchmove") {
+                tx = event.changedTouches[ti].clientX;
+                ty = event.changedTouches[ti].clientY;
+            } else {
+                tx = event.clientX;
+                ty = event.clientY;
+            }
+            var x = ( tx / window.innerWidth ) * 2 - 1;
+            var y = - ( ty / window.innerHeight ) * 2 + 1;
+
+            if (SELECTED) {
+                mouse.x = x;
+                mouse.y = y;
+                raycaster.setFromCamera( mouse, camera );
+
+                // recompute the plane each time, in case the camera moved
+                var worldLoc = userLocation.localToWorld(SELECTED.position);
+                plane.setFromNormalAndCoplanarPoint(
+                        camera.getWorldDirection( plane.normal ),
+                    //userLocation.getWorldDirection( new THREE.Vector3(0,0,1) ),
+                    worldLoc );
+
+                if ( raycaster.ray.intersectPlane( plane, intersection ) ) {
+                    // planes, rays and intersections are in the local "world" 3D coordinates
+                    var ptInWorld = userLocation.worldToLocal(intersection).sub( offset );
+                    SELECTED.position.copy( ptInWorld );
+                    SELECTED.entity.position.setValue(SELECTED.position, app.context.user);
+                }
+            } else {
+                handlePointerMove(x,y);
+                evt.forwardEvent();
+            }
+            return;
+
+      case "touchstart":
+            console.log ("touch start: ");
+            console.log(event);
+            event.preventDefault();
+
+            // try the first new touch ... seems unlikely there will be TWO new touches
+            // at exactly the same time
+            ti = 0;
+
+        case 'pointerdown':
+        case 'mousedown':
+            // ignore additional touches or pointer down events after the first selection
+            if (SELECTED) {
+                // perhaps multitouch devices can do a second pointer down ... need
+                // to keep track of which pointer event, I suppose!
+                evt.forwardEvent();
+                return;
+            }
+
+            if (isCrosshair) {
+                if (event.type == "mousedown") {
+                    // ignore mouse down events for selection in crosshair mode, they must
+                    // use the keyboard
+                    evt.forwardEvent();
+                    return;
+                }
+                mouse.x = mouse.y = 0;
+            } else {
+                if (event.type == "touchstart") {
+                    tx = event.changedTouches[ti].clientX;
+                    ty = event.changedTouches[ti].clientY;
+                } else {
+                    tx = event.clientX;
+                    ty = event.clientY;
+                }
+
+                mouse.x = ( tx / window.innerWidth ) * 2 - 1;
+                mouse.y = - ( ty / window.innerHeight ) * 2 + 1;
+            }
+
+
+            if(handleSelection()) {
+                if (event.type == "touchstart") {
+                    touchID = event.changedTouches[ti].identifier;
+                    if (!isCrosshair) {
+                        if ( INTERSECTED ) INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
+                        INTERSECTED = SELECTED;
+                        INTERSECTED.currentHex = INTERSECTED.material.color.getHex();
+                        INTERSECTED.material.color.setHex(0xffff33);
+                    }
+                }
+            } else {
+                evt.forwardEvent();
+            }
+            break;
+
+        case "touchend":
+            console.log("touch end: ");
+            console.log(event);
+            event.preventDefault();
+            for (ti=0; ti < event.changedTouches.length; ti++) {
+                //console.log("changedTouches[" + i + "].identifier = " + e.changedTouches[i].identifier);
+                if (event.changedTouches[ti].identifier == touchID)
+                  break;
+            }
+            // if we didn't find a move for the first touch, skip
+            if (ti == event.changedTouches.length) return;
+
+        case 'pointerup':
+        case 'mouseup':
+            console.log("release")
+
+            if (isCrosshair && event.type == "mouseup") {
+                // ignore mouse up events for selection in crosshair mode, they must
+                // use the keyboard
+                evt.forwardEvent();
+                return;
+            }
+
+            if ( SELECTED ) {
+                if (handleRelease()) {
+                    if (event.type == "touchend" && !isCrosshair) {
+                        if ( INTERSECTED ) INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
+                        INTERSECTED = null;
+                    }
+                }
+            } else {
+                evt.forwardEvent();
+            }
+            break;
+
+        default:
+            evt.forwardEvent();
+    }
+
+    //console.log(event);
+
+});
+
+function handleRelease() : boolean {
+    var date = app.context.getTime();
+
+    if (!Argon.convertEntityReferenceFrame(SELECTED.entity, date, boxSceneEntity)) {
+        SELECTED = null;
+        touchID = null;
+        return false;
+    }
+    var boxPose = app.context.getEntityPose(SELECTED.entity);
+    // console.log("------");
+    // console.log("touch released, pos=" + boxPose.position);
+    // console.log("touch released, quat=" + boxPose.orientation);
+    // console.log("touch released _value pos=" + SELECTED.entity.position._value)
+    // console.log("touch released _value quat=" + SELECTED.entity.orientation._value)
+    // console.log("------");
+
+    var boxPose = app.context.getEntityPose(SELECTED.entity, boxSceneEntity);
+    SELECTED.position.copy(boxPose.position);
+    SELECTED.quaternion.copy(boxPose.orientation);
+
+    userLocation.remove(SELECTED);
+    boxScene.add(SELECTED);
+
+    SELECTED = null;
+    touchID = null;
+
+    return true;
+}
+
+function handleSelection() : boolean {
     scene.updateMatrixWorld(true);
     raycaster.setFromCamera( mouse, camera );
-    console.log("touch3")
+    console.log("touch!")
 
     var intersects = raycaster.intersectObjects( objects );
     if ( intersects.length > 0 ) {
-        console.log("touch intersect")
+        console.log("touch intersect!")
         var object = intersects[ 0 ].object;
         var date = app.context.getTime();
 
         const defaultFrame = app.context.getDefaultReferenceFrame();
 
-        // var oldpose = app.context.getEntityPose(object.entity);
-        // console.log("------");
-        // console.log("touch FIXED pos=" + oldpose.position)
-        // console.log("touch FIXED quat=" + oldpose.orientation)
-        // console.log("touch FIXED _value pos=" + object.entity.position._value)
-        // console.log("touch FIXED _value quat=" + object.entity.orientation._value)
+        var oldpose = app.context.getEntityPose(object.entity);
+        console.log("------");
+        console.log("touch FIXED pos=" + oldpose.position)
+        console.log("touch FIXED quat=" + oldpose.orientation)
+        console.log("touch FIXED _value pos=" + (object.entity.position as any)._value)
+        console.log("touch FIXED _value quat=" + (object.entity.orientation as any)._value)
 
-        if (!Argon.convertEntityReferenceFrame(object.entity, date, deviceEntity)) {
+        if (!Argon.convertEntityReferenceFrame(object.entity, date, app.context.user)) {
             console.log("touch convert fail")
-            return;
+            return false;
         }
 
         // var newpose = app.context.getEntityPose(object.entity);
@@ -222,56 +451,43 @@ function onDocumentTouchStart( event ) {
 
         boxScene.remove(object);
         userLocation.add(object);
+
         SELECTED = object;
-    }
-}
 
-function onDocumentTouchEnd( event ) {
-    console.log("release")
-    if ( event instanceof TouchEvent) {
-        // ok!
-    } else if (event instanceof KeyboardEvent) {
-        if (event.key !== " ") {
-            return;
-        }
-    } else {
-        return;
-    }
-
-    event.preventDefault();
-
-    if ( SELECTED ) {
-        var date = app.context.getTime();
-        // if (!Argon.convertEntityReferenceFrame(SELECTED.entity, date, ReferenceFrame.FIXED)) {
-        //     return;
-        // }
-        if (!Argon.convertEntityReferenceFrame(SELECTED.entity, date, boxSceneEntity)) {
-            return;
-        }
-        var boxPose = app.context.getEntityPose(SELECTED.entity);
-        console.log("------");
-        console.log("touch released, pos=" + boxPose.position);
-        console.log("touch released, quat=" + boxPose.orientation);
-        console.log("touch released _value pos=" + SELECTED.entity.position._value)
-        console.log("touch released _value quat=" + SELECTED.entity.orientation._value)
-        console.log("------");
-
-        var boxPose = app.context.getEntityPose(SELECTED.entity, boxSceneEntity);
+        // get the pose in the local coordinates of userLocation
+        var boxPose = app.context.getEntityPose(SELECTED.entity, app.context.user);
         SELECTED.position.copy(boxPose.position);
         SELECTED.quaternion.copy(boxPose.orientation);
 
-        userLocation.remove(SELECTED);
-        boxScene.add(SELECTED);
-        SELECTED = null;
+        SELECTED.updateMatrixWorld(true);
+
+        // console.log("touch DEVICE pos=" + boxPose.position);
+        // console.log("touch DEVICE quat=" + boxPose.orientation)
+        // console.log("touch DEVICE _value pos=" + (object.entity.position as any)._value);
+        // console.log("touch DEVICE _value quat=" + (object.entity.orientation as any)._value)
+        // console.log("------");
+
+        if (!isCrosshair) {
+            var worldLoc = userLocation.localToWorld(SELECTED.position);
+            plane.setFromNormalAndCoplanarPoint(
+                    camera.getWorldDirection( plane.normal ),
+                    worldLoc );
+            if ( raycaster.ray.intersectPlane( plane, intersection ) ) {
+                offset.copy( userLocation.worldToLocal(( intersection ).sub( worldLoc )));
+            }
+        }
+        return true;
     }
+    return false;
 }
 
-function handleDeviceMove( ) {
+function handlePointerMove(x,y) {
     if ( SELECTED ) {
         return;
     }
 
-    mouse.x = mouse.y = 0;
+    mouse.x = x;
+    mouse.y = y;
     scene.updateMatrixWorld(true);
     raycaster.setFromCamera( mouse, camera );
 
@@ -295,17 +511,8 @@ var boxInit = false;
 // since these don't move, we only update them when the origin changes
 app.context.localOriginChangeEvent.addEventListener(() => {
     if (boxInit) {
-        // // get the local coordinates of the local boxes, and set the THREE objects
-        // for (var i =0; i<objects.length; i++) {
-        //     var object = objects[i];
-        //     var boxPose = app.context.getEntityPose(object.entity);
-        //     object.position.copy(boxPose.position);
-        //     object.quaternion.copy(boxPose.orientation);
-        // }
-
-        var boxPose = app.context.getEntityPose(boxSceneEntity);
         console.log("**** new frame of reference");
-        console.log(boxSceneEntity.name + " is at " + boxPose.position);
+        var boxPose = app.context.getEntityPose(boxSceneEntity);
         boxScene.position.copy(<any>boxPose.position);
         boxScene.quaternion.copy(<any>boxPose.orientation);
     }
@@ -319,10 +526,11 @@ app.updateEvent.addEventListener((frame) => {
     // in the local coordinate frame.
     const userPose = app.context.getEntityPose(app.context.user);
 
-    // assuming we know the user's pose, set the position of our 
+    // assuming we know the user's pose, set the pose of our
     // THREE user object to match it
     if (userPose.poseStatus & Argon.PoseStatus.KNOWN) {
         userLocation.position.copy(<any>userPose.position);
+        userLocation.quaternion.copy(<any>userPose.orientation);
     } else {
         return;
     }
@@ -332,43 +540,35 @@ app.updateEvent.addEventListener((frame) => {
 	sunMoonLights.update(frame.time, defaultFrame);
 
     // the first time through, we create a geospatial position for
-    // the box scene somewhere near us
+    // the box scene somewhere near us.  If we don't have geospatial tracking,
+    // we end up positioning the box scene around our starting point
     if (!boxInit) {
         // set the pose of it's entity to the user pose in our local frame of refererence
-        boxSceneEntity.position.setValue(userPose.position, defaultFrame);
-        boxSceneEntity.orientation.setValue(userPose.orientation);
+        (boxSceneEntity.position as Argon.Cesium.ConstantPositionProperty).setValue(userPose.position, defaultFrame);
+        (boxSceneEntity.orientation as Argon.Cesium.ConstantProperty).setValue(userPose.orientation);
+        boxInit = true;
 
-        // now convert the entity from our local reference frame to world coordinates
+        // now convert the entity from our local reference frame to world coordinates if we can
         if (Argon.convertEntityReferenceFrame(boxSceneEntity, frame.time, ReferenceFrame.FIXED)) {
-            // get the pose of the boxscene in local coordinates
-            var boxPose = app.context.getEntityPose(boxSceneEntity);
-            // console.log(boxSceneEntity.name + " is at " + boxPose.position);
-            boxScene.position.copy(<any>boxPose.position);
-            boxScene.quaternion.copy(<any>boxPose.orientation);
-
-            // The above should work for all boxes, no none of them.
-            boxInit = true;
+            // yay!  We're going to continue, either way, since we need it positioned somewhere!
         }
-    } else {
+    }
+        // get the pose of the boxscene in local coordinates, only need to do this when we
+        // set it or when the origin changes (see above)
         var boxPose = app.context.getEntityPose(boxSceneEntity);
-        // if (boxPose.position.x != boxScene.position.x || boxPose.position.y != boxScene.position.y || boxPose.position.z != boxScene.position.z) {
-        //     console.log(boxSceneEntity.name + " is at " + boxPose.position);
-        // }
         boxScene.position.copy(<any>boxPose.position);
         boxScene.quaternion.copy(<any>boxPose.orientation);
-    }
 
-    handleDeviceMove();
+
+    if (isCrosshair) {
+        handlePointerMove(0,0);
+    }
 
     // if one is selected, update it's pose since it's attached to the camera
     if (SELECTED) {
-        var boxPose = app.context.getEntityPose(SELECTED.entity);
+        var boxPose = app.context.getEntityPose(SELECTED.entity, app.context.user);
         SELECTED.position.copy(boxPose.position);
         SELECTED.quaternion.copy(boxPose.orientation);
-
-        var newpose = boxPose;
-        //  console.log("touch back to DEVICE pos=" + newpose.position);
-        //  console.log("touch back to DEVICE quat=" + newpose.orientation)
     }
 });
 
