@@ -142,6 +142,9 @@ var initStreetview = function () {
                 }
             }
         });
+        // Position the eye as a child of the pano entity
+        if (!eyeEntity.position)
+            eyeEntity.position = new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, panoEntity);
     });
     app.view.viewportChangeEvent.addEventListener(resize);
     var streetViewService = new google.maps.StreetViewService();
@@ -161,8 +164,6 @@ var initStreetview = function () {
                 streetviews[0].setPano(data.location.pano);
                 // streetviews[1].setPano(data.location.pano);
                 console.log("Loading initial streetview panorama: " + data.location.shortDescription);
-                // Position the eye as a child of the pano entity
-                eyeEntity.position = new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, panoEntity);
             }
             else if (status === google.maps.StreetViewStatus.ZERO_RESULTS) {
                 // unable to find nearby panorama (what should we do?)
@@ -200,6 +201,7 @@ var initStreetview = function () {
 app.context.setDefaultReferenceFrame(app.context.localOriginEastUpSouth);
 // Create an entity to represent the panorama
 var panoEntity = new Argon.Cesium.Entity({
+    id: 'streetview_pano',
     position: new Argon.Cesium.ConstantPositionProperty(undefined, Argon.Cesium.ReferenceFrame.FIXED),
     orientation: new Argon.Cesium.ConstantProperty(Quaternion.IDENTITY)
 });
@@ -227,6 +229,8 @@ app.device.frameStateEvent.addEventListener(function (frameState) {
         return;
     if (!streetviews)
         initStreetview();
+    if (!eyeEntity.position)
+        return; // pano has not loaded
     var time = frameState.time;
     Argon.Viewport.clone(frameState.viewport, viewport);
     Argon.SerializedSubviewList.clone(frameState.subviews, subviews);
