@@ -124,7 +124,7 @@ THREE.CSS3DArgonRenderer = function () {
 
     this.setViewport = function ( x, y, width, height, side ) {
 		domElements[side].style.display = 'inline-block';
-		domElements[side].style.top = y + 'px';
+		domElements[side].style.bottom = y + 'px';
 		domElements[side].style.left = x + 'px';
 		domElements[side].style.width = width + 'px';
 		domElements[side].style.height = height + 'px';
