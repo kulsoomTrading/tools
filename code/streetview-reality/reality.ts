@@ -159,8 +159,6 @@ const initStreetview = () => {
                 }
             }
         });
-        // Position the eye as a child of the pano entity
-        if (!eyeEntity.position) eyeEntity.position = new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, panoEntity);
     })
 
     app.view.viewportChangeEvent.addEventListener(resize)
@@ -224,12 +222,7 @@ const panoEntity = new Argon.Cesium.Entity({
     id:'streetview_pano',
     position: new Argon.Cesium.ConstantPositionProperty(undefined, Argon.Cesium.ReferenceFrame.FIXED),
     orientation: new Argon.Cesium.ConstantProperty(Quaternion.IDENTITY)
-})
-
-// Create an entity to represent the eye
-const eyeEntity = new Argon.Cesium.Entity({
-    orientation: new Argon.Cesium.ConstantProperty(Quaternion.IDENTITY)
-})
+});
 
 // Creating a lot of garbage slows everything down. Not fun.
 // Let's create some recyclable objects that we can use later.
@@ -249,6 +242,11 @@ let lastZoomLevel:number;
 const viewport = <Argon.Viewport>{};
 const subviews = <Argon.SerializedSubview[]>[];
 
+const frameStateOptions = {
+    overrideStage: true,
+    overrideUser: true
+}
+
 // Reality views must raise frame events at regular intervals in order to 
 // drive updates for the entire system.
 app.device.frameStateEvent.addEventListener((frameState)=>{
@@ -257,7 +255,9 @@ app.device.frameStateEvent.addEventListener((frameState)=>{
 
     if (!streetviews) initStreetview();
 
-    if (!eyeEntity.position) return; // pano has not loaded
+    // Position the stage as a child of the pano entity
+    (app.context.stage.position as Argon.Cesium.ConstantPositionProperty).setValue(Cartesian3.ZERO, panoEntity);
+    (app.context.stage.orientation as Argon.Cesium.ConstantProperty).setValue(Quaternion.IDENTITY);
 
     const time = frameState.time;
     Argon.Viewport.clone(frameState.viewport, viewport);
@@ -307,7 +307,9 @@ app.device.frameStateEvent.addEventListener((frameState)=>{
     const pitchValue = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, pitch, scratchQuaternionPitch);
     const headingValue = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, heading, scratchQuaternionHeading)
     orientationValue = Quaternion.fromHeadingPitchRoll(-heading, 0, pitch + Math.PI / 2, scratchQuaternion);
-    (eyeEntity.orientation as Argon.Cesium.ConstantProperty).setValue(orientationValue);
+
+    (app.context.user.position as Argon.Cesium.ConstantPositionProperty).setValue(Cartesian3.ZERO, app.context.stage);
+    (app.context.user.orientation as Argon.Cesium.ConstantProperty).setValue(orientationValue);
 
     // get the current fov
     let zoomLevel = pov['zoom'] || streetviews[0].getZoom();
@@ -347,7 +349,7 @@ app.device.frameStateEvent.addEventListener((frameState)=>{
         s.projectionMatrix = Matrix4.clone(frustum.projectionMatrix, s.projectionMatrix);
     });
 
-    eyeEntity['meta'] = {
+    app.context.user['meta'] = {
         geoHeadingAccuracy: 5, // assume accurate within 5 degrees
         geoVerticalAccuracy: undefined, // unknown
         geoHorizontalAccuracy: 5 // assume accurate within 5 meters
@@ -357,7 +359,7 @@ app.device.frameStateEvent.addEventListener((frameState)=>{
         time,
         viewport,
         subviews,
-        eyeEntity
+        frameStateOptions
     );
     
     app.context.submitFrameState(contextFrameState);

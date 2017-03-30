@@ -142,9 +142,6 @@ var initStreetview = function () {
                 }
             }
         });
-        // Position the eye as a child of the pano entity
-        if (!eyeEntity.position)
-            eyeEntity.position = new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, panoEntity);
     });
     app.view.viewportChangeEvent.addEventListener(resize);
     var streetViewService = new google.maps.StreetViewService();
@@ -205,10 +202,6 @@ var panoEntity = new Argon.Cesium.Entity({
     position: new Argon.Cesium.ConstantPositionProperty(undefined, Argon.Cesium.ReferenceFrame.FIXED),
     orientation: new Argon.Cesium.ConstantProperty(Quaternion.IDENTITY)
 });
-// Create an entity to represent the eye
-var eyeEntity = new Argon.Cesium.Entity({
-    orientation: new Argon.Cesium.ConstantProperty(Quaternion.IDENTITY)
-});
 // Creating a lot of garbage slows everything down. Not fun.
 // Let's create some recyclable objects that we can use later.
 var scratchMatrix3 = new Matrix3;
@@ -222,6 +215,10 @@ var x90Neg = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, -Math.PI / 2);
 var lastZoomLevel;
 var viewport = {};
 var subviews = [];
+var frameStateOptions = {
+    overrideStage: true,
+    overrideUser: true
+};
 // Reality views must raise frame events at regular intervals in order to 
 // drive updates for the entire system.
 app.device.frameStateEvent.addEventListener(function (frameState) {
@@ -229,8 +226,9 @@ app.device.frameStateEvent.addEventListener(function (frameState) {
         return;
     if (!streetviews)
         initStreetview();
-    if (!eyeEntity.position)
-        return; // pano has not loaded
+    // Position the stage as a child of the pano entity
+    app.context.stage.position.setValue(Cartesian3.ZERO, panoEntity);
+    app.context.stage.orientation.setValue(Quaternion.IDENTITY);
     var time = frameState.time;
     Argon.Viewport.clone(frameState.viewport, viewport);
     Argon.SerializedSubviewList.clone(frameState.subviews, subviews);
@@ -278,7 +276,8 @@ app.device.frameStateEvent.addEventListener(function (frameState) {
     var pitchValue = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, pitch, scratchQuaternionPitch);
     var headingValue = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, heading, scratchQuaternionHeading);
     orientationValue = Quaternion.fromHeadingPitchRoll(-heading, 0, pitch + Math.PI / 2, scratchQuaternion);
-    eyeEntity.orientation.setValue(orientationValue);
+    app.context.user.position.setValue(Cartesian3.ZERO, app.context.stage);
+    app.context.user.orientation.setValue(orientationValue);
     // get the current fov
     var zoomLevel = pov['zoom'] || streetviews[0].getZoom();
     // google streetview uses a non-rectilinear projection which reduces
@@ -309,12 +308,12 @@ app.device.frameStateEvent.addEventListener(function (frameState) {
     subviews.forEach(function (s) {
         s.projectionMatrix = Matrix4.clone(frustum.projectionMatrix, s.projectionMatrix);
     });
-    eyeEntity['meta'] = {
+    app.context.user['meta'] = {
         geoHeadingAccuracy: 5,
         geoVerticalAccuracy: undefined,
         geoHorizontalAccuracy: 5 // assume accurate within 5 meters
     };
-    var contextFrameState = app.device.createContextFrameState(time, viewport, subviews, eyeEntity);
+    var contextFrameState = app.device.createContextFrameState(time, viewport, subviews, frameStateOptions);
     app.context.submitFrameState(contextFrameState);
 });
 var compassControl;

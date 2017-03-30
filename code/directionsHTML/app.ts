@@ -177,7 +177,7 @@ app.updateEvent.addEventListener(() => {
 // initiated.  Extra repairs do not appear to happen within the 
 // animation callback.
 var viewport = null;
-var subViews = null;
+var subViews:Argon.Subview[] = null;
 var rAFpending = false;
 
 app.renderEvent.addEventListener(() => {
@@ -209,6 +209,7 @@ function renderFunc() {
         // this subview
         camera.position.copy(subview.pose.position);
         camera.quaternion.copy(subview.pose.orientation);
+        
         // the underlying system provide a full projection matrix
         // for the camera.  Use it, and then update the FOV of the 
         // camera from it (needed by the CSS Perspective DIV)
