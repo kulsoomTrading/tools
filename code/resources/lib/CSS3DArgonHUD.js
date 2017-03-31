@@ -40,7 +40,7 @@ THREE.CSS3DArgonHUD = function () {
 
     this.setViewport = function ( x, y, width, height, side ) {
 		hudElements[side].style.display = 'inline-block';
-		hudElements[side].style.top = y + 'px';
+		hudElements[side].style.bottom = y + 'px';
 		hudElements[side].style.left = x + 'px';
 		hudElements[side].style.width = width + 'px';
 		hudElements[side].style.height = height + 'px';

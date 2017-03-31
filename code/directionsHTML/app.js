@@ -16,7 +16,7 @@ var renderer = new THREE.CSS3DArgonRenderer();
 app.view.element.appendChild(renderer.domElement);
 // to easily control stuff on the display
 var hud = new THREE.CSS3DArgonHUD();
-// We put some elements in the index.html, for convenience. 
+// We put some elements in the index.html, for convenience.
 // Here, we retrieve the description box and move it to the 
 // the CSS3DArgonHUD hudElements[0].  We only put it in the left
 // hud since we'll be hiding it in stereo
@@ -153,7 +153,6 @@ app.renderEvent.addEventListener(function () {
         window.requestAnimationFrame(renderFunc);
     }
 });
-var n = 3;
 // the animation callback.  
 function renderFunc() {
     // if we have 1 subView, we're in mono mode.  If more, stereo.
@@ -164,8 +163,6 @@ function renderFunc() {
     // both views if we are in stereo viewing mode
     renderer.setSize(viewport.width, viewport.height);
     hud.setSize(viewport.width, viewport.height);
-    if (n-- > 0)
-        console.log(JSON.stringify(app.context.serializedFrameState));
     // there is 1 subview in monocular mode, 2 in stereo mode
     for (var _i = 0, subViews_1 = subViews; _i < subViews_1.length; _i++) {
         var subview = subViews_1[_i];

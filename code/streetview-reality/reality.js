@@ -150,7 +150,7 @@ var initStreetview = function () {
         streetViewService.getPanorama({
             location: coords,
             radius: 1500,
-            preference: google.maps.StreetViewPreference.NEAREST
+            preference: google.maps.StreetViewPreference.NEAREST,
         }, function (data, status) {
             if (status === google.maps.StreetViewStatus.OK) {
                 currentPanoData = data;
@@ -161,8 +161,6 @@ var initStreetview = function () {
                 streetviews[0].setPano(data.location.pano);
                 // streetviews[1].setPano(data.location.pano);
                 console.log("Loading initial streetview panorama: " + data.location.shortDescription);
-                // Position the eye as a child of the pano entity
-                eyeEntity.position = new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, panoEntity);
             }
             else if (status === google.maps.StreetViewStatus.ZERO_RESULTS) {
                 // unable to find nearby panorama (what should we do?)
@@ -200,11 +198,8 @@ var initStreetview = function () {
 app.context.setDefaultReferenceFrame(app.context.localOriginEastUpSouth);
 // Create an entity to represent the panorama
 var panoEntity = new Argon.Cesium.Entity({
+    id: 'streetview_pano',
     position: new Argon.Cesium.ConstantPositionProperty(undefined, Argon.Cesium.ReferenceFrame.FIXED),
-    orientation: new Argon.Cesium.ConstantProperty(Quaternion.IDENTITY)
-});
-// Create an entity to represent the eye
-var eyeEntity = new Argon.Cesium.Entity({
     orientation: new Argon.Cesium.ConstantProperty(Quaternion.IDENTITY)
 });
 // Creating a lot of garbage slows everything down. Not fun.
@@ -220,18 +215,24 @@ var x90Neg = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, -Math.PI / 2);
 var lastZoomLevel;
 var viewport = {};
 var subviews = [];
+var frameStateOptions = {
+    overrideStage: true,
+    overrideUser: true
+};
 // Reality views must raise frame events at regular intervals in order to 
 // drive updates for the entire system.
-var handleFrameState = function (suggestedFrameState) {
-    app.device.requestFrameState().then(handleFrameState);
-    if (suggestedFrameState.viewport.width === 0 || suggestedFrameState.viewport.height === 0)
+app.device.frameStateEvent.addEventListener(function (frameState) {
+    if (frameState.viewport.width === 0 || frameState.viewport.height === 0)
         return;
     if (!streetviews)
         initStreetview();
-    var time = suggestedFrameState.time;
-    Argon.Viewport.clone(suggestedFrameState.viewport, viewport);
-    Argon.SerializedSubviewList.clone(suggestedFrameState.subviews, subviews);
-    if (suggestedFrameState.strict || subviews.length > 1) {
+    // Position the stage as a child of the pano entity
+    app.context.stage.position.setValue(Cartesian3.ZERO, panoEntity);
+    app.context.stage.orientation.setValue(Quaternion.IDENTITY);
+    var time = frameState.time;
+    Argon.Viewport.clone(frameState.viewport, viewport);
+    Argon.SerializedSubviewList.clone(frameState.subviews, subviews);
+    if (frameState.strict || subviews.length > 1) {
         mapToggleControl.element.style.display = 'none';
     }
     else {
@@ -275,7 +276,8 @@ var handleFrameState = function (suggestedFrameState) {
     var pitchValue = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, pitch, scratchQuaternionPitch);
     var headingValue = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, heading, scratchQuaternionHeading);
     orientationValue = Quaternion.fromHeadingPitchRoll(-heading, 0, pitch + Math.PI / 2, scratchQuaternion);
-    eyeEntity.orientation.setValue(orientationValue);
+    app.context.user.position.setValue(Cartesian3.ZERO, app.context.stage);
+    app.context.user.orientation.setValue(orientationValue);
     // get the current fov
     var zoomLevel = pov['zoom'] || streetviews[0].getZoom();
     // google streetview uses a non-rectilinear projection which reduces
@@ -283,14 +285,19 @@ var handleFrameState = function (suggestedFrameState) {
     // a way to specify non-rectilinar projections to apps, so content 
     // may not perfectly match the streetview imagagery at a large fov
     // const MIN_ZOOM_LEVEL = 1.5;
-    if (!zoomLevel || suggestedFrameState.strict || app.session.manager.version[0] === 0) {
+    if (!isFinite(zoomLevel) || frameState.strict || app.session.manager.version[0] === 0) {
         var targetFrustum = Argon.decomposePerspectiveProjectionMatrix(subviews[0].projectionMatrix, frustum);
         // calculate streetview zoom level
         var fovyRad = targetFrustum.fovy;
         var fovxRad = Math.atan(Math.tan(fovyRad * 0.5) * subviewAspect) * 2.0;
         zoomLevel = 1 - Math.log2(fovxRad * Argon.Cesium.CesiumMath.DEGREES_PER_RADIAN / 90);
+        // streetviews.forEach((streetview) => {
+        //     streetview.setZoom(zoomLevel);
+        // });
     }
     // if (zoomLevel < MIN_ZOOM_LEVEL) zoomLevel = MIN_ZOOM_LEVEL;
+    if (zoomLevel === 0)
+        zoomLevel = 0.00000001; // because PerspectiveFrustum can't handle 180deg fov
     lastZoomLevel = zoomLevel;
     var fovx = 90 * Math.pow(2, 1 - zoomLevel) * CesiumMath.RADIANS_PER_DEGREE;
     frustum.fov = subviewAspect < 1 ?
@@ -301,15 +308,14 @@ var handleFrameState = function (suggestedFrameState) {
     subviews.forEach(function (s) {
         s.projectionMatrix = Matrix4.clone(frustum.projectionMatrix, s.projectionMatrix);
     });
-    eyeEntity['meta'] = {
+    app.context.user['meta'] = {
         geoHeadingAccuracy: 5,
         geoVerticalAccuracy: undefined,
         geoHorizontalAccuracy: 5 // assume accurate within 5 meters
     };
-    var frameState = app.device.createFrameState(time, viewport, subviews, eyeEntity);
-    app.context.submitFrameState(frameState);
-};
-app.device.requestFrameState().then(handleFrameState);
+    var contextFrameState = app.device.createContextFrameState(time, viewport, subviews, frameStateOptions);
+    app.context.submitFrameState(contextFrameState);
+});
 var compassControl;
 var timeoutId;
 var ensureUIVisible = function () {

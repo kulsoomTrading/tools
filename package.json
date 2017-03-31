@@ -1,9 +1,10 @@
 {
   "devDependencies": {
+    "@argonjs/argon": "^1.1.8",
     "@types/dat-gui": "^0.5.28",
     "@types/googlemaps": "^3.20.30",
     "@types/stats": "^0.16.29",
-    "@types/three": "0.0.19",
+    "@types/three": "^0.83.5",
     "@types/tween.js": "0.0.27",
     "static-server": "^2.0.1",
     "typescript": "^2.1.4"

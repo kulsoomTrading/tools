@@ -60,7 +60,7 @@ interface Panorama extends PanoramaInfo {
 
 // A map to store our panoramas
 var panoramas = new Map<string, Panorama>();
-var currentPano:Panorama;
+var currentPano:Panorama|undefined;
 
 // Create two pano spheres we can transition between
 var sphereGeometry = new THREE.SphereGeometry(100, 32, 32);
@@ -74,10 +74,7 @@ panoSpheres.forEach((mesh)=>{
 })
 var currentSphere = 0;
 
-// Create an entity to represent the virtual eye
-const virtualEye = new Argon.Cesium.Entity({
-    orientation: new Argon.Cesium.ConstantProperty(Quaternion.fromAxisAngle(Cartesian3.UNIT_X, Argon.Cesium.CesiumMath.PI_OVER_TWO))
-})
+const X_90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, Argon.Cesium.CesiumMath.PI_OVER_TWO);
 
 // Creating a lot of garbage slows everything down. Not fun.
 // Let's create some recyclable objects that we can use later.
@@ -91,32 +88,21 @@ const aggregator = new Argon.Cesium.CameraEventAggregator(<any>document.document
 
 const subviews = new Array<Argon.SerializedSubview>();
 
+
+const frameStateOptions = {
+    overrideStage: true,
+    overrideUser: false
+}
+
 // Reality views must raise frame events at regular intervals in order to 
 // drive updates for the entire system
-const handleFrameState = (suggestedFrameState:Argon.SuggestedFrameState) => {
+app.device.frameStateEvent.addEventListener((frameState)=>{
+    const time = frameState.time;
+    Argon.SerializedSubviewList.clone(frameState.subviews, subviews);
+    Argon.decomposePerspectiveProjectionMatrix(subviews[0].projectionMatrix, frustum);
+    frustum.fov = app.view.subviews[0].frustum.fov;
 
-    app.device.requestFrameState().then(handleFrameState);
-
-    const time = suggestedFrameState.time;
-    Argon.SerializedSubviewList.clone(suggestedFrameState.subviews, subviews);
-    
-    // Get the physical device orientation
-    const deviceUserOrientation = Argon.getEntityOrientation(
-        app.device.user,
-        time, 
-        app.device.stage, 
-        scratchQuaternion
-    );
-
-    if (deviceUserOrientation) {
-        // Rotate our virtual eye according to the device orientation
-        // (the eye should be positioned at the current panorama)
-        (<any>virtualEye.orientation).setValue(deviceUserOrientation);
-    }
-
-    if (!suggestedFrameState.strict) {
-        Argon.decomposePerspectiveProjectionMatrix(subviews[0].projectionMatrix, frustum);
-        frustum.fov = app.view.subviews[0].frustum.fov;
+    if ( !frameState.strict ) {
 
         if (aggregator.isMoving(Argon.Cesium.CameraEventType.WHEEL)) {
             const wheelMovement = aggregator.getMovement(Argon.Cesium.CameraEventType.WHEEL);
@@ -129,17 +115,6 @@ const handleFrameState = (suggestedFrameState:Argon.SuggestedFrameState) => {
             const diff = pinchMovement.distance.endPosition.y - pinchMovement.distance.startPosition.y;
             frustum.fov = Math.min(Math.max(frustum.fov - diff * 0.02, Math.PI/8), Math.PI-Math.PI/8);
         }
-
-        if (!deviceUserOrientation && aggregator.isMoving(Argon.Cesium.CameraEventType.LEFT_DRAG)) {
-            const dragMovement = aggregator.getMovement(Argon.Cesium.CameraEventType.LEFT_DRAG);
-            const currentOrientation = Argon.getEntityOrientationInReferenceFrame(virtualEye, time, currentPano.entity, scratchQuaternion);
-            // const dragPitch = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, frustum.fov * (dragMovement.endPosition.y - dragMovement.startPosition.y) / app.viewport.current.height, scratchQuaternionDragPitch);
-            const dragYaw = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, frustum.fov * (dragMovement.endPosition.x - dragMovement.startPosition.x) / app.view.viewport.width, scratchQuaternionDragYaw);
-            // const drag = Quaternion.multiply(dragPitch, dragYaw, dragYaw);
-
-            const newOrientation = Quaternion.multiply(currentOrientation, dragYaw, dragYaw);
-            (<any>virtualEye.orientation).setValue(newOrientation);
-        }
         
         subviews.forEach((s)=>{
             const aspect = s.viewport.width / s.viewport.height;
@@ -148,21 +123,54 @@ const handleFrameState = (suggestedFrameState:Argon.SuggestedFrameState) => {
         });
     }
 
+    if (currentPano) {
+        app.context.stage.position.setValue(Cartesian3.ZERO, currentPano.entity);
+        app.context.stage.orientation.setValue(Quaternion.IDENTITY);
+    }
+    
+    // Get the physical device orientation
+    const deviceUserOrientation = Argon.getEntityOrientation(
+        app.device.user,
+        time, 
+        app.device.stage, 
+        scratchQuaternion
+    );
+
+    if (!deviceUserOrientation) {
+        frameStateOptions.overrideUser = true;
+
+        let currentOrientation = 
+            currentPano && Argon.getEntityOrientationInReferenceFrame(app.context.user, time, currentPano.entity, scratchQuaternion) || 
+            Quaternion.clone(X_90, scratchQuaternion);
+
+        if (aggregator.isMoving(Argon.Cesium.CameraEventType.LEFT_DRAG)) {
+            const dragMovement = aggregator.getMovement(Argon.Cesium.CameraEventType.LEFT_DRAG);
+            // const dragPitch = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, frustum.fov * (dragMovement.endPosition.y - dragMovement.startPosition.y) / app.viewport.current.height, scratchQuaternionDragPitch);
+            const dragYaw = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, frustum.fov * (dragMovement.endPosition.x - dragMovement.startPosition.x) / app.view.viewport.width, scratchQuaternionDragYaw);
+            // const drag = Quaternion.multiply(dragPitch, dragYaw, dragYaw);
+
+            currentOrientation = Quaternion.multiply(currentOrientation, dragYaw, dragYaw);
+        }
+
+        (app.context.user.position as Argon.Cesium.ConstantPositionProperty).setValue(Cartesian3.ZERO, app.context.stage);
+        (app.context.user.orientation as Argon.Cesium.ConstantProperty).setValue(currentOrientation);
+    } else {
+        frameStateOptions.overrideUser = false;
+    }
+
     aggregator.reset();
 
     // By publishing a view state, we are describing where we
     // are in the world, what direction we are looking, and how we are rendering 
-    const frameState = app.device.createFrameState(
+    const contextFrameState = app.device.createContextFrameState(
         time,
-        suggestedFrameState.viewport,
+        frameState.viewport,
         subviews,
-        virtualEye
+        frameStateOptions
     );
 
-    app.context.submitFrameState(frameState);
-};
-
-app.device.requestFrameState().then(handleFrameState);
+    app.context.submitFrameState(contextFrameState);
+});
 
 
 // the updateEvent is called each time the 3D world should be
@@ -281,8 +289,6 @@ function showPanorama(options:ShowPanoramaOptions) {
     const panoIn = panoramas.get(url);
     if (!panoIn) throw new Error('Unknown pano: '+ url + ' (did you forget to add the panorama first?)')
     currentPano = panoIn;
-
-    virtualEye.position = new Argon.Cesium.ConstantPositionProperty(Cartesian3.ZERO, currentPano.entity);
     
     // get the threejs objects for rendering our panoramas
     const sphereOut = panoSpheres[currentSphere];

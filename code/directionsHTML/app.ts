@@ -21,7 +21,7 @@ app.view.element.appendChild(renderer.domElement);
 // to easily control stuff on the display
 const hud = new (<any>THREE).CSS3DArgonHUD();
 
-// We put some elements in the index.html, for convenience. 
+// We put some elements in the index.html, for convenience.
 // Here, we retrieve the description box and move it to the 
 // the CSS3DArgonHUD hudElements[0].  We only put it in the left
 // hud since we'll be hiding it in stereo
@@ -177,7 +177,7 @@ app.updateEvent.addEventListener(() => {
 // initiated.  Extra repairs do not appear to happen within the 
 // animation callback.
 var viewport = null;
-var subViews = null;
+var subViews:Argon.Subview[] = null;
 var rAFpending = false;
 
 app.renderEvent.addEventListener(() => {
@@ -209,6 +209,7 @@ function renderFunc() {
         // this subview
         camera.position.copy(subview.pose.position);
         camera.quaternion.copy(subview.pose.orientation);
+        
         // the underlying system provide a full projection matrix
         // for the camera.  Use it, and then update the FOV of the 
         // camera from it (needed by the CSS Perspective DIV)
