@@ -13,7 +13,7 @@ const app = Argon.init();
 //app.view.element.style.zIndex = 0;
 
 // this app uses geoposed content, so subscribe to geolocation updates
-// app.context.subscribeGeolocation();
+app.context.subscribeGeolocation();
 
 // set up THREE.  Create a scene, a perspective camera and an object
 // for the user's location
@@ -280,52 +280,52 @@ app.updateEvent.addEventListener((frame) => {
 })
     
 // renderEvent is fired whenever argon wants the app to update its display
-// app.renderEvent.addEventListener(() => {
-//     // set the renderers to know the current size of the viewport.
-//     // This is the full size of the viewport, which would include
-//     // both views if we are in stereo viewing mode
-//     const viewport = app.view.viewport;
-//     renderer.setSize(viewport.width, viewport.height);
-//     cssRenderer.setSize(viewport.width, viewport.height);
-//     hud.setSize(viewport.width, viewport.height);
+app.renderEvent.addEventListener(() => {
+    // set the renderers to know the current size of the viewport.
+    // This is the full size of the viewport, which would include
+    // both views if we are in stereo viewing mode
+    const viewport = app.view.viewport;
+    renderer.setSize(viewport.width, viewport.height);
+    cssRenderer.setSize(viewport.width, viewport.height);
+    hud.setSize(viewport.width, viewport.height);
 
-//     // There is 1 subview in monocular mode, 2 in stereo mode.
-//     // If we are in mono view, show the description.  If not, hide it, 
-//     if (app.view.subviews.length > 1) {
-//       holder.style.display = 'none';
-//     } else {
-//       holder.style.display = 'block';
-//     }
+    // There is 1 subview in monocular mode, 2 in stereo mode.
+    // If we are in mono view, show the description.  If not, hide it, 
+    if (app.view.subviews.length > 1) {
+      holder.style.display = 'none';
+    } else {
+      holder.style.display = 'block';
+    }
 
-//     // there is 1 subview in monocular mode, 2 in stereo mode    
-//     for (let subview of app.view.subviews) {
-//         var frustum = subview.frustum;
-//         // set the position and orientation of the camera for 
-//         // this subview
-//         camera.position.copy(<any>subview.pose.position);
-//         camera.quaternion.copy(<any>subview.pose.orientation);
-//         // the underlying system provide a full projection matrix
-//         // for the camera. 
-//         camera.projectionMatrix.fromArray(<any>subview.frustum.projectionMatrix);
+    // there is 1 subview in monocular mode, 2 in stereo mode    
+    for (let subview of app.view.subviews) {
+        var frustum = subview.frustum;
+        // set the position and orientation of the camera for 
+        // this subview
+        camera.position.copy(<any>subview.pose.position);
+        camera.quaternion.copy(<any>subview.pose.orientation);
+        // the underlying system provide a full projection matrix
+        // for the camera. 
+        camera.projectionMatrix.fromArray(<any>subview.frustum.projectionMatrix);
 
-//         // set the viewport for this view
-//         let {x,y,width,height} = subview.viewport;
+        // set the viewport for this view
+        let {x,y,width,height} = subview.viewport;
 
-//         // set the CSS rendering up, by computing the FOV, and render this view
-//         camera.fov = THREE.Math.radToDeg(frustum.fovy);
+        // set the CSS rendering up, by computing the FOV, and render this view
+        camera.fov = THREE.Math.radToDeg(frustum.fovy);
 
-//         cssRenderer.setViewport(x,y,width,height, subview.index);
-//         cssRenderer.render(scene, camera, subview.index);
+        cssRenderer.setViewport(x,y,width,height, subview.index);
+        cssRenderer.render(scene, camera, subview.index);
 
-//         // set the webGL rendering parameters and render this view
-//         renderer.setViewport(x,y,width,height);
-//         renderer.setScissor(x,y,width,height);
-//         renderer.setScissorTest(true);
-//         renderer.render(scene, camera);
+        // set the webGL rendering parameters and render this view
+        renderer.setViewport(x,y,width,height);
+        renderer.setScissor(x,y,width,height);
+        renderer.setScissorTest(true);
+        renderer.render(scene, camera);
 
-//         // adjust the hud
-//         hud.setViewport(x,y,width,height, subview.index);
-//         hud.render(subview.index);
-//     }
-// })
+        // adjust the hud
+        hud.setViewport(x,y,width,height, subview.index);
+        hud.render(subview.index);
+    }
+})
 
