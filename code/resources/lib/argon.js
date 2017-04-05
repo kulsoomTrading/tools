@@ -20603,15 +20603,14 @@ $__System.register('1', ['2', '3', '3d', '4', '9', '10', 'a', '1d', '35', '2d', 
         return true;
     }
 
+    function installArgonApp() {
+        if (isIOS) {
+            window.location.href = "https://itunes.apple.com/us/app/argon4/id1089308600?mt=8";
+        }
+    }
     function openInArgonApp() {
         if (isIOS) {
-            // var now = Date.now();
-            // setTimeout(function () {
-            //     if (Date.now() - now > 1000) return;
-            //     window.location.href = "https://itunes.apple.com/us/app/argon4/id1089308600";
-            // }, 25);
-            var protocol = window.location.protocol;
-            window.location.protocol = protocol === 'https:' ? 'argon4s' : 'argon4';
+            window.location.href = "argon4://open?url=" + encodeURIComponent(window.location.href);
         }
     }
     // requestAnimationFrame / cancelAnimationFrame polyfills
@@ -23874,9 +23873,17 @@ $__System.register('1', ['2', '3', '3d', '4', '9', '10', 'a', '1d', '35', '2d', 
                     setInterval(function () {
                         if (!_this.focusService.hasFocus) publish();
                     }, 500);
-                    this.contextService.frameStateEvent.addEventListener(function () {
-                        if (_this.focusService.hasFocus) publish();
-                    });
+                    // this.contextService.renderEvent.addEventListener(()=>{
+                    //     if (this.focusService.hasFocus) publish();
+                    // });
+                    if (typeof window !== 'undefined' && window.addEventListener) {
+                        window.addEventListener('orientationchange', publish);
+                        window.addEventListener('scroll', publish);
+                        this.sessionService.manager.closeEvent.addEventListener(function () {
+                            window.removeEventListener('orientationchange', publish);
+                            window.removeEventListener('scroll', publish);
+                        });
+                    }
                 };
                 return ViewService;
             }());
@@ -25876,10 +25883,16 @@ $__System.register('1', ['2', '3', '3d', '4', '9', '10', 'a', '1d', '35', '2d', 
                         menuButton.style.cursor = 'pointer';
                         menuButton.style.pointerEvents = 'auto';
                         menuButton.style.zIndex = '-1';
-                        this.openInArgonMenuItem = this._createMenuItem(openIcon, 'Open in Argon', function () {
+                        this.openInArgonMenuItem = this._createMenuItem(openIcon, 'Open in Argon');
+                        this.openInArgonMenuItem.addEventListener('touchstart', function () {
+                            openInArgonApp();
+                        });
+                        this.openInArgonMenuItem.addEventListener('touchend', function () {
+                            if (confirm('Oops, it looks like you are still here! You may not have the Argon Browser installed. Would you like to install it now?')) {
+                                installArgonApp();
+                            }
                             _this.menuOpen = false;
                             _this.updateMenu();
-                            openInArgonApp();
                         });
                         this.hmdMenuItem = this._createMenuItem(vrIcon, 'Toggle HMD', function () {
                             _this.menuOpen = false;
@@ -25900,7 +25913,7 @@ $__System.register('1', ['2', '3', '3d', '4', '9', '10', 'a', '1d', '35', '2d', 
                             _this.menuOpen = false;
                             _this.updateMenu();
                             if (_this.viewService.viewportMode === ViewportMode.IMMERSIVE) {
-                                _this.viewService.desiredViewportMode = ViewportMode.PAGE;
+                                _this.viewService.desiredViewportMode = ViewportMode.EMBEDDED;
                             } else {
                                 _this.viewService.desiredViewportMode = ViewportMode.IMMERSIVE;
                             }
@@ -25908,6 +25921,9 @@ $__System.register('1', ['2', '3', '3d', '4', '9', '10', 'a', '1d', '35', '2d', 
                         this.onSelect(menuButton, this.toggleMenu.bind(this));
                         this.updateMenu();
                         this.viewService.viewportChangeEvent.addEventListener(function () {
+                            _this.updateMenu();
+                        });
+                        this.viewService.viewportModeChangeEvent.addEventListener(function () {
                             _this.updateMenu();
                         });
                     }
@@ -25963,7 +25979,13 @@ $__System.register('1', ['2', '3', '3d', '4', '9', '10', 'a', '1d', '35', '2d', 
                     }
                     this.updateMenu();
                 };
+                DefaultUIService.prototype._hideMenuItem = function (e) {
+                    e.style.transform = 'scale(0.2)';
+                    e.style.opacity = '0';
+                    e.style.pointerEvents = 'none';
+                };
                 DefaultUIService.prototype.updateMenu = function () {
+                    var _this = this;
                     if (this.deviceService.isPresentingHMD) {
                         this.element.style.display = 'none';
                     } else {
@@ -25971,20 +25993,18 @@ $__System.register('1', ['2', '3', '3d', '4', '9', '10', 'a', '1d', '35', '2d', 
                     }
                     this.menuItems = [];
                     this.menuItems.push(null);
-                    if (isIOS) this.menuItems.push(this.openInArgonMenuItem);
+                    if (isIOS) this.menuItems.push(this.openInArgonMenuItem);else this._hideMenuItem(this.openInArgonMenuItem);
                     var parentElement = this.viewService.element.parentElement;
                     var parentWidth = parentElement ? parentElement.clientWidth : 0;
                     var parentHeight = parentElement ? parentElement.clientHeight : 0;
-                    if (!(window.innerWidth === parentWidth && window.innerHeight === parentHeight)) this.menuItems.push(this.maximizeMenuItem);
-                    if (isIOS || 'getVRDisplays' in navigator) this.menuItems.push(this.hmdMenuItem);
-                    if (this.realityViewerItemElements.size > 0) this.menuItems.push(this.realityMenuItem);
+                    if (!(window.innerWidth === parentWidth && window.innerHeight === parentHeight)) this.menuItems.push(this.maximizeMenuItem);else this._hideMenuItem(this.maximizeMenuItem);
+                    if (isIOS || 'getVRDisplays' in navigator) this.menuItems.push(this.hmdMenuItem);else this._hideMenuItem(this.hmdMenuItem);
+                    if (this.realityViewerItemElements.size > 0) this.menuItems.push(this.realityMenuItem);else this._hideMenuItem(this.realityMenuItem);
                     this.menuItems.push(null);
                     if (!this.menuOpen) {
                         this.menuItems.forEach(function (e, i) {
                             if (!e) return;
-                            e.style.transform = 'scale(0.2)';
-                            e.style.opacity = '0';
-                            e.style.pointerEvents = 'none';
+                            _this._hideMenuItem(e);
                         });
                         this.menuBackgroundElement.style.transform = 'scale(0.1)';
                     } else {
@@ -26489,6 +26509,8 @@ $__System.register('1', ['2', '3', '3d', '4', '9', '10', 'a', '1d', '35', '2d', 
             _export('convertEntityReferenceFrame', convertEntityReferenceFrame);
 
             _export('isIOS', isIOS);
+
+            _export('installArgonApp', installArgonApp);
 
             _export('openInArgonApp', openInArgonApp);
 
