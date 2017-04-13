@@ -61,7 +61,7 @@ app.reality.install(Argon.resolveURL('../streetview-reality/index.html'));
 
 // create 6 3D words for the 6 directions.  
 var loader = new THREE.FontLoader();
-loader.load( '../resources/fonts/helvetiker_regular.typeface.js', function ( font ) {    
+loader.load( '../resources/fonts/helvetiker_regular.typeface.json', function ( font ) {    
     const textOptions = {
         font:<any>font,
         size: 15,

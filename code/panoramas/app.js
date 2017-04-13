@@ -129,7 +129,7 @@ app.reality.connectEvent.addEventListener(function (session) {
 var myMysteriousLabel = new THREE.Object3D();
 // create a label  
 var loader = new THREE.FontLoader();
-loader.load('../resources/fonts/helvetiker_regular.typeface.js', function (font) {
+loader.load('../resources/fonts/helvetiker_regular.typeface.json', function (font) {
     var textOptions = {
         font: font,
         size: 15,
