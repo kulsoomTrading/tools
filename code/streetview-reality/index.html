@@ -4,7 +4,7 @@
     <script type="text/javascript">
       // geolocation api requires https
       if(window.location.protocol != 'https:') {
-        location.href = location.href.replace("http://", "https://");
+        document.location.replace(location.href.replace("http://", "https://"));
       }
     </script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAluCri0DZjVJ6Iu5rF0a6I5gpnfiwl0lQ"></script>

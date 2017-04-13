@@ -6,7 +6,7 @@
     <script type="text/javascript">
       // geolocation api requires https
       if(window.location.protocol != 'https:') {
-        location.href = location.href.replace("http://", "https://");
+        document.location.replace(location.href.replace("http://", "https://"));
       }
     </script>
     </head>
