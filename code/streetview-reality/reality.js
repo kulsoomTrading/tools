@@ -224,8 +224,14 @@ var frameStateOptions = {
 app.device.frameStateEvent.addEventListener(function (frameState) {
     if (frameState.viewport.width === 0 || frameState.viewport.height === 0)
         return;
+    if (!app.session.manager.isConnected)
+        return;
     if (!streetviews)
         initStreetview();
+    if (!app.visibility.isVisible) {
+        streetviews[0].setVisible(false);
+        streetviews[1].setVisible(false);
+    }
     // Position the stage as a child of the pano entity
     app.context.stage.position.setValue(Cartesian3.ZERO, panoEntity);
     app.context.stage.orientation.setValue(Quaternion.IDENTITY);
