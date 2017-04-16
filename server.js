@@ -13,7 +13,7 @@ pem.createCertificate({ days:1, selfSigned:true }, function(err, keys) {
     //     if (req.secure) return next();
     //     res.redirect('https://' + req.hostname + ':' + httpsServer.address().port + req.url);
     // });
-    app.use(express.static('.'));
+    app.use(express.static('_site/.'));
 
     // Create an HTTPS service
     var httpsServer = https.createServer({
