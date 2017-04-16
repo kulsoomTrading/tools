@@ -366,10 +366,6 @@ function init() {
 function transform( targets, duration ) {
   TWEEN.removeAll();
 
-  for ( var i = 0; i < objects.length; i ++ ) {
-
-      TWEEN.removeAll();
-
       for ( var i = 0; i < objects.length; i ++ ) {
 
         var object = objects[ i ];
@@ -396,7 +392,7 @@ function transform( targets, duration ) {
         .to( {}, duration * 2 )
 //					.onUpdate( render )
         .start();
-  }
+  
 }
 
 // The original demo responded to windowResize events but updating the camera.
@@ -459,7 +455,8 @@ var subViews = null;
 app.renderEvent.addEventListener(function () {
     viewport = app.view.getViewport();
     subViews = app.view.getSubviews();
-    renderFunc();
+//    renderFunc();
+        window.requestAnimationFrame(renderFunc);
 });
 
 // the animation callback.  
