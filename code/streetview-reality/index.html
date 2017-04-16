@@ -1,6 +1,12 @@
 <html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
 <head>
+    <script type="text/javascript">
+      // geolocation api requires https
+      if(window.location.protocol != 'https:') {
+        document.location.replace(location.href.replace("http://", "https://"));
+      }
+    </script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAluCri0DZjVJ6Iu5rF0a6I5gpnfiwl0lQ"></script>
     <script src="https://rawgit.com/argonjs/argon/develop/dist/argon.js"></script>
     <style>

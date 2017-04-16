@@ -2,7 +2,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
   <head>
     <title>Geo</title>
+    <head>
+    <script type="text/javascript">
+      // geolocation api requires https
+      if(window.location.protocol != 'https:') {
+        document.location.replace(location.href.replace("http://", "https://"));
+      }
+    </script>
+    </head>
     <script src="../resources/lib/three/three.min.js"></script>
+    <script src="https://unpkg.com/@argonjs/argon@1.1/dist/argon.js"></script>
     <script src="../resources/lib/CSS3DArgonRenderer.js"></script>
     <script src="../resources/lib/CSS3DArgonHUD.js"></script>
     <script src="https://rawgit.com/argonjs/argon/develop/dist/argon.js"></script>
