@@ -26,6 +26,11 @@ const renderer = new THREE.WebGLRenderer({
 // account for the pixel density of the device
 renderer.setPixelRatio(window.devicePixelRatio);
 app.view.element.appendChild(renderer.domElement);
+renderer.domElement.style.position = 'absolute';
+renderer.domElement.style.bottom = '0';
+renderer.domElement.style.left = '0';
+renderer.domElement.style.width = '100%';
+renderer.domElement.style.height = '100%';
 
 // Tell argon what local coordinate system you want.  The default coordinate
 // frame used by Argon is Cesium's FIXED frame, which is centered at the center
@@ -126,7 +131,7 @@ app.renderEvent.addEventListener(() => {
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
     const viewport = app.view.viewport;
-    renderer.setSize(viewport.width, viewport.height);
+    renderer.setSize(viewport.width, viewport.height, false);
     
     // there is 1 subview in monocular mode, 2 in stereo mode    
     for (let subview of app.view.subviews) {
