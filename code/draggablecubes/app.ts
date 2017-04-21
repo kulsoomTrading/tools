@@ -1,5 +1,6 @@
 /// <reference types="@argonjs/argon" />
 /// <reference types="three" />
+/// <reference types="stats" />
 
 // add a field to Object3D
 declare namespace THREE {

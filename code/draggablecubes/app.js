@@ -1,5 +1,6 @@
 /// <reference types="@argonjs/argon" />
 /// <reference types="three" />
+/// <reference types="stats" />
 // any time we use an INERTIAL frame in Cesium, it needs to know where to find it's
 // ASSET folder on the web.  The SunMoonLights computation uses INERTIAL frames, so
 // so we need to put the assets on the web and point Cesium at them
@@ -513,7 +514,6 @@ app.updateEvent.addEventListener(function (frame) {
             if (Argon.convertEntityReferenceFrame(boxSceneEntity, frame.time, ReferenceFrame.FIXED)) {
                 geoLocked = true;
                 console.log("Successfully positioned the boxes in the world");
-                // yay!  We're going to continue, either way, since we need it positioned somewhere!
             }
         }
     }

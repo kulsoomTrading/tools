@@ -1,5 +1,6 @@
 /// <reference types="@argonjs/argon"/>
 /// <reference types="three"/>
+/// <reference types="stats" />
 // any time we use an INERTIAL frame in Cesium, it needs to know where to find it's
 // ASSET folder on the web.  The SunMoonLights computation uses INERTIAL frames, so
 // so we need to put the assets on the web and point Cesium at them
@@ -20,12 +21,23 @@ var renderer = new THREE.WebGLRenderer({
 });
 // account for the pixel density of the device
 renderer.setPixelRatio(window.devicePixelRatio);
-app.view.element.appendChild(renderer.domElement);
 renderer.domElement.style.position = 'absolute';
 renderer.domElement.style.bottom = '0';
 renderer.domElement.style.left = '0';
 renderer.domElement.style.width = '100%';
 renderer.domElement.style.height = '100%';
+app.view.element.appendChild(renderer.domElement);
+var hud = new THREE.CSS3DArgonHUD();
+//  We also move the description box to the left Argon HUD.  
+// We don't duplicated it because we only use it in mono mode
+var holder = document.createElement('div');
+var hudDescription = document.getElementById('description');
+holder.appendChild(hudDescription);
+hud.hudElements[0].appendChild(holder);
+// add a performance stats thing to the display
+var stats = new Stats();
+hud.hudElements[0].appendChild(stats.dom);
+app.view.element.appendChild(hud.domElement);
 // Tell argon what local coordinate system you want.  The default coordinate
 // frame used by Argon is Cesium's FIXED frame, which is centered at the center
 // of the earth and oriented with the earth's axes.  
@@ -112,13 +124,20 @@ app.updateEvent.addEventListener(function () {
 });
 // renderEvent is fired whenever argon wants the app to update its display
 app.renderEvent.addEventListener(function () {
-    // if we have 1 subView, we're in mono mode.  If more, stereo.
-    var monoMode = (app.view.subviews).length == 1;
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
     var viewport = app.view.viewport;
     renderer.setSize(viewport.width, viewport.height, false);
+    hud.setSize(viewport.width, viewport.height);
+    // There is 1 subview in monocular mode, 2 in stereo mode.
+    // If we are in mono view, show the description.  If not, hide it, 
+    if (app.view.subviews.length > 1) {
+        holder.style.display = 'none';
+    }
+    else {
+        holder.style.display = 'block';
+    }
     // there is 1 subview in monocular mode, 2 in stereo mode    
     for (var _i = 0, _a = app.view.subviews; _i < _a.length; _i++) {
         var subview = _a[_i];
@@ -136,5 +155,9 @@ app.renderEvent.addEventListener(function () {
         renderer.setScissor(x, y, width, height);
         renderer.setScissorTest(true);
         renderer.render(scene, camera);
+        // adjust the hud
+        hud.setViewport(x, y, width, height, subview.index);
+        hud.render(subview.index);
     }
+    stats.update();
 });
