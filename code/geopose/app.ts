@@ -35,7 +35,8 @@ const cssRenderer = new (<any>THREE).CSS3DArgonRenderer();
 const hud = new (<any>THREE).CSS3DArgonHUD();
 const renderer = new THREE.WebGLRenderer({ 
     alpha: true, 
-    logarithmicDepthBuffer: true
+    logarithmicDepthBuffer: true,
+    antialias: true
 });
 renderer.setPixelRatio(window.devicePixelRatio);
 

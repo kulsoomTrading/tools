@@ -15,7 +15,8 @@ scene.autoUpdate = false;
 // We use the standard WebGLRenderer when we only need WebGL-based content
 var renderer = new THREE.WebGLRenderer({
     alpha: true,
-    logarithmicDepthBuffer: true
+    logarithmicDepthBuffer: true,
+    antialias: true
 });
 // account for the pixel density of the device
 renderer.setPixelRatio(window.devicePixelRatio);
@@ -164,13 +165,13 @@ app.vuforia.isAvailable().then(function (available) {
                         userLocation.add(argonTextObject);
                     }
                 });
-            })["catch"](function (err) {
+            }).catch(function (err) {
                 console.log("could not load dataset: " + err.message);
             });
             // activate the dataset.
             api.objectTracker.activateDataSet(dataSet);
         });
-    })["catch"](function (err) {
+    }).catch(function (err) {
         console.log("vuforia failed to initialize: " + err.message);
     });
 });

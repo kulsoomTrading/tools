@@ -18,7 +18,8 @@ scene.autoUpdate = false;
 // We use the standard WebGLRenderer when we only need WebGL-based content
 const renderer = new THREE.WebGLRenderer({ 
     alpha: true, 
-    logarithmicDepthBuffer: true
+    logarithmicDepthBuffer: true,
+    antialias: true
 });
 // account for the pixel density of the device
 renderer.setPixelRatio(window.devicePixelRatio);

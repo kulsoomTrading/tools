@@ -30,7 +30,8 @@ var cssRenderer = new THREE.CSS3DArgonRenderer();
 var hud = new THREE.CSS3DArgonHUD();
 var renderer = new THREE.WebGLRenderer({
     alpha: true,
-    logarithmicDepthBuffer: true
+    logarithmicDepthBuffer: true,
+    antialias: true
 });
 renderer.setPixelRatio(window.devicePixelRatio);
 // Assuming the z-orders are the same, the order of sibling elements
