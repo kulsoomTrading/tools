@@ -21,6 +21,11 @@ const renderer = new THREE.WebGLRenderer({
 
 // account for the pixel density of the device
 renderer.setPixelRatio(window.devicePixelRatio);
+renderer.domElement.style.position = 'absolute';
+renderer.domElement.style.bottom = '0';
+renderer.domElement.style.left = '0';
+renderer.domElement.style.width = '100%';
+renderer.domElement.style.height = '100%';
 app.view.element.insertBefore(renderer.domElement, app.view.element.firstChild);
 
 // Tell argon what local coordinate system you want.  The default coordinate
@@ -216,9 +221,19 @@ app.renderEvent.addEventListener(() => {
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
-    const viewport = app.view.viewport;
-    renderer.setSize(viewport.width, viewport.height);
+    const view = app.view;
+    renderer.setSize(view.renderWidth, view.renderHeight, false);    
     
+    const viewport = view.viewport;
+    // if the viewport width and the renderwidth are different
+    // we assume we are rendering on a different surface than
+    // the main display, so we reset the pixel ratio to 1
+    if (viewport.width != view.renderWidth) {
+        renderer.setPixelRatio(1);
+    } else {
+        renderer.setPixelRatio(window.devicePixelRatio);
+    }
+
     // there is 1 subview in monocular mode, 2 in stereo mode    
     for (let subview of app.view.subviews) {
         // set the position and orientation of the camera for 
@@ -230,7 +245,7 @@ app.renderEvent.addEventListener(() => {
         camera.projectionMatrix.fromArray(<any>subview.frustum.projectionMatrix);
 
         // set the viewport for this view
-        let {x,y,width,height} = subview.viewport;
+        var {x,y,width,height} = subview.renderViewport;
         renderer.setViewport(x,y,width,height);
 
         // set the webGL rendering parameters and render this view

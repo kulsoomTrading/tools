@@ -43,6 +43,12 @@ renderer.sortObjects = false;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 
+renderer.domElement.style.position = 'absolute';
+renderer.domElement.style.bottom = '0';
+renderer.domElement.style.left = '0';
+renderer.domElement.style.width = '100%';
+renderer.domElement.style.height = '100%';
+
 // add it to the view
 app.view.element.appendChild(renderer.domElement);
 
@@ -638,9 +644,20 @@ app.renderEvent.addEventListener((frame) => {
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
-    const viewport = app.view.viewport;
-    renderer.setSize(viewport.width, viewport.height);
+    const view = app.view;
+    renderer.setSize(view.renderWidth, view.renderHeight, false);    
+
+    const viewport = view.viewport;
     hud.setSize(viewport.width, viewport.height);
+
+    // if the viewport width and the renderwidth are different
+    // we assume we are rendering on a different surface than
+    // the main display, so we reset the pixel ratio to 1
+    if (viewport.width != view.renderWidth) {
+        renderer.setPixelRatio(1);
+    } else {
+        renderer.setPixelRatio(window.devicePixelRatio);
+    }
 
     // there is 1 subview in monocular mode, 2 in stereo mode
     for (let subview of app.view.subviews) {
@@ -653,7 +670,7 @@ app.renderEvent.addEventListener((frame) => {
         camera.projectionMatrix.fromArray(<any>subview.frustum.projectionMatrix);
 
         // set the viewport for this view
-        let {x,y,width,height} = subview.viewport;
+        var {x,y,width,height} = subview.renderViewport;
         renderer.setViewport(x,y,width,height);
 
         // set the webGL rendering parameters and render this view
@@ -663,6 +680,7 @@ app.renderEvent.addEventListener((frame) => {
 
         // adjust the hud, but only in mono
         if (monoMode) {
+            var {x,y,width,height} = subview.viewport;
             hud.setViewport(x,y,width,height, subview.index);
             hud.render(subview.index);
         }

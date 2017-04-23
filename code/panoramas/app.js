@@ -17,6 +17,11 @@ var renderer = new THREE.WebGLRenderer({
 });
 // account for the pixel density of the device
 renderer.setPixelRatio(window.devicePixelRatio);
+renderer.domElement.style.position = 'absolute';
+renderer.domElement.style.bottom = '0';
+renderer.domElement.style.left = '0';
+renderer.domElement.style.width = '100%';
+renderer.domElement.style.height = '100%';
 app.view.element.insertBefore(renderer.domElement, app.view.element.firstChild);
 // Tell argon what local coordinate system you want.  The default coordinate
 // frame used by Argon is Cesium's FIXED frame, which is centered at the center
@@ -189,8 +194,18 @@ app.renderEvent.addEventListener(function () {
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
-    var viewport = app.view.viewport;
-    renderer.setSize(viewport.width, viewport.height);
+    var view = app.view;
+    renderer.setSize(view.renderWidth, view.renderHeight, false);
+    var viewport = view.viewport;
+    // if the viewport width and the renderwidth are different
+    // we assume we are rendering on a different surface than
+    // the main display, so we reset the pixel ratio to 1
+    if (viewport.width != view.renderWidth) {
+        renderer.setPixelRatio(1);
+    }
+    else {
+        renderer.setPixelRatio(window.devicePixelRatio);
+    }
     // there is 1 subview in monocular mode, 2 in stereo mode    
     for (var _i = 0, _a = app.view.subviews; _i < _a.length; _i++) {
         var subview = _a[_i];
@@ -202,7 +217,7 @@ app.renderEvent.addEventListener(function () {
         // for the camera. 
         camera.projectionMatrix.fromArray(subview.frustum.projectionMatrix);
         // set the viewport for this view
-        var _b = subview.viewport, x = _b.x, y = _b.y, width = _b.width, height = _b.height;
+        var _b = subview.renderViewport, x = _b.x, y = _b.y, width = _b.width, height = _b.height;
         renderer.setViewport(x, y, width, height);
         // set the webGL rendering parameters and render this view
         renderer.setScissor(x, y, width, height);

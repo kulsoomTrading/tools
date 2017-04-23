@@ -23,6 +23,11 @@ const renderer = new THREE.WebGLRenderer({
 });
 // account for the pixel density of the device
 renderer.setPixelRatio(window.devicePixelRatio);
+renderer.domElement.style.position = 'absolute';
+renderer.domElement.style.bottom = '0';
+renderer.domElement.style.left = '0';
+renderer.domElement.style.width = '100%';
+renderer.domElement.style.height = '100%';
 app.view.element.appendChild(renderer.domElement);
 
 // to easily control stuff on the display
@@ -148,7 +153,7 @@ loader.load( '../resources/fonts/helvetiker_bold.typeface.json', function ( font
     });
 });
 
-app.vuforia.isAvailable().then(function(available) {
+app.vuforia.isAvailable().then((available) => {
     // vuforia not available on this platform
     if (!available) {
         console.warn("vuforia not available on this platform.");
@@ -303,7 +308,7 @@ app.renderEvent.addEventListener(() => {
     stats.update();
     
     // get the subviews for the current frame
-    const subviews = app.view.getSubviews();
+    const subviews = app.view.subviews;
 
     // if we have 1 subView, we're in mono mode.  If more, stereo.
     var monoMode = subviews.length == 1;
@@ -311,10 +316,21 @@ app.renderEvent.addEventListener(() => {
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both subviews if we are in stereo viewing mode
-    const viewport = app.view.getViewport();
-    renderer.setSize(viewport.width, viewport.height);
+    const view = app.view;
+    renderer.setSize(view.renderWidth, view.renderHeight, false);    
+
+    const viewport = view.viewport;
     hud.setSize(viewport.width, viewport.height);
     
+    // if the viewport width and the renderwidth are different
+    // we assume we are rendering on a different surface than
+    // the main display, so we reset the pixel ratio to 1
+    if (viewport.width != view.renderWidth) {
+        renderer.setPixelRatio(1);
+    } else {
+        renderer.setPixelRatio(window.devicePixelRatio);
+    }
+
     // there is 1 subview in monocular mode, 2 in stereo mode    
     for (let subview of subviews) {
         // set the position and orientation of the camera for 
@@ -323,10 +339,10 @@ app.renderEvent.addEventListener(() => {
         camera.quaternion.copy(<any>subview.pose.orientation);
         // the underlying system provide a full projection matrix
         // for the camera. 
-        camera.projectionMatrix.fromArray(<any>subview.projectionMatrix);
+        camera.projectionMatrix.fromArray(<any>subview.frustum.projectionMatrix);
 
-        // set the viewport for this subview
-        let {x,y,width,height} = subview.viewport;
+        // set the viewport for this view
+        var {x,y,width,height} = subview.renderViewport;
         renderer.setViewport(x,y,width,height);
 
         // set the webGL rendering parameters and render this view
@@ -336,6 +352,7 @@ app.renderEvent.addEventListener(() => {
 
         // adjust the hud, but only in mono
         if (monoMode) {
+            var {x,y,width,height} = subview.viewport;
             hud.setViewport(x,y,width,height, subview.index);
             hud.render(subview.index);
         }

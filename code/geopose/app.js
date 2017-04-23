@@ -34,6 +34,11 @@ var renderer = new THREE.WebGLRenderer({
     antialias: true
 });
 renderer.setPixelRatio(window.devicePixelRatio);
+renderer.domElement.style.position = 'absolute';
+renderer.domElement.style.bottom = '0';
+renderer.domElement.style.left = '0';
+renderer.domElement.style.width = '100%';
+renderer.domElement.style.height = '100%';
 // Assuming the z-orders are the same, the order of sibling elements
 // in the DOM determines which content is in front (top->bottom = back->front)
 app.view.element.appendChild(renderer.domElement);
@@ -245,8 +250,9 @@ app.renderEvent.addEventListener(function () {
     // set the renderers to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
-    var viewport = app.view.viewport;
-    renderer.setSize(viewport.width, viewport.height);
+    var view = app.view;
+    renderer.setSize(view.renderWidth, view.renderHeight, false);
+    var viewport = view.viewport;
     cssRenderer.setSize(viewport.width, viewport.height);
     hud.setSize(viewport.width, viewport.height);
     // There is 1 subview in monocular mode, 2 in stereo mode.
@@ -256,6 +262,15 @@ app.renderEvent.addEventListener(function () {
     }
     else {
         holder.style.display = 'block';
+    }
+    // if the viewport width and the renderwidth are different
+    // we assume we are rendering on a different surface than
+    // the main display, so we reset the pixel ratio to 1
+    if (viewport.width != view.renderWidth) {
+        renderer.setPixelRatio(1);
+    }
+    else {
+        renderer.setPixelRatio(window.devicePixelRatio);
     }
     // there is 1 subview in monocular mode, 2 in stereo mode    
     for (var _i = 0, _a = app.view.subviews; _i < _a.length; _i++) {
@@ -268,17 +283,19 @@ app.renderEvent.addEventListener(function () {
         // the underlying system provide a full projection matrix
         // for the camera. 
         camera.projectionMatrix.fromArray(subview.frustum.projectionMatrix);
-        // set the viewport for this view
-        var _b = subview.viewport, x = _b.x, y = _b.y, width = _b.width, height = _b.height;
-        // set the CSS rendering up, by computing the FOV, and render this view
-        camera.fov = THREE.Math.radToDeg(frustum.fovy);
-        cssRenderer.setViewport(x, y, width, height, subview.index);
-        cssRenderer.render(scene, camera, subview.index);
         // set the webGL rendering parameters and render this view
+        // set the viewport for this view
+        var _b = subview.renderViewport, x = _b.x, y = _b.y, width = _b.width, height = _b.height;
         renderer.setViewport(x, y, width, height);
         renderer.setScissor(x, y, width, height);
         renderer.setScissorTest(true);
         renderer.render(scene, camera);
+        // set the viewport for this view
+        var _c = subview.viewport, x = _c.x, y = _c.y, width = _c.width, height = _c.height;
+        // set the CSS rendering up, by computing the FOV, and render this view
+        camera.fov = THREE.Math.radToDeg(frustum.fovy);
+        cssRenderer.setViewport(x, y, width, height, subview.index);
+        cssRenderer.render(scene, camera, subview.index);
         // adjust the hud
         hud.setViewport(x, y, width, height, subview.index);
         hud.render(subview.index);
