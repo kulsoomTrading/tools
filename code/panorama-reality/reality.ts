@@ -56,7 +56,7 @@ interface PanoramaInfo {
 
 interface Panorama extends PanoramaInfo {
     entity:Argon.Cesium.Entity,
-    texture?:Promise<THREE.Texture>
+    texture:Promise<THREE.Texture>
 }
 
 // A map to store our panoramas
@@ -101,7 +101,7 @@ app.device.frameStateEvent.addEventListener((frameState)=>{
     const time = frameState.time;
     Argon.SerializedSubviewList.clone(frameState.subviews, subviews);
     Argon.decomposePerspectiveProjectionMatrix(subviews[0].projectionMatrix, frustum);
-    frustum.fov = app.view.subviews[0].frustum.fov;
+    frustum.fov = app.view.subviews[0] && app.view.subviews[0].frustum.fov || CesiumMath.PI_OVER_THREE;
 
     if ( !frameState.strict ) {
 
@@ -125,8 +125,8 @@ app.device.frameStateEvent.addEventListener((frameState)=>{
     }
 
     if (currentPano) {
-        app.context.stage.position.setValue(Cartesian3.ZERO, currentPano.entity);
-        app.context.stage.orientation.setValue(Quaternion.IDENTITY);
+        (app.context.stage.position as Argon.Cesium.ConstantPositionProperty).setValue(Cartesian3.ZERO, currentPano.entity);
+        (app.context.stage.orientation as Argon.Cesium.ConstantProperty).setValue(Quaternion.IDENTITY);
     }
     
     // Get the physical device orientation
@@ -224,7 +224,7 @@ app.reality.connectEvent.addEventListener((controlSession)=>{
         
         const entity = new Argon.Cesium.Entity;
         if (Argon.Cesium.defined(pano.longitude) &&
-            Argon.Cesium.defined(pano.longitude)) {
+            Argon.Cesium.defined(pano.latitude)) {
             const positionProperty = new Argon.Cesium.ConstantPositionProperty(undefined);
             const positionValue = Cartesian3.fromDegrees(pano.longitude, pano.latitude, pano.height || 0);
             positionProperty.setValue(positionValue, Argon.Cesium.ReferenceFrame.FIXED);
@@ -299,13 +299,13 @@ function showPanorama(options:ShowPanoramaOptions) {
     const outMaterial = sphereOut.material as THREE.MeshBasicMaterial;
     
     // update the material for the incoming panorama
-    inMaterial.map = undefined;
-    inMaterial.opacity = 1;
-    inMaterial.needsUpdate = true;
+    // inMaterial.map = undefined;
+    // inMaterial.needsUpdate = true;
     panoIn.texture.then((texture)=>{
+        inMaterial.opacity = 1;
         inMaterial.map = texture;
         inMaterial.needsUpdate = true;
-    })
+    });
     
     // update the pose of the pano spheres
     sphereIn.rotation.y = (panoIn.offsetDegrees || 0) * CesiumMath.RADIANS_PER_DEGREE;
@@ -323,14 +323,14 @@ function showPanorama(options:ShowPanoramaOptions) {
     // fade out the old pano using tween.js!
     TWEEN.removeAll();
     var outTween = new TWEEN.Tween(outMaterial);
-    outTween.to({opacity:0}, transition.duration).onUpdate(()=>{
+    outTween.to({opacity:0}, transition.duration || 500).onUpdate(()=>{
         outMaterial.needsUpdate = true;
     }).easing(easing).start();
     outMaterial.opacity = 1;
     outMaterial.needsUpdate = true;
 }
 
-function resolve(path:string, obj, safe:boolean=true) {
+function resolve(path:string|undefined, obj, safe:boolean=true) {
     if (!path) return undefined;
     return path.split('.').reduce(function(prev, curr) {
         return !safe ? prev[curr] : (prev ? prev[curr] : undefined)

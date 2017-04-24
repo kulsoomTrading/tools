@@ -73,7 +73,7 @@ app.device.frameStateEvent.addEventListener(function (frameState) {
     var time = frameState.time;
     Argon.SerializedSubviewList.clone(frameState.subviews, subviews);
     Argon.decomposePerspectiveProjectionMatrix(subviews[0].projectionMatrix, frustum);
-    frustum.fov = app.view.subviews[0].frustum.fov;
+    frustum.fov = app.view.subviews[0] && app.view.subviews[0].frustum.fov || CesiumMath.PI_OVER_THREE;
     if (!frameState.strict) {
         if (aggregator.isMoving(Argon.Cesium.CameraEventType.WHEEL)) {
             var wheelMovement = aggregator.getMovement(Argon.Cesium.CameraEventType.WHEEL);
@@ -163,7 +163,7 @@ app.reality.connectEvent.addEventListener(function (controlSession) {
         var offsetRadians = (pano.offsetDegrees || 0) * CesiumMath.DEGREES_PER_RADIAN;
         var entity = new Argon.Cesium.Entity;
         if (Argon.Cesium.defined(pano.longitude) &&
-            Argon.Cesium.defined(pano.longitude)) {
+            Argon.Cesium.defined(pano.latitude)) {
             var positionProperty = new Argon.Cesium.ConstantPositionProperty(undefined);
             var positionValue = Cartesian3.fromDegrees(pano.longitude, pano.latitude, pano.height || 0);
             positionProperty.setValue(positionValue, Argon.Cesium.ReferenceFrame.FIXED);
@@ -225,10 +225,10 @@ function showPanorama(options) {
     var inMaterial = sphereIn.material;
     var outMaterial = sphereOut.material;
     // update the material for the incoming panorama
-    inMaterial.map = undefined;
-    inMaterial.opacity = 1;
-    inMaterial.needsUpdate = true;
+    // inMaterial.map = undefined;
+    // inMaterial.needsUpdate = true;
     panoIn.texture.then(function (texture) {
+        inMaterial.opacity = 1;
         inMaterial.map = texture;
         inMaterial.needsUpdate = true;
     });
@@ -245,7 +245,7 @@ function showPanorama(options) {
     // fade out the old pano using tween.js!
     TWEEN.removeAll();
     var outTween = new TWEEN.Tween(outMaterial);
-    outTween.to({ opacity: 0 }, transition.duration).onUpdate(function () {
+    outTween.to({ opacity: 0 }, transition.duration || 500).onUpdate(function () {
         outMaterial.needsUpdate = true;
     }).easing(easing).start();
     outMaterial.opacity = 1;
