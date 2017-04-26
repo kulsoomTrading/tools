@@ -254,6 +254,10 @@ app.view.uiEvent.addEventListener((evt: any) => {
 
     switch (event.type) {
         case "touchmove":
+            if ((<any>window).PointerEvent) {
+                evt.forwardEvent();
+                return; // ignore duplicate events
+            }
             //console.log ("touch move: ");
             //console.log(event);
             event.preventDefault();
@@ -268,6 +272,7 @@ app.view.uiEvent.addEventListener((evt: any) => {
                 return;
             }
 
+        case "pointermove":
         case "mousemove":
             // if crosshair interaction, mousemove passed on
             if (isCrosshair) {
@@ -310,6 +315,10 @@ app.view.uiEvent.addEventListener((evt: any) => {
             return;
 
       case "touchstart":
+            if ((<any>window).PointerEvent) {
+                evt.forwardEvent();
+                return; // ignore duplicate events
+            }
             console.log ("touch start: ");
             console.log(event);
             event.preventDefault();
@@ -355,6 +364,8 @@ app.view.uiEvent.addEventListener((evt: any) => {
             if(handleSelection()) {
                 if (event.type == "touchstart") {
                     touchID = event.changedTouches[ti].identifier;
+                }
+                if (event.type == "touchstart" || event.type == "pointerdown") {
                     if (!isCrosshair) {
                         if ( INTERSECTED ) INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
                         INTERSECTED = SELECTED;
@@ -368,6 +379,10 @@ app.view.uiEvent.addEventListener((evt: any) => {
             break;
 
         case "touchend":
+            if ((<any>window).PointerEvent) {
+                evt.forwardEvent();
+                return; // ignore duplicate events
+            }
             console.log("touch end: ");
             console.log(event);
             event.preventDefault();
@@ -396,7 +411,7 @@ app.view.uiEvent.addEventListener((evt: any) => {
 
             if ( SELECTED ) {
                 if (handleRelease()) {
-                    if (event.type == "touchend" && !isCrosshair) {
+                    if ((event.type == "touchend" || event.type == "pointerup") && !isCrosshair) {
                         if ( INTERSECTED ) INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
                         INTERSECTED = null;
                     }
