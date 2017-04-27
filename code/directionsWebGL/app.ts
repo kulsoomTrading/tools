@@ -27,12 +27,12 @@ const renderer = new THREE.WebGLRenderer({
 
 // account for the pixel density of the device
 renderer.setPixelRatio(window.devicePixelRatio);
-renderer.domElement.style.position = 'absolute';
-renderer.domElement.style.bottom = '0';
-renderer.domElement.style.left = '0';
-renderer.domElement.style.width = '100%';
-renderer.domElement.style.height = '100%';
-app.view.element.appendChild(renderer.domElement);
+// renderer.domElement.style.position = 'absolute';
+// renderer.domElement.style.bottom = '0';
+// renderer.domElement.style.left = '0';
+// renderer.domElement.style.width = '100%';
+// renderer.domElement.style.height = '100%';
+// app.view.element.appendChild(renderer.domElement);
 
 const hud = new (<any>THREE).CSS3DArgonHUD();
 
@@ -46,7 +46,13 @@ hud.hudElements[0].appendChild(holder);
 // add a performance stats thing to the display
 var stats = new Stats();
 hud.hudElements[0].appendChild(stats.dom);
-app.view.element.appendChild(hud.domElement);
+// app.view.element.appendChild(hud.domElement);
+
+// set the layers of our view
+app.view.setLayers([
+    { source: renderer.domElement }, 
+    { source: hud.domElement }
+]);
 
 // Tell argon what local coordinate system you want.  The default coordinate
 // frame used by Argon is Cesium's FIXED frame, which is centered at the center
