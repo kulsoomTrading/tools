@@ -36,7 +36,7 @@ app.view.element.appendChild(subviewElements[1]);
 app.view.element.appendChild(mapElement);
 
 // pass a dummy element to avoid webvr polyfill from messing with the streetview canvas
-app.view.setLayers([{source: new HTMLElement}]); 
+app.view.setLayers([{source: document.createElement('div')}]); 
 
 const resize = ()=> {
     google.maps.event.trigger(map, 'resize');

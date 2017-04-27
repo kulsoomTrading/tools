@@ -31,7 +31,7 @@ app.view.element.appendChild(subviewElements[0]);
 app.view.element.appendChild(subviewElements[1]);
 app.view.element.appendChild(mapElement);
 // pass a dummy element to avoid webvr polyfill from messing with the streetview canvas
-app.view.setLayers([{ source: new HTMLElement }]);
+app.view.setLayers([{ source: document.createElement('div') }]);
 var resize = function () {
     google.maps.event.trigger(map, 'resize');
     setTimeout(function () { return google.maps.event.trigger(map, 'resize'); }, 100);
@@ -215,7 +215,7 @@ var frustum = new Argon.Cesium.PerspectiveFrustum();
 var x90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, Math.PI / 2);
 var x90Neg = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, -Math.PI / 2);
 var lastZoomLevel;
-var viewport = {};
+var viewport = new Argon.CanvasViewport;
 var subviews = [];
 var frameStateOptions = {
     overrideStage: true,
