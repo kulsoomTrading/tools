@@ -17,12 +17,13 @@ var renderer = new THREE.WebGLRenderer({
 });
 // account for the pixel density of the device
 renderer.setPixelRatio(window.devicePixelRatio);
-renderer.domElement.style.position = 'absolute';
-renderer.domElement.style.bottom = '0';
-renderer.domElement.style.left = '0';
-renderer.domElement.style.width = '100%';
-renderer.domElement.style.height = '100%';
-app.view.element.insertBefore(renderer.domElement, app.view.element.firstChild);
+// renderer.domElement.style.position = 'absolute';
+// renderer.domElement.style.bottom = '0';
+// renderer.domElement.style.left = '0';
+// renderer.domElement.style.width = '100%';
+// renderer.domElement.style.height = '100%';
+// app.view.element.insertBefore(renderer.domElement, app.view.element.firstChild);
+app.view.setLayers([{ source: renderer.domElement }]);
 // Tell argon what local coordinate system you want.  The default coordinate
 // frame used by Argon is Cesium's FIXED frame, which is centered at the center
 // of the earth and oriented with the earth's axes.  
