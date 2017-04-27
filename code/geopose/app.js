@@ -34,16 +34,13 @@ var renderer = new THREE.WebGLRenderer({
     antialias: true
 });
 renderer.setPixelRatio(window.devicePixelRatio);
-renderer.domElement.style.position = 'absolute';
-renderer.domElement.style.bottom = '0';
-renderer.domElement.style.left = '0';
-renderer.domElement.style.width = '100%';
-renderer.domElement.style.height = '100%';
-// Assuming the z-orders are the same, the order of sibling elements
-// in the DOM determines which content is in front (top->bottom = back->front)
-app.view.element.appendChild(renderer.domElement);
-app.view.element.appendChild(cssRenderer.domElement);
-app.view.element.appendChild(hud.domElement);
+// Set the layers that should be rendered in our view. The order of sibling elements
+// determines which content is in front (top->bottom = back->front)
+app.view.setLayers([
+    { source: renderer.domElement },
+    { source: cssRenderer.domElement },
+    { source: hud.domElement },
+]);
 // We put some elements in the index.html, for convenience. 
 // Here, we retrieve the hud element and use hud.appendChild to append it and a clone 
 // to the two CSS3DArgonHUD hudElements.  We are retrieve the two
