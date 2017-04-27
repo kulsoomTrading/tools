@@ -28,13 +28,6 @@ renderer.setPixelRatio(window.devicePixelRatio);
 renderer.sortObjects = false;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
-renderer.domElement.style.position = 'absolute';
-renderer.domElement.style.bottom = '0';
-renderer.domElement.style.left = '0';
-renderer.domElement.style.width = '100%';
-renderer.domElement.style.height = '100%';
-// add it to the view
-app.view.element.appendChild(renderer.domElement);
 // to easily control stuff on the display
 var hud = new THREE.CSS3DArgonHUD();
 // We put some elements in the index.html, for convenience.
@@ -47,7 +40,11 @@ var hudContainer = document.getElementById('hud');
 hud.hudElements[0].appendChild(hudContainer);
 var description = document.getElementById('description');
 hud.hudElements[0].appendChild(description);
-app.view.element.appendChild(hud.domElement);
+// add layers to the view
+app.view.setLayers([
+    { source: renderer.domElement },
+    { source: hud.domElement }
+]);
 // add a performance stats thing to the display
 var stats = new Stats();
 hud.hudElements[0].appendChild(stats.dom);
@@ -535,6 +532,7 @@ app.updateEvent.addEventListener(function (frame) {
             if (Argon.convertEntityReferenceFrame(boxSceneEntity, frame.time, ReferenceFrame.FIXED)) {
                 geoLocked = true;
                 console.log("Successfully positioned the boxes in the world");
+                // yay!  We're going to continue, either way, since we need it positioned somewhere!
             }
         }
     }
