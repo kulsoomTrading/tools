@@ -35,6 +35,9 @@ app.view.element.appendChild(subviewElements[0]);
 app.view.element.appendChild(subviewElements[1]);
 app.view.element.appendChild(mapElement);
 
+// pass a dummy element to avoid webvr polyfill from messing with the streetview canvas
+app.view.setLayers([{source: new HTMLElement}]); 
+
 const resize = ()=> {
     google.maps.event.trigger(map, 'resize');
     setTimeout(() => google.maps.event.trigger(map, 'resize'), 100);
@@ -239,7 +242,7 @@ const x90Neg = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, - Math.PI / 2);
 
 let lastZoomLevel:number;
 
-const viewport = <Argon.Viewport>{};
+const viewport = new Argon.CanvasViewport;
 const subviews = <Argon.SerializedSubview[]>[];
 
 const frameStateOptions = {

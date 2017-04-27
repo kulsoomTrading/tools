@@ -30,16 +30,19 @@ subviewElements[1].style.pointerEvents = 'none';
 app.view.element.appendChild(subviewElements[0]);
 app.view.element.appendChild(subviewElements[1]);
 app.view.element.appendChild(mapElement);
+// pass a dummy element to avoid webvr polyfill from messing with the streetview canvas
+app.view.setLayers([{ source: new HTMLElement }]);
 var resize = function () {
     google.maps.event.trigger(map, 'resize');
     setTimeout(function () { return google.maps.event.trigger(map, 'resize'); }, 100);
-    var _loop_1 = function(streetview) {
+    var _loop_1 = function (streetview) {
         google.maps.event.trigger(streetview, 'resize');
         setTimeout(function () { return google.maps.event.trigger(streetview, 'resize'); }, 50);
         setTimeout(function () { return google.maps.event.trigger(streetview, 'resize'); }, 100);
         setTimeout(function () { return google.maps.event.trigger(streetview, 'resize'); }, 200);
         setTimeout(function () { return google.maps.event.trigger(streetview, 'resize'); }, 300);
         setTimeout(function () { return google.maps.event.trigger(streetview, 'resize'); }, 500);
+        // ^ because sometimes it doesn't resize right away??
     };
     for (var _i = 0, streetviews_1 = streetviews; _i < streetviews_1.length; _i++) {
         var streetview = streetviews_1[_i];
@@ -296,6 +299,9 @@ app.device.frameStateEvent.addEventListener(function (frameState) {
         var fovyRad = targetFrustum.fovy;
         var fovxRad = Math.atan(Math.tan(fovyRad * 0.5) * subviewAspect) * 2.0;
         zoomLevel = 1 - Math.log2(fovxRad * Argon.Cesium.CesiumMath.DEGREES_PER_RADIAN / 90);
+        // streetviews.forEach((streetview) => {
+        //     streetview.setZoom(zoomLevel);
+        // });
     }
     // if (zoomLevel < MIN_ZOOM_LEVEL) zoomLevel = MIN_ZOOM_LEVEL;
     if (zoomLevel === 0)
