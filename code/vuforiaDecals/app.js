@@ -148,7 +148,7 @@ function init() {
     renderer.domElement.addEventListener('mousemove', onTouchMove);
     function onTouchMove(event) {
         var x, y;
-        if (event instanceof TouchEvent) {
+        if (event.type == "touchmove") {
             x = event.changedTouches[0].pageX;
             y = event.changedTouches[0].pageY;
         }
@@ -348,7 +348,7 @@ app.vuforia.init({
         // activate the dataset.
         api.objectTracker.activateDataSet(dataSet);
     });
-}).catch(function () {
+})["catch"](function () {
     // if we're not running in Argon, we'll position the headModel in front of the camera
     // in the world, so we see something and can test
     if (app.session.isRealityManager) {
