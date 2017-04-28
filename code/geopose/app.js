@@ -156,7 +156,6 @@ app.updateEvent.addEventListener(function (frame) {
         userLocation.position.copy(userPose.position);
     }
     else {
-        // if we don't know the user pose we can't do anything
         return;
     }
     // the first time through, we create a geospatial position for
@@ -166,7 +165,7 @@ app.updateEvent.addEventListener(function (frame) {
         // set the box's position to 10 meters away from the user.
         // First, clone the userPose postion, and add 10 to the X
         var boxPos_1 = userPose.position.clone();
-        boxPos_1.x += 10;
+        boxPos_1.z -= 10;
         // set the value of the box Entity to this local position, by
         // specifying the frame of reference to our local frame
         boxGeoEntity.position.setValue(boxPos_1, defaultFrame);
@@ -175,17 +174,28 @@ app.updateEvent.addEventListener(function (frame) {
         // now, we want to move the box's coordinates to the FIXED frame, so
         // the box doesn't move if the local coordinate system origin changes.
         if (Argon.convertEntityReferenceFrame(boxGeoEntity, frame.time, ReferenceFrame.FIXED)) {
-            scene.add(boxGeoObject);
-            boxInit = true;
         }
+        else {
+            // can't convert to geospatial, let's move the GT box somewhere in front of the camera
+            gatechGeoTarget.position.z = -4000;
+            gatechGeoTarget.position.x = 1000;
+        }
+        // add it to the scene, regardless, as it's at least in the default reference frame.
+        scene.add(boxGeoObject);
+        // we won't keep trying to reset it to FIXED until it works!
+        boxInit = true;
     }
     // get the local coordinates of the local box, and set the THREE object
     var boxPose = app.context.getEntityPose(boxGeoEntity);
-    boxGeoObject.position.copy(boxPose.position);
-    boxGeoObject.quaternion.copy(boxPose.orientation);
+    if (boxPose.poseStatus & Argon.PoseStatus.KNOWN) {
+        boxGeoObject.position.copy(boxPose.position);
+        boxGeoObject.quaternion.copy(boxPose.orientation);
+    }
     // get the local coordinates of the GT box, and set the THREE object
     var geoPose = app.context.getEntityPose(gatechGeoEntity);
-    gatechGeoTarget.position.copy(geoPose.position);
+    if (geoPose.poseStatus & Argon.PoseStatus.KNOWN) {
+        gatechGeoTarget.position.copy(geoPose.position);
+    }
     // rotate the boxes at a constant speed, independent of frame rates     
     // to make it a little less boring
     buzz.rotateY(2 * frame.deltaTime / 10000);
@@ -195,27 +205,6 @@ app.updateEvent.addEventListener(function (frame) {
     // coordinates back to LLA, but those coordinates probably make the most sense as
     // something to show the user, so we'll do that computation.
     //
-    // cartographicDegrees is a 3 element array containing [longitude, latitude, height]
-    var gpsCartographicDeg = [0, 0, 0];
-    // get user position in global coordinates
-    var userPoseFIXED = app.context.getEntityPose(app.context.user, ReferenceFrame.FIXED);
-    var userLLA = Cesium.Ellipsoid.WGS84.cartesianToCartographic(userPoseFIXED.position);
-    if (userLLA) {
-        gpsCartographicDeg = [
-            CesiumMath.toDegrees(userLLA.longitude),
-            CesiumMath.toDegrees(userLLA.latitude),
-            userLLA.height
-        ];
-    }
-    var boxPoseFIXED = app.context.getEntityPose(boxGeoEntity, ReferenceFrame.FIXED);
-    var boxLLA = Cesium.Ellipsoid.WGS84.cartesianToCartographic(boxPoseFIXED.position);
-    if (boxLLA) {
-        boxCartographicDeg = [
-            CesiumMath.toDegrees(boxLLA.longitude),
-            CesiumMath.toDegrees(boxLLA.latitude),
-            boxLLA.height
-        ];
-    }
     // we'll compute the distance to the cube, just for fun. If the cube could be further away,
     // we'd want to use Cesium.EllipsoidGeodesic, rather than Euclidean distance, but this is fine here.
     var userPos = userLocation.getWorldPosition();
@@ -223,14 +212,48 @@ app.updateEvent.addEventListener(function (frame) {
     var boxPos = box.getWorldPosition();
     var distanceToBox = userPos.distanceTo(boxPos);
     var distanceToBuzz = userPos.distanceTo(buzzPos);
+    // cartographicDegrees is a 3 element array containing [longitude, latitude, height]
+    var gpsCartographicDeg = [0, 0, 0];
     // create some feedback text
     var infoText = "Geospatial Argon example:<br>";
-    infoText += "Your location is lla (" + toFixed(gpsCartographicDeg[0], 6) + ", ";
-    infoText += toFixed(gpsCartographicDeg[1], 6) + ", " + toFixed(gpsCartographicDeg[2], 2) + ")<br>";
-    infoText += " distance to Georgia Tech (" + toFixed(distanceToBuzz, 2) + ")<br>";
+    // get user position in global coordinates
+    var userPoseFIXED = app.context.getEntityPose(app.context.user, ReferenceFrame.FIXED);
+    if (userPoseFIXED.poseStatus & Argon.PoseStatus.KNOWN) {
+        var userLLA = Cesium.Ellipsoid.WGS84.cartesianToCartographic(userPoseFIXED.position);
+        if (userLLA) {
+            gpsCartographicDeg = [
+                CesiumMath.toDegrees(userLLA.longitude),
+                CesiumMath.toDegrees(userLLA.latitude),
+                userLLA.height
+            ];
+            infoText += "Your location is lla (" + toFixed(gpsCartographicDeg[0], 6) + ", ";
+            infoText += toFixed(gpsCartographicDeg[1], 6) + ", " + toFixed(gpsCartographicDeg[2], 2) + ")<br>";
+        }
+    }
+    else {
+        infoText += "Your location is unknown<br>";
+    }
+    var boxPoseFIXED = app.context.getEntityPose(boxGeoEntity, ReferenceFrame.FIXED);
+    if (boxPoseFIXED.poseStatus & Argon.PoseStatus.KNOWN) {
+        var boxLLA = Cesium.Ellipsoid.WGS84.cartesianToCartographic(boxPoseFIXED.position);
+        if (boxLLA) {
+            boxCartographicDeg = [
+                CesiumMath.toDegrees(boxLLA.longitude),
+                CesiumMath.toDegrees(boxLLA.latitude),
+                boxLLA.height
+            ];
+        }
+    }
+    infoText += " distance to Buzz box @ GT (" + toFixed(distanceToBuzz, 2) + ")<br>";
     infoText += "box is " + toFixed(distanceToBox, 2) + " meters away";
-    var boxLabelText = "a wooden box!<br>lla = " + toFixed(boxCartographicDeg[0], 6) + ", ";
-    boxLabelText += toFixed(boxCartographicDeg[1], 6) + ", " + toFixed(boxCartographicDeg[2], 2) + "";
+    var boxLabelText;
+    if (boxPoseFIXED.poseStatus & Argon.PoseStatus.KNOWN) {
+        boxLabelText = "a wooden box!<br>lla = " + toFixed(boxCartographicDeg[0], 6) + ", ";
+        boxLabelText += toFixed(boxCartographicDeg[1], 6) + ", " + toFixed(boxCartographicDeg[2], 2) + "";
+    }
+    else {
+        boxLabelText = "a wooden box!<br>Location unknown";
+    }
     if (lastInfoText !== infoText) {
         locationElements[0].innerHTML = infoText;
         locationElements[1].innerHTML = infoText;
