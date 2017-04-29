@@ -177,8 +177,7 @@ function init() {
 
     function onTouchMove( event:TouchEvent|MouseEvent ) {
         var x,y: number;
-        if ( event instanceof TouchEvent ) {
-
+        if ( event.type == "touchmove" ) {
             x = event.changedTouches[ 0 ].pageX;
             y = event.changedTouches[ 0 ].pageY;
 
