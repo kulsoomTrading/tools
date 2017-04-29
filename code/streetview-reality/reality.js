@@ -127,12 +127,13 @@ var initStreetview = function () {
     // update the pano entity with the appropriate pose
     var elevationService = new google.maps.ElevationService();
     var elevation = 0;
+    var identityHeadingPitchRoll = new Argon.Cesium.HeadingPitchRoll;
     google.maps.event.addListener(streetviews[0], 'position_changed', function () {
         var position = streetviews[0].getPosition();
         // update the position with previous elevation
         var positionValue = Cartesian3.fromDegrees(position.lng(), position.lat(), elevation, undefined, scratchCartesian);
         panoEntity.position.setValue(positionValue, Argon.Cesium.ReferenceFrame.FIXED);
-        var orientationValue = Argon.Cesium.Transforms.headingPitchRollQuaternion(positionValue, 0, 0, 0);
+        var orientationValue = Argon.Cesium.Transforms.headingPitchRollQuaternion(positionValue, identityHeadingPitchRoll);
         panoEntity.orientation.setValue(orientationValue);
         // update the position with correct elevation as long as we haven't moved
         elevationService.getElevationForLocations({ locations: [position] }, function (results, status) {

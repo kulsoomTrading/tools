@@ -145,12 +145,14 @@ const initStreetview = () => {
     const elevationService = new google.maps.ElevationService();
     let elevation = 0;
 
+    const identityHeadingPitchRoll = new Argon.Cesium.HeadingPitchRoll;
+
     google.maps.event.addListener(streetviews[0], 'position_changed', () => {
         const position = streetviews[0].getPosition();
         // update the position with previous elevation
         const positionValue = Cartesian3.fromDegrees(position.lng(), position.lat(), elevation, undefined, scratchCartesian);
         (panoEntity.position as Argon.Cesium.ConstantPositionProperty).setValue(positionValue, Argon.Cesium.ReferenceFrame.FIXED);
-        const orientationValue = Argon.Cesium.Transforms.headingPitchRollQuaternion(positionValue, 0, 0, 0);
+        const orientationValue = Argon.Cesium.Transforms.headingPitchRollQuaternion(positionValue, identityHeadingPitchRoll);
         (panoEntity.orientation as Argon.Cesium.ConstantProperty).setValue(orientationValue);
         // update the position with correct elevation as long as we haven't moved
         elevationService.getElevationForLocations({ locations: [position] }, (results, status) => {

@@ -1,6 +1,6 @@
 {
   "devDependencies": {
-    "@argonjs/argon": "^1.2.0-4",
+    "@argonjs/argon": "^1.2.0-10",
     "@types/dat-gui": "^0.5.28",
     "@types/googlemaps": "^3.20.30",
     "@types/stats": "^0.16.29",

@@ -151,6 +151,7 @@ app.renderEvent.addEventListener(function () {
 // create a texture loader
 var loader = new THREE.TextureLoader();
 loader.setCrossOrigin('anonymous');
+var identityHeadingPitchRoll = new Argon.Cesium.HeadingPitchRoll;
 // when the a controlling session connects, we can communite with it to
 // receive commands (or even send information back, if appropriate)
 app.reality.connectEvent.addEventListener(function (controlSession) {
@@ -168,7 +169,7 @@ app.reality.connectEvent.addEventListener(function (controlSession) {
             entity.position = positionProperty;
             var orientationProperty = new Argon.Cesium.ConstantProperty();
             // calculate the orientation for the ENU coodrinate system at the given position
-            var orientationValue = Argon.Cesium.Transforms.headingPitchRollQuaternion(positionValue, 0, 0, 0);
+            var orientationValue = Argon.Cesium.Transforms.headingPitchRollQuaternion(positionValue, identityHeadingPitchRoll);
             // TODO: apply offsetDegrees to orientation
             orientationProperty.setValue(orientationValue);
             entity.orientation = orientationProperty;
