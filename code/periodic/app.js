@@ -138,6 +138,78 @@ var root, userLocation;
 var objects = [];
 var targets = { table: [], sphere: [], helix: [], grid: [] };
 
+// In a typical threejs example, the camera doesn't move and is controlled by the 
+// mouse.  We do not need that here.  Furthermore, our domElement for rendering is 
+// coordinated by argon to match the user's prefered rendering setup
+
+//   renderer = new THREE.CSS3DRenderer();
+//   renderer.setSize( window.innerWidth, window.innerHeight );
+//   renderer.domElement.style.position = 'absolute';
+//   renderer.domElement.style.top = 0;
+//   document.getElementById( 'container' ).appendChild( renderer.domElement );
+//
+//   controls = new THREE.TrackballControls( camera, renderer.domElement );
+//   controls.rotateSpeed = 0.5;
+//   controls.addEventListener( 'change', render );
+
+// In argon, we use a custom version of the CSS3DRenderer called CSS3DArgonRenderer.
+// This version of the renderer supports stereo in a way that fits with Argon's renderEvent,
+// especially supporting the user providing multiple divs for the potential multiple viewports
+// in stereo mode.
+renderer = new THREE.CSS3DArgonRenderer();
+// The CSS3DArgonHUD has a similar interface to a renderer, and provides a simple abstraction
+// for multiple HTML HUD's that can be used in stereo mode.  We do not
+// use the HUD features here (instead, just removing the buttons below when in Stereo mode)
+hud = new THREE.CSS3DArgonHUD();
+
+// argon creates the domElement for the view, which we add our renderer dom to
+app.view.element.appendChild(renderer.domElement);
+app.view.element.appendChild(hud.domElement);
+
+// argon will pass us the camera projection details in each renderEvent callback.  This
+// is necessary to handle different devices, stereo/mono switching, etc.   argon will also
+// tell us the position of the camera to correspond to user movement
+//    camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 5000 );
+//		camera.position.z = 1800;
+camera = new THREE.PerspectiveCamera();
+scene = new THREE.Scene();
+
+// add a new Object3D, root, that serves as the root of the 3D world in local coordinates.
+// Since the camera is moving in AR, and we want to move the content with us, but have it
+// oriented relative to the world, putting it in a sub-graph under the userLocation object
+// let's us move the location of the content with us.  Content should not be added to the 
+// scene directly unless it is going to be updated as the user moves through the world 
+// (since the world coordinate system is abitrarily chosen to be near the user, and could
+// change at any time)
+
+root = new THREE.Object3D()
+userLocation = new THREE.Object3D;
+
+// Add the root node to our eyeOrigin
+userLocation.add(root)
+
+// put the user and the camera in the world.  This allows us to update the userLocation
+// based on the user's currect location in local coordinates, and to update the camera
+// based on it's location and orientation in local coordinates
+scene.add(userLocation);
+scene.add(camera);
+
+// Tell argon what local coordinate system you want.  The default coordinate
+// frame used by Argon is Cesium's FIXED frame, which is centered at the center
+// of the earth and oriented with the earth's axes.  
+// The FIXED frame is inconvenient for a number of reasons: the numbers used are
+// large and cause issues with rendering, and the orientation of the user's "local
+// view of the world" is different that the FIXED orientation (my perception of "up"
+// does not correspond to one of the FIXED axes).  
+// Therefore, Argon uses a local coordinate frame that sits on a plane tangent to 
+// the earth near the user's current location.  This frame automatically changes if the
+// user moves more than a few kilometers.
+// The EUS frame cooresponds to the typical 3D computer graphics coordinate frame, so we use
+// that here.  The other option Argon supports is localOriginEastNorthUp, which is
+// more similar to what is used in the geospatial industry
+app.context.setDefaultReferenceFrame(app.context.localOriginEastUpSouth);
+
+
 // need init to run after everything loads
 window.addEventListener( 'load', init );
 
@@ -146,49 +218,6 @@ window.addEventListener( 'load', init );
 //    animate();
 
 function init() {
-  // argon will pass us the camera projection details in each renderEvent callback.  This
-  // is necessary to handle different devices, stereo/mono switching, etc.   argon will also
-  // tell us the position of the camera to correspond to user movement
-  //    camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 5000 );
-	//		camera.position.z = 1800;
-  camera = new THREE.PerspectiveCamera();
-  scene = new THREE.Scene();
-
-  // add a new Object3D, root, that serves as the root of the 3D world in local coordinates.
-  // Since the camera is moving in AR, and we want to move the content with us, but have it
-  // oriented relative to the world, putting it in a sub-graph under the userLocation object
-  // let's us move the location of the content with us.  Content should not be added to the 
-  // scene directly unless it is going to be updated as the user moves through the world 
-  // (since the world coordinate system is abitrarily chosen to be near the user, and could
-  // change at any time)
-
-  root = new THREE.Object3D()
-  userLocation = new THREE.Object3D;
-
-  // Add the root node to our eyeOrigin
-  userLocation.add(root)
-  
-  // put the user and the camera in the world.  This allows us to update the userLocation
-  // based on the user's currect location in local coordinates, and to update the camera
-  // based on it's location and orientation in local coordinates
-  scene.add(userLocation);
-  scene.add(camera);
-
-  // Tell argon what local coordinate system you want.  The default coordinate
-  // frame used by Argon is Cesium's FIXED frame, which is centered at the center
-  // of the earth and oriented with the earth's axes.  
-  // The FIXED frame is inconvenient for a number of reasons: the numbers used are
-  // large and cause issues with rendering, and the orientation of the user's "local
-  // view of the world" is different that the FIXED orientation (my perception of "up"
-  // does not correspond to one of the FIXED axes).  
-  // Therefore, Argon uses a local coordinate frame that sits on a plane tangent to 
-  // the earth near the user's current location.  This frame automatically changes if the
-  // user moves more than a few kilometers.
-  // The EUS frame cooresponds to the typical 3D computer graphics coordinate frame, so we use
-  // that here.  The other option Argon supports is localOriginEastNorthUp, which is
-  // more similar to what is used in the geospatial industry
-  app.context.setDefaultReferenceFrame(app.context.localOriginEastUpSouth);
-
   // some of the exact locations of content below have been changed slightly from the original
   // example so that they work reasonably on smaller mobile phone screens.
   for ( var i = 0; i < table.length; i ++ ) {
@@ -247,7 +276,7 @@ function init() {
 
   // sphere
 
-  var vector = new THREE.Vector3(0, 0, 0);
+  var vector = userLocation.position;
 
   for ( var i = 0; i < objects.length; i ++ ) {
 
@@ -302,33 +331,6 @@ function init() {
 
   }
 
-  // In a typical threejs example, the camera doesn't move and is controlled by the 
-  // mouse.  We do not need that here.  Furthermore, our domElement for rendering is 
-  // coordinated by argon to match the user's prefered rendering setup
-
-  //   renderer = new THREE.CSS3DRenderer();
-  //   renderer.setSize( window.innerWidth, window.innerHeight );
-  //   renderer.domElement.style.position = 'absolute';
-  //   renderer.domElement.style.top = 0;
-  //   document.getElementById( 'container' ).appendChild( renderer.domElement );
-  //
-  //   controls = new THREE.TrackballControls( camera, renderer.domElement );
-  //   controls.rotateSpeed = 0.5;
-  //   controls.addEventListener( 'change', render );
-
-  // In argon, we use a custom version of the CSS3DRenderer called CSS3DArgonRenderer.
-  // This version of the renderer supports stereo in a way that fits with Argon's renderEvent,
-  // especially supporting the user providing multiple divs for the potential multiple viewports
-  // in stereo mode.
-  renderer = new THREE.CSS3DArgonRenderer();
-  // The CSS3DArgonHUD has a similar interface to a renderer, and provides a simple abstraction
-  // for multiple HTML HUD's that can be used in stereo mode.  We do not
-  // use the HUD features here (instead, just removing the buttons below when in Stereo mode)
-  hud = new THREE.CSS3DArgonHUD();
-
-  // argon creates the domElement for the view, which we add our renderer dom to
-  app.view.element.appendChild(renderer.domElement);
-  app.view.element.appendChild(hud.domElement);
 
   // move the menu to the Argon HUD.  We don't duplicate it because we only
   // use it in mono mode
