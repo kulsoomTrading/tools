@@ -136,6 +136,8 @@ var boxGeoEntity = new Argon.Cesium.Entity({
 });
 
 boxGeoObject.add(box);
+boxGeoObject.position.z = -10;
+scene.add(boxGeoObject);            
 
 // Create a DIV to use to label the position and distance of the cube
 let boxLocDiv = document.getElementById("box-location");
@@ -201,16 +203,9 @@ app.updateEvent.addEventListener((frame) => {
         // the box doesn't move if the local coordinate system origin changes.
         if (Argon.convertEntityReferenceFrame(boxGeoEntity, frame.time, 
                                               ReferenceFrame.FIXED)) {
-        } else {
-            // can't convert to geospatial, let's move the GT box somewhere in front of the camera
-            gatechGeoTarget.position.z = -4000;
-            gatechGeoTarget.position.x = 1000;
+            // we will keep trying to reset it to FIXED until it works!
+            boxInit = true;
         }
-        // add it to the scene, regardless, as it's at least in the default reference frame.
-        scene.add(boxGeoObject);            
-
-        // we won't keep trying to reset it to FIXED until it works!
-        boxInit = true;
     }
 
     // get the local coordinates of the local box, and set the THREE object
@@ -224,6 +219,11 @@ app.updateEvent.addEventListener((frame) => {
     var geoPose = app.context.getEntityPose(gatechGeoEntity);
     if (geoPose.poseStatus & Argon.PoseStatus.KNOWN) {
         gatechGeoTarget.position.copy(<any>geoPose.position);        
+    } else {
+        // initialize to a fixed location in case we can't convert to geospatial
+        gatechGeoTarget.position.y = 0;
+        gatechGeoTarget.position.z = -4000;
+        gatechGeoTarget.position.x = 1000;
     }
 
     // rotate the boxes at a constant speed, independent of frame rates     
