@@ -10,6 +10,9 @@ var CESIUM_BASE_URL='../resources/cesium/';
 // set up Argon
 const app = Argon.init();
 
+// this app uses geoposed content, so subscribe to geolocation updates
+app.context.subscribeGeolocation();
+
 // set up THREE.  Create a scene, a perspective camera and an object
 // for the user's location
 const scene = new THREE.Scene();
