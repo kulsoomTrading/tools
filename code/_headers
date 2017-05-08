@@ -1,5 +1,5 @@
 /resources/*
-    Access-Control-Allow-Origin: "*"
+    Access-Control-Allow-Origin: *
 
 /panoramas/images/*
-    Access-Control-Allow-Origin: "*"
+    Access-Control-Allow-Origin: *
