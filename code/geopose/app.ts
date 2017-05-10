@@ -13,7 +13,7 @@ const app = Argon.init();
 //app.view.element.style.zIndex = 0;
 
 // this app uses geoposed content, so subscribe to geolocation updates
-app.context.subscribeGeolocation();
+app.context.subscribeGeolocation({enableHighAccuracy: true});
 
 // set up THREE.  Create a scene, a perspective camera and an object
 // for the user's location

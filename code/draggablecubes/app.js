@@ -14,7 +14,7 @@ var CesiumMath = Argon.Cesium.CesiumMath;
 // set up Argon
 var app = Argon.init();
 // this app uses geoposed content, so subscribe to geolocation updates
-app.context.subscribeGeolocation();
+app.context.subscribeGeolocation({ enableHighAccuracy: true });
 // install a secondary reality that the user can select from on the desktop
 app.reality.install(Argon.resolveURL('../streetview-reality/index.html'));
 // We use the standard WebGLRenderer when we only need WebGL-based content
@@ -532,7 +532,6 @@ app.updateEvent.addEventListener(function (frame) {
             if (Argon.convertEntityReferenceFrame(boxSceneEntity, frame.time, ReferenceFrame.FIXED)) {
                 geoLocked = true;
                 console.log("Successfully positioned the boxes in the world");
-                // yay!  We're going to continue, either way, since we need it positioned somewhere!
             }
         }
     }

@@ -25,7 +25,7 @@ const CesiumMath = Argon.Cesium.CesiumMath;
 const app = Argon.init();
 
 // this app uses geoposed content, so subscribe to geolocation updates
-app.context.subscribeGeolocation();
+app.context.subscribeGeolocation({enableHighAccuracy: true});
 
 // install a secondary reality that the user can select from on the desktop
 app.reality.install(Argon.resolveURL('../streetview-reality/index.html'));
