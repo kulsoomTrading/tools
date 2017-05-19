@@ -6,9 +6,9 @@ var app = Argon.init();
 // for the user's location
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera();
-var userLocation = new THREE.Object3D;
+var stage = new THREE.Object3D;
 scene.add(camera);
-scene.add(userLocation);
+scene.add(stage);
 // The CSS3DArgonRenderer supports mono and stereo views, and 
 // includes both 3D elements and a place to put things that appear 
 // fixed to the screen (heads-up-display) 
@@ -23,20 +23,6 @@ var hud = new THREE.CSS3DArgonHUD();
 var description = document.getElementById('description');
 hud.hudElements[0].appendChild(description);
 app.view.element.appendChild(hud.domElement);
-// Tell argon what local coordinate system you want.  The default coordinate
-// frame used by Argon is Cesium's FIXED frame, which is centered at the center
-// of the earth and oriented with the earth's axes.  
-// The FIXED frame is inconvenient for a number of reasons: the numbers used are
-// large and cause issues with rendering, and the orientation of the user's "local
-// view of the world" is different that the FIXED orientation (my perception of "up"
-// does not correspond to one of the FIXED axes).  
-// Therefore, Argon uses a local coordinate frame that sits on a plane tangent to 
-// the earth near the user's current location.  This frame automatically changes if the
-// user moves more than a few kilometers.
-// The EUS frame cooresponds to the typical 3D computer graphics coordinate frame, so we use
-// that here.  The other option Argon supports is localOriginEastNorthUp, which is
-// more similar to what is used in the geospatial industry
-app.context.setDefaultReferenceFrame(app.context.localOriginEastUpSouth);
 // creating 6 divs to indicate the x y z positioning
 var divXpos = document.createElement('div');
 var divXneg = document.createElement('div');
@@ -117,23 +103,24 @@ cssObjectZneg.position.x = 0.0;
 cssObjectZneg.position.y = 0.0;
 cssObjectZneg.position.z = -200.0;
 //no rotation need for this one
-userLocation.add(cssObjectXpos);
-userLocation.add(cssObjectXneg);
-userLocation.add(cssObjectYpos);
-userLocation.add(cssObjectYneg);
-userLocation.add(cssObjectZpos);
-userLocation.add(cssObjectZneg);
+stage.add(cssObjectXpos);
+stage.add(cssObjectXneg);
+stage.add(cssObjectYpos);
+stage.add(cssObjectYneg);
+stage.add(cssObjectZpos);
+stage.add(cssObjectZneg);
 // the updateEvent is called each time the 3D world should be
 // rendered, before the renderEvent.  The state of your application
 // should be updated here.
 app.updateEvent.addEventListener(function () {
-    // get the position and orientation (the "pose") of the user
-    // in the local coordinate frame.
-    var userPose = app.context.getEntityPose(app.context.user);
-    // assuming we know the user's pose, set the position of our 
-    // THREE user object to match it
-    if (userPose.poseStatus & Argon.PoseStatus.KNOWN) {
-        userLocation.position.copy(userPose.position);
+    // get the pose of the "stage" to anchor our content. 
+    // The "stage" defines an East-Up-South coordinate system 
+    // (assuming geolocation is available).
+    var stagePose = app.context.getEntityPose(app.context.stage);
+    // set the pose of our THREE stage object
+    if (stagePose.poseStatus & Argon.PoseStatus.KNOWN) {
+        stage.position.copy(stagePose.position);
+        stage.quaternion.copy(stagePose.orientation);
     }
 });
 // for the CSS renderer, we want to use requestAnimationFrame to 
@@ -170,7 +157,7 @@ function renderFunc() {
         // this subview
         camera.position.copy(subview.pose.position);
         camera.quaternion.copy(subview.pose.orientation);
-        // the underlying system provide a full projection matrix
+        // the underlying system provides a full projection matrix
         // for the camera.  Use it, and then update the FOV of the 
         // camera from it (needed by the CSS Perspective DIV)
         camera.projectionMatrix.fromArray(subview.frustum.projectionMatrix);

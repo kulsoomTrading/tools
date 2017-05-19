@@ -15,9 +15,11 @@ app.context.subscribeGeolocation({ enableHighAccuracy: true });
 // for the user's location
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera();
-var userLocation = new THREE.Object3D;
+var stage = new THREE.Object3D;
+var user = new THREE.Object3D;
 scene.add(camera);
-scene.add(userLocation);
+scene.add(stage);
+scene.add(user);
 // The CSS3DArgonRenderer supports mono and stereo views.  Currently
 // not using it in this example, but left it in the code in case we
 // want to add an HTML element near either geo object. 
@@ -152,13 +154,19 @@ app.updateEvent.addEventListener(function (frame) {
     // get the position and orientation (the "pose") of the user
     // in the local coordinate frame.
     var userPose = app.context.getEntityPose(app.context.user);
-    // assuming we know the user's pose, set the position of our 
-    // THREE user object to match it
+    // set the pose of our THREE user object
     if (userPose.poseStatus & Argon.PoseStatus.KNOWN) {
-        userLocation.position.copy(userPose.position);
+        user.position.copy(userPose.position);
+        user.quaternion.copy(userPose.orientation);
     }
-    else {
-        return;
+    // get the pose of the "stage" to anchor our content. 
+    // The "stage" defines an East-Up-South coordinate system 
+    // (assuming geolocation is available).
+    var stagePose = app.context.getEntityPose(app.context.stage);
+    // set the pose of our THREE stage object
+    if (stagePose.poseStatus & Argon.PoseStatus.KNOWN) {
+        stage.position.copy(stagePose.position);
+        stage.quaternion.copy(stagePose.orientation);
     }
     // the first time through, we create a geospatial position for
     // the box somewhere near us 
@@ -208,7 +216,7 @@ app.updateEvent.addEventListener(function (frame) {
     //
     // we'll compute the distance to the cube, just for fun. If the cube could be further away,
     // we'd want to use Cesium.EllipsoidGeodesic, rather than Euclidean distance, but this is fine here.
-    var userPos = userLocation.getWorldPosition();
+    var userPos = user.getWorldPosition();
     var buzzPos = buzz.getWorldPosition();
     var boxPos = box.getWorldPosition();
     var distanceToBox = userPos.distanceTo(boxPos);

@@ -90,29 +90,13 @@ button.addEventListener( 'click', function ( event ) {
 
 }, false );
 
-// Tell argon what local coordinate system you want.  The default coordinate
-// frame used by Argon is Cesium's FIXED frame, which is centered at the center
-// of the earth and oriented with the earth's axes.
-// The FIXED frame is inconvenient for a number of reasons: the numbers used are
-// large and cause issues with rendering, and the orientation of the user's "local
-// view of the world" is different that the FIXED orientation (my perception of "up"
-// does not correspond to one of the FIXED axes).
-// Therefore, Argon uses a local coordinate frame that sits on a plane tangent to
-// the earth near the user's current location.  This frame automatically changes if the
-// user moves more than a few kilometers.
-// The EUS frame cooresponds to the typical 3D computer graphics coordinate frame, so we use
-// that here.  The other option Argon supports is localOriginEastNorthUp, which is
-// more similar to what is used in the geospatial industry
-app.context.setDefaultReferenceFrame(app.context.localOriginEastUpSouth);
-
-
 // set up the scene, a perspective camera and objects for the user's location and the boxes
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera();
-const userLocation = new THREE.Object3D;
+const user = new THREE.Object3D;
 const boxScene = new THREE.Object3D;
 scene.add(camera);
-scene.add(userLocation);
+scene.add(user);
 scene.add(boxScene);
 
 // an entity for the collection of boxes, which are rooted to the world together
@@ -292,15 +276,15 @@ app.view.uiEvent.addEventListener((evt: any) => {
                 raycaster.setFromCamera( mouse, camera );
 
                 // recompute the plane each time, in case the camera moved
-                var worldLoc = userLocation.localToWorld(SELECTED.position);
+                var worldLoc = user.localToWorld(SELECTED.position);
                 plane.setFromNormalAndCoplanarPoint(
                         camera.getWorldDirection( plane.normal ),
-                    //userLocation.getWorldDirection( new THREE.Vector3(0,0,1) ),
+                    //user.getWorldDirection( new THREE.Vector3(0,0,1) ),
                     worldLoc );
 
                 if ( raycaster.ray.intersectPlane( plane, intersection ) ) {
                     // planes, rays and intersections are in the local "world" 3D coordinates
-                    var ptInWorld = userLocation.worldToLocal(intersection).sub( offset );
+                    var ptInWorld = user.worldToLocal(intersection).sub( offset );
                     SELECTED.position.copy( ptInWorld );
                     SELECTED.entity.position.setValue(SELECTED.position, app.context.user);
                 }
@@ -445,7 +429,7 @@ function handleRelease() : boolean {
     SELECTED.position.copy(boxPose.position);
     SELECTED.quaternion.copy(boxPose.orientation);
 
-    userLocation.remove(SELECTED);
+    user.remove(SELECTED);
     boxScene.add(SELECTED);
 
     SELECTED = null;
@@ -487,11 +471,11 @@ function handleSelection() : boolean {
         // console.log("------");
 
         boxScene.remove(object);
-        userLocation.add(object);
+        user.add(object);
 
         SELECTED = object;
 
-        // get the pose in the local coordinates of userLocation
+        // get the pose in the local coordinates of user
         var boxPose = app.context.getEntityPose(SELECTED.entity, app.context.user);
         SELECTED.position.copy(boxPose.position);
         SELECTED.quaternion.copy(boxPose.orientation);
@@ -505,12 +489,12 @@ function handleSelection() : boolean {
         // console.log("------");
 
         if (!isCrosshair) {
-            var worldLoc = userLocation.localToWorld(SELECTED.position);
+            var worldLoc = user.localToWorld(SELECTED.position);
             plane.setFromNormalAndCoplanarPoint(
                     camera.getWorldDirection( plane.normal ),
                     worldLoc );
             if ( raycaster.ray.intersectPlane( plane, intersection ) ) {
-                offset.copy( userLocation.worldToLocal(( intersection ).sub( worldLoc )));
+                offset.copy( user.worldToLocal(( intersection ).sub( worldLoc )));
             }
         }
         return true;
@@ -569,8 +553,8 @@ app.updateEvent.addEventListener((frame) => {
     // assuming we know the user's pose, set the pose of our
     // THREE user object to match it
     if (userPose.poseStatus & Argon.PoseStatus.KNOWN) {
-        userLocation.position.copy(<any>userPose.position);
-        userLocation.quaternion.copy(<any>userPose.orientation);
+        user.position.copy(<any>userPose.position);
+        user.quaternion.copy(<any>userPose.orientation);
     } else {
         return;
     }

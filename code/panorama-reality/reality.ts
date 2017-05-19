@@ -103,7 +103,7 @@ app.device.frameStateEvent.addEventListener((frameState)=>{
     Argon.decomposePerspectiveProjectionMatrix(subviews[0].projectionMatrix, frustum);
     frustum.fov = app.view.subviews[0] && app.view.subviews[0].frustum.fov || CesiumMath.PI_OVER_THREE;
 
-    if ( !frameState.strict ) {
+    if ( !app.device.strict ) {
 
         if (aggregator.isMoving(Argon.Cesium.CameraEventType.WHEEL)) {
             const wheelMovement = aggregator.getMovement(Argon.Cesium.CameraEventType.WHEEL);
@@ -221,20 +221,28 @@ app.reality.connectEvent.addEventListener((controlSession)=>{
         
         const offsetRadians = (pano.offsetDegrees || 0) * CesiumMath.DEGREES_PER_RADIAN;
         
-        const entity = new Argon.Cesium.Entity;
-        if (Argon.Cesium.defined(pano.longitude) &&
-            Argon.Cesium.defined(pano.latitude)) {
-            const positionProperty = new Argon.Cesium.ConstantPositionProperty(undefined);
-            const positionValue = Cartesian3.fromDegrees(pano.longitude, pano.latitude, pano.height || 0);
-            positionProperty.setValue(positionValue, Argon.Cesium.ReferenceFrame.FIXED);
-            entity.position = positionProperty;
-            const orientationProperty = new Argon.Cesium.ConstantProperty();
-            // calculate the orientation for the ENU coodrinate system at the given position
-            const orientationValue = Argon.Cesium.Transforms.headingPitchRollQuaternion(positionValue, identityHeadingPitchRoll);
-            // TODO: apply offsetDegrees to orientation
-            orientationProperty.setValue(orientationValue);
-            entity.orientation = orientationProperty;
-        }
+        const entityPromise = new Promise<Argon.Cesium.Entity>((resolve, reject)=>{
+            if (Argon.Cesium.defined(pano.longitude) &&
+                Argon.Cesium.defined(pano.latitude)) {
+
+                const cartographic = new Argon.Cesium.Cartographic(pano.longitude, pano.latitude, pano.height);
+
+                let updatedCartographicPromise:Promise<Argon.Cesium.Cartographic>;
+                if (Argon.Cesium.defined(pano.height)) {
+                    updatedCartographicPromise = Promise.resolve(cartographic);
+                } else {
+                    updatedCartographicPromise = Argon.updateHeightFromTerrain(cartographic);
+                }
+
+                updatedCartographicPromise.then((cart)=>{
+                    resolve(app.entity.createFixed(cart, Argon.eastUpSouthToFixedFrame));
+                });
+
+            } else {
+                resolve(new Argon.Cesium.Entity);
+            }
+        });
+
         
         var texture = new Promise<THREE.Texture>((resolve)=>{
             loader.load(pano.url, function ( texture ) {
@@ -243,21 +251,23 @@ app.reality.connectEvent.addEventListener((controlSession)=>{
             });
         });
         
-        panoramas.set(pano.url, {
-            url: pano.url,
-            longitude: pano.longitude,
-            latitude: pano.latitude,
-            height: pano.height,
-            offsetDegrees: pano.offsetDegrees,
-            entity,
-            texture
+        entityPromise.then((entity)=>{
+            panoramas.set(pano.url, {
+                url: pano.url,
+                longitude: pano.longitude,
+                latitude: pano.latitude,
+                height: pano.height,
+                offsetDegrees: pano.offsetDegrees,
+                entity,
+                texture
+            });
         });
         
         // We can optionally return a value (or a promise of a value) in a message handler. 
         // In this case, if three.js throws an error while attempting to load
         // the texture, the error will be passed to the remote session. Otherwise,
         // this function will respond as fulfilled when the texture is loaded. 
-        return texture.then(()=>{})
+        return texture.then(()=>entityPromise).then(()=>{});
     }
     controlSession.on['edu.gatech.ael.panorama.deletePanorama'] = ({url}) => {
         panoramas.delete(url);
@@ -281,7 +291,7 @@ function showPanorama(options:ShowPanoramaOptions) {
     const url = options.url;
     const transition:Transition = options.transition || {};
     const easing = resolve(transition.easing, TWEEN.Easing) || TWEEN.Easing.Linear.None;
-    
+        
     if (!url) throw new Error('Expected a url');
     if (!easing) throw new Error('Unknown easing: ' + easing);
     

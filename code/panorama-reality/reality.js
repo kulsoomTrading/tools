@@ -74,7 +74,7 @@ app.device.frameStateEvent.addEventListener(function (frameState) {
     Argon.SerializedSubviewList.clone(frameState.subviews, subviews);
     Argon.decomposePerspectiveProjectionMatrix(subviews[0].projectionMatrix, frustum);
     frustum.fov = app.view.subviews[0] && app.view.subviews[0].frustum.fov || CesiumMath.PI_OVER_THREE;
-    if (!frameState.strict) {
+    if (!app.device.strict) {
         if (aggregator.isMoving(Argon.Cesium.CameraEventType.WHEEL)) {
             var wheelMovement = aggregator.getMovement(Argon.Cesium.CameraEventType.WHEEL);
             var diff = wheelMovement.endPosition.y;
@@ -160,40 +160,47 @@ app.reality.connectEvent.addEventListener(function (controlSession) {
         if (!pano.url)
             throw new Error('Expected an equirectangular image url!');
         var offsetRadians = (pano.offsetDegrees || 0) * CesiumMath.DEGREES_PER_RADIAN;
-        var entity = new Argon.Cesium.Entity;
-        if (Argon.Cesium.defined(pano.longitude) &&
-            Argon.Cesium.defined(pano.latitude)) {
-            var positionProperty = new Argon.Cesium.ConstantPositionProperty(undefined);
-            var positionValue = Cartesian3.fromDegrees(pano.longitude, pano.latitude, pano.height || 0);
-            positionProperty.setValue(positionValue, Argon.Cesium.ReferenceFrame.FIXED);
-            entity.position = positionProperty;
-            var orientationProperty = new Argon.Cesium.ConstantProperty();
-            // calculate the orientation for the ENU coodrinate system at the given position
-            var orientationValue = Argon.Cesium.Transforms.headingPitchRollQuaternion(positionValue, identityHeadingPitchRoll);
-            // TODO: apply offsetDegrees to orientation
-            orientationProperty.setValue(orientationValue);
-            entity.orientation = orientationProperty;
-        }
+        var entityPromise = new Promise(function (resolve, reject) {
+            if (Argon.Cesium.defined(pano.longitude) &&
+                Argon.Cesium.defined(pano.latitude)) {
+                var cartographic = new Argon.Cesium.Cartographic(pano.longitude, pano.latitude, pano.height);
+                var updatedCartographicPromise = void 0;
+                if (Argon.Cesium.defined(pano.height)) {
+                    updatedCartographicPromise = Promise.resolve(cartographic);
+                }
+                else {
+                    updatedCartographicPromise = Argon.updateHeightFromTerrain(cartographic);
+                }
+                updatedCartographicPromise.then(function (cart) {
+                    resolve(app.entity.createFixed(cart, Argon.eastUpSouthToFixedFrame));
+                });
+            }
+            else {
+                resolve(new Argon.Cesium.Entity);
+            }
+        });
         var texture = new Promise(function (resolve) {
             loader.load(pano.url, function (texture) {
                 texture.minFilter = THREE.LinearFilter;
                 resolve(texture);
             });
         });
-        panoramas.set(pano.url, {
-            url: pano.url,
-            longitude: pano.longitude,
-            latitude: pano.latitude,
-            height: pano.height,
-            offsetDegrees: pano.offsetDegrees,
-            entity: entity,
-            texture: texture
+        entityPromise.then(function (entity) {
+            panoramas.set(pano.url, {
+                url: pano.url,
+                longitude: pano.longitude,
+                latitude: pano.latitude,
+                height: pano.height,
+                offsetDegrees: pano.offsetDegrees,
+                entity: entity,
+                texture: texture
+            });
         });
         // We can optionally return a value (or a promise of a value) in a message handler. 
         // In this case, if three.js throws an error while attempting to load
         // the texture, the error will be passed to the remote session. Otherwise,
         // this function will respond as fulfilled when the texture is loaded. 
-        return texture.then(function () { });
+        return texture.then(function () { return entityPromise; }).then(function () { });
     };
     controlSession.on['edu.gatech.ael.panorama.deletePanorama'] = function (_a) {
         var url = _a.url;

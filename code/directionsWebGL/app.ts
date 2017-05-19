@@ -17,9 +17,9 @@ app.context.subscribeGeolocation();
 // for the user's location
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera();
-const userLocation = new THREE.Object3D;
+const stage = new THREE.Object3D;
 scene.add(camera);
-scene.add(userLocation);
+scene.add(stage);
 
 // We use the standard WebGLRenderer when we only need WebGL-based content
 const renderer = new THREE.WebGLRenderer({ 
@@ -30,12 +30,6 @@ const renderer = new THREE.WebGLRenderer({
 
 // account for the pixel density of the device
 renderer.setPixelRatio(window.devicePixelRatio);
-// renderer.domElement.style.position = 'absolute';
-// renderer.domElement.style.bottom = '0';
-// renderer.domElement.style.left = '0';
-// renderer.domElement.style.width = '100%';
-// renderer.domElement.style.height = '100%';
-// app.view.element.appendChild(renderer.domElement);
 
 const hud = new (<any>THREE).CSS3DArgonHUD();
 
@@ -56,21 +50,6 @@ app.view.setLayers([
     { source: renderer.domElement }, 
     { source: hud.domElement }
 ]);
-
-// Tell argon what local coordinate system you want.  The default coordinate
-// frame used by Argon is Cesium's FIXED frame, which is centered at the center
-// of the earth and oriented with the earth's axes.  
-// The FIXED frame is inconvenient for a number of reasons: the numbers used are
-// large and cause issues with rendering, and the orientation of the user's "local
-// view of the world" is different that the FIXED orientation (my perception of "up"
-// does not correspond to one of the FIXED axes).  
-// Therefore, Argon uses a local coordinate frame that sits on a plane tangent to 
-// the earth near the user's current location.  This frame automatically changes if the
-// user moves more than a few kilometers.
-// The EUS frame cooresponds to the typical 3D computer graphics coordinate frame, so we use
-// that here.  The other option Argon supports is localOriginEastNorthUp, which is
-// more similar to what is used in the geospatial industry
-app.context.setDefaultReferenceFrame(app.context.localOriginEastUpSouth);
 
 // In this example, we are using the actual position of the sun and moon to create lights.
 // The SunMoonLights functions are created by ArgonSunMoon.js, and turn on the sun or moon
@@ -116,7 +95,7 @@ loader.load( '../resources/fonts/helvetiker_regular.typeface.json', function ( f
         if (rotation.x) textMesh.rotation.x = rotation.x;
         if (rotation.y) textMesh.rotation.y = rotation.y;
         if (rotation.z) textMesh.rotation.z = rotation.z;
-        userLocation.add(textMesh);
+        stage.add(textMesh);
     }
     
     createDirectionLabel("North", {z:-100}, {});
@@ -132,19 +111,21 @@ loader.load( '../resources/fonts/helvetiker_regular.typeface.json', function ( f
 // rendered, before the renderEvent.  The state of your application
 // should be updated here.
 app.updateEvent.addEventListener(() => {
-    // get the position and orientation (the "pose") of the user
-    // in the local coordinate frame.
-    const userPose = app.context.getEntityPose(app.context.user);
+    // get the position and orientation of the "stage",
+    // to anchor our content. The "stage" defines an East-Up-South
+    // coordinate system (assuming geolocation is available).
+    const stagePose = app.context.getEntityPose(app.context.stage);
 
     // assuming we know the user's pose, set the position of our 
     // THREE user object to match it
-    if (userPose.poseStatus & Argon.PoseStatus.KNOWN) {
-        userLocation.position.copy(<any>userPose.position);
+    if (stagePose.poseStatus & Argon.PoseStatus.KNOWN) {
+        stage.position.copy(<any>stagePose.position);
+        stage.quaternion.copy(<any>stagePose.orientation);
     }
 
     // get sun and moon positions, add/remove lights as necessary
     var date = app.context.time;
-	sunMoonLights.update(date,app.context.defaultReferenceFrame);
+	sunMoonLights.update(date, app.context.defaultReferenceFrame);
 })
 
 // renderEvent is fired whenever argon wants the app to update its display

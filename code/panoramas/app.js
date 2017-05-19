@@ -6,9 +6,9 @@ var app = Argon.init('#my-pano-argon-app');
 // for the user's location
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera();
-var userLocation = new THREE.Object3D;
+var stage = new THREE.Object3D;
 scene.add(camera);
-scene.add(userLocation);
+scene.add(stage);
 // We use the standard WebGLRenderer when we only need WebGL-based content
 var renderer = new THREE.WebGLRenderer({
     alpha: true,
@@ -17,27 +17,7 @@ var renderer = new THREE.WebGLRenderer({
 });
 // account for the pixel density of the device
 renderer.setPixelRatio(window.devicePixelRatio);
-// renderer.domElement.style.position = 'absolute';
-// renderer.domElement.style.bottom = '0';
-// renderer.domElement.style.left = '0';
-// renderer.domElement.style.width = '100%';
-// renderer.domElement.style.height = '100%';
-// app.view.element.insertBefore(renderer.domElement, app.view.element.firstChild);
 app.view.setLayers([{ source: renderer.domElement }]);
-// Tell argon what local coordinate system you want.  The default coordinate
-// frame used by Argon is Cesium's FIXED frame, which is centered at the center
-// of the earth and oriented with the earth's axes.  
-// The FIXED frame is inconvenient for a number of reasons: the numbers used are
-// large and cause issues with rendering, and the orientation of the user's "local
-// view of the world" is different that the FIXED orientation (my perception of "up"
-// does not correspond to one of the FIXED axes).  
-// Therefore, Argon uses a local coordinate frame that sits on a plane tangent to 
-// the earth near the user's current location.  This frame automatically changes if the
-// user moves more than a few kilometers.
-// The EUS frame cooresponds to the typical 3D computer graphics coordinate frame, so we use
-// that here.  The other option Argon supports is localOriginEastNorthUp, which is
-// more similar to what is used in the geospatial industry
-app.context.setDefaultReferenceFrame(app.context.localOriginEastUpSouth);
 // add some ambient so things aren't so harshly illuminated
 var ambientlight = new THREE.AmbientLight(0x404040); // soft white ambient light 
 scene.add(ambientlight);
@@ -174,20 +154,21 @@ loader.load('../resources/fonts/helvetiker_regular.typeface.json', function (fon
 // rendered, before the renderEvent.  The state of your application
 // should be updated here.
 app.updateEvent.addEventListener(function () {
-    // get the position and orientation (the "pose") of the user
-    // in the local coordinate frame.
-    var userPose = app.context.getEntityPose(app.context.user);
+    // get the pose of the "stage" to anchor our content. 
+    // The "stage" defines an East-Up-South coordinate system 
+    // (assuming geolocation is available).
+    var stagePose = app.context.getEntityPose(app.context.stage);
+    // set the pose of our THREE stage object
+    if (stagePose.poseStatus & Argon.PoseStatus.KNOWN) {
+        stage.position.copy(stagePose.position);
+        stage.quaternion.copy(stagePose.orientation);
+    }
     // show a 3d label when displaying a particular panorama
     if (currentPanorama && currentPanorama.name === 'High Museum') {
-        userLocation.add(myMysteriousLabel);
+        stage.add(myMysteriousLabel);
     }
     else {
-        userLocation.remove(myMysteriousLabel);
-    }
-    // assuming we know the user's pose, set the position of our 
-    // THREE user object to match it
-    if (userPose.poseStatus & Argon.PoseStatus.KNOWN) {
-        userLocation.position.copy(userPose.position);
+        stage.remove(myMysteriousLabel);
     }
 });
 // renderEvent is fired whenever argon wants the app to update its display
