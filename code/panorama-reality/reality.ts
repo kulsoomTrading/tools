@@ -154,8 +154,8 @@ app.device.frameStateEvent.addEventListener((frameState)=>{
             // const dragYaw = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, frustum.fov * (dragMovement.endPosition.x - dragMovement.startPosition.x) / app.view.viewport.width, scratchQuaternionDragYaw);
             // const drag = Quaternion.multiply(dragPitch, dragYaw, dragYaw);
 
-            headingPitchRoll.heading += frustum.fov * (dragMovement.endPosition.x - dragMovement.startPosition.x) / app.view.viewport.width;
-            headingPitchRoll.pitch += frustum.fovy * (dragMovement.endPosition.y - dragMovement.startPosition.y) / app.view.viewport.height;
+            headingPitchRoll.heading -= frustum.fov * (dragMovement.endPosition.x - dragMovement.startPosition.x) / app.view.viewport.width;
+            headingPitchRoll.pitch -= frustum.fovy * (dragMovement.endPosition.y - dragMovement.startPosition.y) / app.view.viewport.height;
             // currentOrientation = Quaternion.multiply(currentOrientation, dragYaw, dragYaw);
         }
 
