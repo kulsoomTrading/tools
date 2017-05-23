@@ -53,7 +53,9 @@ panoSpheres.forEach(function (mesh) {
     scene.add(mesh);
 });
 var currentSphere = 0;
-var X_90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, Argon.Cesium.CesiumMath.PI_OVER_TWO);
+var Z_90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, Argon.Cesium.CesiumMath.PI_OVER_TWO);
+var NEG_X_90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, -Argon.Cesium.CesiumMath.PI_OVER_TWO);
+// const NEG_Y_90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, Argon.Cesium.CesiumMath.PI_OVER_TWO);
 // Creating a lot of garbage slows everything down. Not fun.
 // Let's create some recyclable objects that we can use later.
 var scratchCartesian = new Cartesian3;
@@ -67,6 +69,7 @@ var frameStateOptions = {
     overrideStage: true,
     overrideUser: false
 };
+var headingPitchRoll = new Argon.Cesium.HeadingPitchRoll(0, -Math.PI / 2, 0);
 // Reality views must raise frame events at regular intervals in order to 
 // drive updates for the entire system
 app.device.frameStateEvent.addEventListener(function (frameState) {
@@ -99,15 +102,22 @@ app.device.frameStateEvent.addEventListener(function (frameState) {
     var deviceUserOrientation = Argon.getEntityOrientation(app.device.user, time, app.device.stage, scratchQuaternion);
     if (!deviceUserOrientation) {
         frameStateOptions.overrideUser = true;
-        var currentOrientation = currentPano && Argon.getEntityOrientationInReferenceFrame(app.context.user, time, currentPano.entity, scratchQuaternion) ||
-            Quaternion.clone(X_90, scratchQuaternion);
+        // let currentOrientation = 
+        //     currentPano && Argon.getEntityOrientationInReferenceFrame(app.context.user, time, currentPano.entity, scratchQuaternion) || 
+        //     Quaternion.clone(Quaternion.IDENTITY, scratchQuaternion);
         if (aggregator.isMoving(Argon.Cesium.CameraEventType.LEFT_DRAG)) {
             var dragMovement = aggregator.getMovement(Argon.Cesium.CameraEventType.LEFT_DRAG);
             // const dragPitch = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, frustum.fov * (dragMovement.endPosition.y - dragMovement.startPosition.y) / app.viewport.current.height, scratchQuaternionDragPitch);
-            var dragYaw = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, frustum.fov * (dragMovement.endPosition.x - dragMovement.startPosition.x) / app.view.viewport.width, scratchQuaternionDragYaw);
+            // const dragYaw = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, frustum.fov * (dragMovement.endPosition.x - dragMovement.startPosition.x) / app.view.viewport.width, scratchQuaternionDragYaw);
             // const drag = Quaternion.multiply(dragPitch, dragYaw, dragYaw);
-            currentOrientation = Quaternion.multiply(currentOrientation, dragYaw, dragYaw);
+            headingPitchRoll.heading += frustum.fov * (dragMovement.endPosition.x - dragMovement.startPosition.x) / app.view.viewport.width;
+            headingPitchRoll.pitch += frustum.fovy * (dragMovement.endPosition.y - dragMovement.startPosition.y) / app.view.viewport.height;
+            // currentOrientation = Quaternion.multiply(currentOrientation, dragYaw, dragYaw);
         }
+        var currentOrientation = Quaternion.fromHeadingPitchRoll(headingPitchRoll, scratchQuaternion);
+        Quaternion.multiply(NEG_X_90, currentOrientation, currentOrientation);
+        Quaternion.multiply(currentOrientation, Z_90, currentOrientation);
+        // Quaternion.multiply(currentOrientation, X_90, currentOrientation);
         app.context.user.position.setValue(Cartesian3.ZERO, app.context.stage);
         app.context.user.orientation.setValue(currentOrientation);
     }
