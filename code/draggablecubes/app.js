@@ -225,7 +225,7 @@ app.view.uiEvent.addEventListener(function (evt) {
                 mouse.y = y;
                 raycaster.setFromCamera(mouse, camera);
                 // recompute the plane each time, in case the camera moved
-                var worldLoc = user.localToWorld(SELECTED.position);
+                var worldLoc = user.localToWorld(SELECTED.position.clone());
                 plane.setFromNormalAndCoplanarPoint(camera.getWorldDirection(plane.normal), 
                 //user.getWorldDirection( new THREE.Vector3(0,0,1) ),
                 worldLoc);
@@ -411,10 +411,11 @@ function handleSelection() {
         // console.log("touch DEVICE _value quat=" + (object.entity.orientation as any)._value)
         // console.log("------");
         if (!isCrosshair) {
-            var worldLoc = user.localToWorld(SELECTED.position);
+            var worldLoc = user.localToWorld(SELECTED.position.clone());
             plane.setFromNormalAndCoplanarPoint(camera.getWorldDirection(plane.normal), worldLoc);
             if (raycaster.ray.intersectPlane(plane, intersection)) {
-                offset.copy(user.worldToLocal((intersection).sub(worldLoc)));
+                //offset.copy( user.worldToLocal(( intersection ).sub( worldLoc )));
+                offset.copy(user.worldToLocal(intersection).sub(SELECTED.position));
             }
         }
         return true;
@@ -518,7 +519,6 @@ app.updateEvent.addEventListener(function (frame) {
             if (Argon.convertEntityReferenceFrame(boxSceneEntity, frame.time, ReferenceFrame.FIXED)) {
                 geoLocked = true;
                 console.log("Successfully positioned the boxes in the world");
-                // yay!  We're going to continue, either way, since we need it positioned somewhere!
             }
         }
     }
@@ -541,6 +541,12 @@ app.updateEvent.addEventListener(function (frame) {
 app.renderEvent.addEventListener(function (frame) {
     // if we have 1 subView, we're in mono mode.  If more, stereo.
     var monoMode = (app.view.subviews).length == 1;
+    if (!monoMode) {
+        button.style.display = 'none';
+    }
+    else {
+        button.style.display = 'inline-block';
+    }
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
@@ -575,11 +581,10 @@ app.renderEvent.addEventListener(function (frame) {
         renderer.setScissorTest(true);
         renderer.render(scene, camera);
         // adjust the hud, but only in mono
-        if (monoMode) {
-            var _c = subview.viewport, x = _c.x, y = _c.y, width = _c.width, height = _c.height;
-            hud.setViewport(x, y, width, height, subview.index);
-            hud.render(subview.index);
-        }
+        //      if (monoMode) {
+        var _c = subview.viewport, x = _c.x, y = _c.y, width = _c.width, height = _c.height;
+        hud.setViewport(x, y, width, height, subview.index);
+        hud.render(subview.index);
     }
     stats.update();
 });

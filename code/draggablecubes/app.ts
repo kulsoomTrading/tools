@@ -135,6 +135,7 @@ var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
 var offset = new THREE.Vector3();
 var intersection = new THREE.Vector3();
+var tempPos = new THREE.Vector3();
 var INTERSECTED, SELECTED;
 var touchID;  // which touch caused the selection?
 
@@ -276,7 +277,7 @@ app.view.uiEvent.addEventListener((evt: any) => {
                 raycaster.setFromCamera( mouse, camera );
 
                 // recompute the plane each time, in case the camera moved
-                var worldLoc = user.localToWorld(SELECTED.position);
+                var worldLoc = user.localToWorld(tempPos.copy(SELECTED.position));
                 plane.setFromNormalAndCoplanarPoint(
                         camera.getWorldDirection( plane.normal ),
                     //user.getWorldDirection( new THREE.Vector3(0,0,1) ),
@@ -489,12 +490,13 @@ function handleSelection() : boolean {
         // console.log("------");
 
         if (!isCrosshair) {
-            var worldLoc = user.localToWorld(SELECTED.position);
+            var worldLoc = user.localToWorld(tempPos.copy(SELECTED.position));
             plane.setFromNormalAndCoplanarPoint(
                     camera.getWorldDirection( plane.normal ),
                     worldLoc );
             if ( raycaster.ray.intersectPlane( plane, intersection ) ) {
-                offset.copy( user.worldToLocal(( intersection ).sub( worldLoc )));
+                //offset.copy( user.worldToLocal(( intersection ).sub( worldLoc )));
+                offset.copy( user.worldToLocal(intersection).sub(SELECTED.position));
             }
         }
         return true;
@@ -636,6 +638,11 @@ app.renderEvent.addEventListener((frame) => {
     // if we have 1 subView, we're in mono mode.  If more, stereo.
     var monoMode = (app.view.subviews).length == 1;
 
+    if (!monoMode) {
+        button.style.display = 'none'; 
+    } else {
+        button.style.display = 'inline-block'; 
+    }
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
@@ -674,11 +681,11 @@ app.renderEvent.addEventListener((frame) => {
         renderer.render(scene, camera);
 
         // adjust the hud, but only in mono
-        if (monoMode) {
+  //      if (monoMode) {
             var {x,y,width,height} = subview.viewport;
             hud.setViewport(x,y,width,height, subview.index);
             hud.render(subview.index);
-        }
+    //    }
     }
     stats.update();
 
