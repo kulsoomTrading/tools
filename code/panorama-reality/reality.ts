@@ -23,12 +23,13 @@ scene.add(camera);
 // We use the standard WebGLRenderer when we only need WebGL-based content
 const renderer = new THREE.WebGLRenderer({ 
     alpha: true, 
-    logarithmicDepthBuffer: true
+    logarithmicDepthBuffer: true,
+    antialias: true
 });
 
 // account for the pixel density of the device
 renderer.setPixelRatio(window.devicePixelRatio);
-app.view.element.appendChild(renderer.domElement);
+app.view.setLayers([{source: renderer.domElement}]);
 
 // Tell argon what local coordinate system you want.  The default coordinate
 // frame used by Argon is Cesium's FIXED frame, which is centered at the center
@@ -55,7 +56,7 @@ interface PanoramaInfo {
 
 interface Panorama extends PanoramaInfo {
     entity:Argon.Cesium.Entity,
-    texture?:Promise<THREE.Texture>
+    texture:Promise<THREE.Texture>
 }
 
 // A map to store our panoramas
@@ -74,7 +75,9 @@ panoSpheres.forEach((mesh)=>{
 })
 var currentSphere = 0;
 
-const X_90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, Argon.Cesium.CesiumMath.PI_OVER_TWO);
+const Z_90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, Argon.Cesium.CesiumMath.PI_OVER_TWO);
+const NEG_X_90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, -Argon.Cesium.CesiumMath.PI_OVER_TWO);
+// const NEG_Y_90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, Argon.Cesium.CesiumMath.PI_OVER_TWO);
 
 // Creating a lot of garbage slows everything down. Not fun.
 // Let's create some recyclable objects that we can use later.
@@ -94,15 +97,17 @@ const frameStateOptions = {
     overrideUser: false
 }
 
+const headingPitchRoll = new Argon.Cesium.HeadingPitchRoll(0,-Math.PI/2,0);
+
 // Reality views must raise frame events at regular intervals in order to 
 // drive updates for the entire system
 app.device.frameStateEvent.addEventListener((frameState)=>{
     const time = frameState.time;
     Argon.SerializedSubviewList.clone(frameState.subviews, subviews);
     Argon.decomposePerspectiveProjectionMatrix(subviews[0].projectionMatrix, frustum);
-    frustum.fov = app.view.subviews[0].frustum.fov;
+    frustum.fov = app.view.subviews[0] && app.view.subviews[0].frustum.fov || CesiumMath.PI_OVER_THREE;
 
-    if ( !frameState.strict ) {
+    if ( !app.device.strict ) {
 
         if (aggregator.isMoving(Argon.Cesium.CameraEventType.WHEEL)) {
             const wheelMovement = aggregator.getMovement(Argon.Cesium.CameraEventType.WHEEL);
@@ -124,8 +129,8 @@ app.device.frameStateEvent.addEventListener((frameState)=>{
     }
 
     if (currentPano) {
-        app.context.stage.position.setValue(Cartesian3.ZERO, currentPano.entity);
-        app.context.stage.orientation.setValue(Quaternion.IDENTITY);
+        (app.context.stage.position as Argon.Cesium.ConstantPositionProperty).setValue(Cartesian3.ZERO, currentPano.entity);
+        (app.context.stage.orientation as Argon.Cesium.ConstantProperty).setValue(Quaternion.IDENTITY);
     }
     
     // Get the physical device orientation
@@ -139,19 +144,25 @@ app.device.frameStateEvent.addEventListener((frameState)=>{
     if (!deviceUserOrientation) {
         frameStateOptions.overrideUser = true;
 
-        let currentOrientation = 
-            currentPano && Argon.getEntityOrientationInReferenceFrame(app.context.user, time, currentPano.entity, scratchQuaternion) || 
-            Quaternion.clone(X_90, scratchQuaternion);
+        // let currentOrientation = 
+        //     currentPano && Argon.getEntityOrientationInReferenceFrame(app.context.user, time, currentPano.entity, scratchQuaternion) || 
+        //     Quaternion.clone(Quaternion.IDENTITY, scratchQuaternion);
 
         if (aggregator.isMoving(Argon.Cesium.CameraEventType.LEFT_DRAG)) {
             const dragMovement = aggregator.getMovement(Argon.Cesium.CameraEventType.LEFT_DRAG);
             // const dragPitch = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, frustum.fov * (dragMovement.endPosition.y - dragMovement.startPosition.y) / app.viewport.current.height, scratchQuaternionDragPitch);
-            const dragYaw = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, frustum.fov * (dragMovement.endPosition.x - dragMovement.startPosition.x) / app.view.viewport.width, scratchQuaternionDragYaw);
+            // const dragYaw = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, frustum.fov * (dragMovement.endPosition.x - dragMovement.startPosition.x) / app.view.viewport.width, scratchQuaternionDragYaw);
             // const drag = Quaternion.multiply(dragPitch, dragYaw, dragYaw);
 
-            currentOrientation = Quaternion.multiply(currentOrientation, dragYaw, dragYaw);
+            headingPitchRoll.heading -= frustum.fov * (dragMovement.endPosition.x - dragMovement.startPosition.x) / app.view.viewport.width;
+            headingPitchRoll.pitch -= frustum.fovy * (dragMovement.endPosition.y - dragMovement.startPosition.y) / app.view.viewport.height;
+            // currentOrientation = Quaternion.multiply(currentOrientation, dragYaw, dragYaw);
         }
 
+        const currentOrientation = Quaternion.fromHeadingPitchRoll(headingPitchRoll, scratchQuaternion);
+        Quaternion.multiply(NEG_X_90, currentOrientation, currentOrientation);
+        Quaternion.multiply(currentOrientation, Z_90,currentOrientation);
+        // Quaternion.multiply(currentOrientation, X_90, currentOrientation);
         (app.context.user.position as Argon.Cesium.ConstantPositionProperty).setValue(Cartesian3.ZERO, app.context.stage);
         (app.context.user.orientation as Argon.Cesium.ConstantProperty).setValue(currentOrientation);
     } else {
@@ -186,8 +197,7 @@ app.renderEvent.addEventListener(() => {
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
-    const viewport = app.view.viewport;
-    renderer.setSize(viewport.width, viewport.height);
+    renderer.setSize(app.view.renderWidth, app.view.renderHeight, false);
     
     // there is 1 subview in monocular mode, 2 in stereo mode
     for (let subview of app.view.subviews) {
@@ -197,11 +207,9 @@ app.renderEvent.addEventListener(() => {
         // set the projection matrix
         camera.projectionMatrix.fromArray(<any>subview.frustum.projectionMatrix);
 
-        // set the viewport for this view
-        let {x,y,width,height} = subview.viewport;
-        renderer.setViewport(x,y,width,height);
-
         // set the webGL rendering parameters and render this view
+        let {x,y,width,height} = subview.renderViewport;
+        renderer.setViewport(x,y,width,height);
         renderer.setScissor(x,y,width,height);
         renderer.setScissorTest(true);
         renderer.render(scene, camera);
@@ -212,6 +220,8 @@ app.renderEvent.addEventListener(() => {
 const loader = new THREE.TextureLoader();
 loader.setCrossOrigin('anonymous');
 
+const identityHeadingPitchRoll = new Argon.Cesium.HeadingPitchRoll;
+
 // when the a controlling session connects, we can communite with it to
 // receive commands (or even send information back, if appropriate)
 app.reality.connectEvent.addEventListener((controlSession)=>{
@@ -221,20 +231,28 @@ app.reality.connectEvent.addEventListener((controlSession)=>{
         
         const offsetRadians = (pano.offsetDegrees || 0) * CesiumMath.DEGREES_PER_RADIAN;
         
-        const entity = new Argon.Cesium.Entity;
-        if (Argon.Cesium.defined(pano.longitude) &&
-            Argon.Cesium.defined(pano.longitude)) {
-            const positionProperty = new Argon.Cesium.ConstantPositionProperty(undefined);
-            const positionValue = Cartesian3.fromDegrees(pano.longitude, pano.latitude, pano.height || 0);
-            positionProperty.setValue(positionValue, Argon.Cesium.ReferenceFrame.FIXED);
-            entity.position = positionProperty;
-            const orientationProperty = new Argon.Cesium.ConstantProperty();
-            // calculate the orientation for the ENU coodrinate system at the given position
-            const orientationValue = Argon.Cesium.Transforms.headingPitchRollQuaternion(positionValue, 0, 0, 0);
-            // TODO: apply offsetDegrees to orientation
-            orientationProperty.setValue(orientationValue);
-            entity.orientation = orientationProperty;
-        }
+        const entityPromise = new Promise<Argon.Cesium.Entity>((resolve, reject)=>{
+            if (Argon.Cesium.defined(pano.longitude) &&
+                Argon.Cesium.defined(pano.latitude)) {
+
+                const cartographic = new Argon.Cesium.Cartographic(pano.longitude, pano.latitude, pano.height);
+
+                let updatedCartographicPromise:Promise<Argon.Cesium.Cartographic>;
+                if (Argon.Cesium.defined(pano.height)) {
+                    updatedCartographicPromise = Promise.resolve(cartographic);
+                } else {
+                    updatedCartographicPromise = Argon.updateHeightFromTerrain(cartographic);
+                }
+
+                updatedCartographicPromise.then((cart)=>{
+                    resolve(app.entity.createFixed(cart, Argon.eastUpSouthToFixedFrame));
+                });
+
+            } else {
+                resolve(new Argon.Cesium.Entity);
+            }
+        });
+
         
         var texture = new Promise<THREE.Texture>((resolve)=>{
             loader.load(pano.url, function ( texture ) {
@@ -243,21 +261,23 @@ app.reality.connectEvent.addEventListener((controlSession)=>{
             });
         });
         
-        panoramas.set(pano.url, {
-            url: pano.url,
-            longitude: pano.longitude,
-            latitude: pano.latitude,
-            height: pano.height,
-            offsetDegrees: pano.offsetDegrees,
-            entity,
-            texture
+        entityPromise.then((entity)=>{
+            panoramas.set(pano.url, {
+                url: pano.url,
+                longitude: pano.longitude,
+                latitude: pano.latitude,
+                height: pano.height,
+                offsetDegrees: pano.offsetDegrees,
+                entity,
+                texture
+            });
         });
         
         // We can optionally return a value (or a promise of a value) in a message handler. 
         // In this case, if three.js throws an error while attempting to load
         // the texture, the error will be passed to the remote session. Otherwise,
         // this function will respond as fulfilled when the texture is loaded. 
-        return texture.then(()=>{})
+        return texture.then(()=>entityPromise).then(()=>{});
     }
     controlSession.on['edu.gatech.ael.panorama.deletePanorama'] = ({url}) => {
         panoramas.delete(url);
@@ -281,7 +301,7 @@ function showPanorama(options:ShowPanoramaOptions) {
     const url = options.url;
     const transition:Transition = options.transition || {};
     const easing = resolve(transition.easing, TWEEN.Easing) || TWEEN.Easing.Linear.None;
-    
+        
     if (!url) throw new Error('Expected a url');
     if (!easing) throw new Error('Unknown easing: ' + easing);
     
@@ -298,13 +318,13 @@ function showPanorama(options:ShowPanoramaOptions) {
     const outMaterial = sphereOut.material as THREE.MeshBasicMaterial;
     
     // update the material for the incoming panorama
-    inMaterial.map = undefined;
-    inMaterial.opacity = 1;
-    inMaterial.needsUpdate = true;
+    // inMaterial.map = undefined;
+    // inMaterial.needsUpdate = true;
     panoIn.texture.then((texture)=>{
+        inMaterial.opacity = 1;
         inMaterial.map = texture;
         inMaterial.needsUpdate = true;
-    })
+    });
     
     // update the pose of the pano spheres
     sphereIn.rotation.y = (panoIn.offsetDegrees || 0) * CesiumMath.RADIANS_PER_DEGREE;
@@ -322,14 +342,14 @@ function showPanorama(options:ShowPanoramaOptions) {
     // fade out the old pano using tween.js!
     TWEEN.removeAll();
     var outTween = new TWEEN.Tween(outMaterial);
-    outTween.to({opacity:0}, transition.duration).onUpdate(()=>{
+    outTween.to({opacity:0}, transition.duration || 500).onUpdate(()=>{
         outMaterial.needsUpdate = true;
     }).easing(easing).start();
     outMaterial.opacity = 1;
     outMaterial.needsUpdate = true;
 }
 
-function resolve(path:string, obj, safe:boolean=true) {
+function resolve(path:string|undefined, obj, safe:boolean=true) {
     if (!path) return undefined;
     return path.split('.').reduce(function(prev, curr) {
         return !safe ? prev[curr] : (prev ? prev[curr] : undefined)

@@ -3,20 +3,6 @@
 /// <reference types="dat-gui"/>
 // set up Argon
 var app = Argon.init();
-// Tell argon what local coordinate system you want.  The default coordinate
-// frame used by Argon is Cesium's FIXED frame, which is centered at the center
-// of the earth and oriented with the earth's axes.  
-// The FIXED frame is inconvenient for a number of reasons: the numbers used are
-// large and cause issues with rendering, and the orientation of the user's "local
-// view of the world" is different that the FIXED orientation (my perception of "up"
-// does not correspond to one of the FIXED axes).  
-// Therefore, Argon uses a local coordinate frame that sits on a plane tangent to 
-// the earth near the user's current location.  This frame automatically changes if the
-// user moves more than a few kilometers.
-// The EUS frame cooresponds to the typical 3D computer graphics coordinate frame, so we use
-// that here.  The other option Argon supports is localOriginEastNorthUp, which is
-// more similar to what is used in the geospatial industry
-app.context.setDefaultReferenceFrame(app.context.localOriginEastUpSouth);
 // set up THREE.  Create a scene, a perspective camera and an object
 // for the gvuBrochure target.  Do not add the gvuBrochure target content to the scene yet
 var scene = new THREE.Scene();
@@ -36,6 +22,11 @@ var renderer = new THREE.WebGLRenderer({
     antialias: true
 });
 renderer.setPixelRatio(window.devicePixelRatio);
+renderer.domElement.style.position = 'absolute';
+renderer.domElement.style.bottom = '0';
+renderer.domElement.style.left = '0';
+renderer.domElement.style.width = '100%';
+renderer.domElement.style.height = '100%';
 app.view.element.appendChild(renderer.domElement);
 // our HUD renderer for 2D screen-fixed content.  This deals with stereo viewing in argon
 var hud = new THREE.CSS3DArgonHUD();
@@ -143,7 +134,7 @@ function init() {
     renderer.domElement.addEventListener('mousemove', onTouchMove);
     function onTouchMove(event) {
         var x, y;
-        if (event instanceof TouchEvent) {
+        if (event.type == "touchmove") {
             x = event.changedTouches[0].pageX;
             y = event.changedTouches[0].pageY;
         }
@@ -370,9 +361,19 @@ app.renderEvent.addEventListener(function () {
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
-    var viewport = app.view.viewport;
-    renderer.setSize(viewport.width, viewport.height);
+    var view = app.view;
+    renderer.setSize(view.renderWidth, view.renderHeight, false);
+    var viewport = view.viewport;
     hud.setSize(viewport.width, viewport.height);
+    // if the viewport width and the renderwidth are different
+    // we assume we are rendering on a different surface than
+    // the main display, so we reset the pixel ratio to 1
+    if (viewport.width != view.renderWidth) {
+        renderer.setPixelRatio(1);
+    }
+    else {
+        renderer.setPixelRatio(window.devicePixelRatio);
+    }
     for (var _i = 0, _a = app.view.subviews; _i < _a.length; _i++) {
         var subview = _a[_i];
         // set the position and orientation of the camera for 
@@ -383,7 +384,7 @@ app.renderEvent.addEventListener(function () {
         // for the camera. 
         camera.projectionMatrix.fromArray(subview.frustum.projectionMatrix);
         // set the viewport for this view
-        var _b = subview.viewport, x = _b.x, y = _b.y, width = _b.width, height = _b.height;
+        var _b = subview.renderViewport, x = _b.x, y = _b.y, width = _b.width, height = _b.height;
         renderer.setViewport(x, y, width, height);
         // set the webGL rendering parameters and render this view
         renderer.setScissor(x, y, width, height);
@@ -391,6 +392,7 @@ app.renderEvent.addEventListener(function () {
         renderer.render(scene, camera);
         if (monoMode) {
             // adjust the hud, but only in mono mode. 
+            var _c = subview.viewport, x = _c.x, y = _c.y, width = _c.width, height = _c.height;
             hud.setViewport(x, y, width, height, subview.index);
             hud.render(subview.index);
         }

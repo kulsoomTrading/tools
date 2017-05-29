@@ -13,15 +13,17 @@ const app = Argon.init();
 //app.view.element.style.zIndex = 0;
 
 // this app uses geoposed content, so subscribe to geolocation updates
-app.context.subscribeGeolocation();
+app.context.subscribeGeolocation({enableHighAccuracy: true});
 
 // set up THREE.  Create a scene, a perspective camera and an object
 // for the user's location
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera();
-const userLocation = new THREE.Object3D;
+const stage = new THREE.Object3D;
+const user = new THREE.Object3D;
 scene.add(camera);
-scene.add(userLocation);
+scene.add(stage);
+scene.add(user);
 
 // The CSS3DArgonRenderer supports mono and stereo views.  Currently
 // not using it in this example, but left it in the code in case we
@@ -35,15 +37,18 @@ const cssRenderer = new (<any>THREE).CSS3DArgonRenderer();
 const hud = new (<any>THREE).CSS3DArgonHUD();
 const renderer = new THREE.WebGLRenderer({ 
     alpha: true, 
-    logarithmicDepthBuffer: true
+    logarithmicDepthBuffer: true,
+    antialias: true
 });
 renderer.setPixelRatio(window.devicePixelRatio);
 
-// Assuming the z-orders are the same, the order of sibling elements
-// in the DOM determines which content is in front (top->bottom = back->front)
-app.view.element.appendChild(renderer.domElement);
-app.view.element.appendChild(cssRenderer.domElement);
-app.view.element.appendChild(hud.domElement);
+// Set the layers that should be rendered in our view. The order of sibling elements
+// determines which content is in front (top->bottom = back->front)
+app.view.setLayers([
+    {source: renderer.domElement},
+    {source: cssRenderer.domElement},
+    {source: hud.domElement},
+]);
 
 // We put some elements in the index.html, for convenience. 
 // Here, we retrieve the hud element and use hud.appendChild to append it and a clone 
@@ -133,6 +138,8 @@ var boxGeoEntity = new Argon.Cesium.Entity({
 });
 
 boxGeoObject.add(box);
+boxGeoObject.position.z = -10;
+scene.add(boxGeoObject);            
 
 // Create a DIV to use to label the position and distance of the cube
 let boxLocDiv = document.getElementById("box-location");
@@ -170,13 +177,21 @@ app.updateEvent.addEventListener((frame) => {
     // get the position and orientation (the "pose") of the user
     // in the local coordinate frame.
     const userPose = app.context.getEntityPose(app.context.user);
-    // assuming we know the user's pose, set the position of our 
-    // THREE user object to match it
+    // set the pose of our THREE user object
     if (userPose.poseStatus & Argon.PoseStatus.KNOWN) {
-        userLocation.position.copy(<any>userPose.position);
-    } else {
-        // if we don't know the user pose we can't do anything
-        return;
+        user.position.copy(<any>userPose.position);
+        user.quaternion.copy(<any>userPose.orientation);
+    }
+
+    
+    // get the pose of the "stage" to anchor our content. 
+    // The "stage" defines an East-Up-South coordinate system 
+    // (assuming geolocation is available).
+    const stagePose = app.context.getEntityPose(app.context.stage);
+    // set the pose of our THREE stage object
+    if (stagePose.poseStatus & Argon.PoseStatus.KNOWN) {
+        stage.position.copy(<any>stagePose.position);
+        stage.quaternion.copy(<any>stagePose.orientation);
     }
 
     // the first time through, we create a geospatial position for
@@ -187,7 +202,7 @@ app.updateEvent.addEventListener((frame) => {
         // set the box's position to 10 meters away from the user.
         // First, clone the userPose postion, and add 10 to the X
         const boxPos = userPose.position.clone();
-        boxPos.x += 10;
+        boxPos.z -= 10;
         // set the value of the box Entity to this local position, by
         // specifying the frame of reference to our local frame
         (<any>boxGeoEntity.position).setValue(boxPos, defaultFrame);        
@@ -199,19 +214,28 @@ app.updateEvent.addEventListener((frame) => {
         // the box doesn't move if the local coordinate system origin changes.
         if (Argon.convertEntityReferenceFrame(boxGeoEntity, frame.time, 
                                               ReferenceFrame.FIXED)) {
-            scene.add(boxGeoObject);            
+            // we will keep trying to reset it to FIXED until it works!
             boxInit = true;
         }
     }
 
     // get the local coordinates of the local box, and set the THREE object
     var boxPose = app.context.getEntityPose(boxGeoEntity);
-    boxGeoObject.position.copy(<any>boxPose.position);        
-    boxGeoObject.quaternion.copy(<any>boxPose.orientation);
+    if (boxPose.poseStatus & Argon.PoseStatus.KNOWN) {
+        boxGeoObject.position.copy(<any>boxPose.position);        
+        boxGeoObject.quaternion.copy(<any>boxPose.orientation);
+    }
 
     // get the local coordinates of the GT box, and set the THREE object
     var geoPose = app.context.getEntityPose(gatechGeoEntity);
-    gatechGeoTarget.position.copy(<any>geoPose.position);        
+    if (geoPose.poseStatus & Argon.PoseStatus.KNOWN) {
+        gatechGeoTarget.position.copy(<any>geoPose.position);        
+    } else {
+        // initialize to a fixed location in case we can't convert to geospatial
+        gatechGeoTarget.position.y = 0;
+        gatechGeoTarget.position.z = -4000;
+        gatechGeoTarget.position.x = 1000;
+    }
 
     // rotate the boxes at a constant speed, independent of frame rates     
     // to make it a little less boring
@@ -224,48 +248,59 @@ app.updateEvent.addEventListener((frame) => {
     // something to show the user, so we'll do that computation.
     //
 
-    // cartographicDegrees is a 3 element array containing [longitude, latitude, height]
-    var gpsCartographicDeg = [0,0,0];
-
-    // get user position in global coordinates
-    const userPoseFIXED = app.context.getEntityPose(app.context.user, ReferenceFrame.FIXED);
-    const userLLA = Cesium.Ellipsoid.WGS84.cartesianToCartographic(userPoseFIXED.position);
-    if (userLLA) {
-        gpsCartographicDeg = [
-            CesiumMath.toDegrees(userLLA.longitude),
-            CesiumMath.toDegrees(userLLA.latitude),
-            userLLA.height
-        ];
-    }
-
-    const boxPoseFIXED = app.context.getEntityPose(boxGeoEntity, ReferenceFrame.FIXED);
-    const boxLLA = Cesium.Ellipsoid.WGS84.cartesianToCartographic(boxPoseFIXED.position);
-    if (boxLLA) {
-        boxCartographicDeg = [
-            CesiumMath.toDegrees(boxLLA.longitude),
-            CesiumMath.toDegrees(boxLLA.latitude),
-            boxLLA.height
-        ];
-    }
-
     // we'll compute the distance to the cube, just for fun. If the cube could be further away,
     // we'd want to use Cesium.EllipsoidGeodesic, rather than Euclidean distance, but this is fine here.
-	var userPos = userLocation.getWorldPosition();
+	var userPos = user.getWorldPosition();
     var buzzPos = buzz.getWorldPosition();
     var boxPos = box.getWorldPosition();
     var distanceToBox = userPos.distanceTo( boxPos );
     var distanceToBuzz = userPos.distanceTo( buzzPos );
 
+    // cartographicDegrees is a 3 element array containing [longitude, latitude, height]
+    var gpsCartographicDeg = [0,0,0];
+
     // create some feedback text
     var infoText = "Geospatial Argon example:<br>"
-    infoText += "Your location is lla (" + toFixed(gpsCartographicDeg[0],6) + ", ";
-    infoText += toFixed(gpsCartographicDeg[1], 6) + ", " + toFixed(gpsCartographicDeg[2], 2) + ")<br>";
-    infoText += " distance to Georgia Tech (" + toFixed(distanceToBuzz,2) + ")<br>";
+
+    // get user position in global coordinates
+    const userPoseFIXED = app.context.getEntityPose(app.context.user, ReferenceFrame.FIXED);
+    if (userPoseFIXED.poseStatus & Argon.PoseStatus.KNOWN) {
+        const userLLA = Cesium.Ellipsoid.WGS84.cartesianToCartographic(userPoseFIXED.position);
+        if (userLLA) {
+            gpsCartographicDeg = [
+                CesiumMath.toDegrees(userLLA.longitude),
+                CesiumMath.toDegrees(userLLA.latitude),
+                userLLA.height
+            ];
+            infoText += "Your location is lla (" + toFixed(gpsCartographicDeg[0],6) + ", ";
+            infoText += toFixed(gpsCartographicDeg[1], 6) + ", " + toFixed(gpsCartographicDeg[2], 2) + ")<br>";
+        } 
+    } else {
+            infoText += "Your location is unknown<br>";
+    }
+
+    const boxPoseFIXED = app.context.getEntityPose(boxGeoEntity, ReferenceFrame.FIXED);
+    if (boxPoseFIXED.poseStatus & Argon.PoseStatus.KNOWN) {
+        const boxLLA = Cesium.Ellipsoid.WGS84.cartesianToCartographic(boxPoseFIXED.position);
+        if (boxLLA) {
+            boxCartographicDeg = [
+                CesiumMath.toDegrees(boxLLA.longitude),
+                CesiumMath.toDegrees(boxLLA.latitude),
+                boxLLA.height
+            ];
+        }
+    }
+
+    infoText += " distance to Buzz box @ GT (" + toFixed(distanceToBuzz,2) + ")<br>";
     infoText += "box is " + toFixed(distanceToBox,2) + " meters away";
 
-    var boxLabelText = "a wooden box!<br>lla = " + toFixed(boxCartographicDeg[0], 6) + ", ";
-    boxLabelText += toFixed(boxCartographicDeg[1], 6) + ", " + toFixed(boxCartographicDeg[2], 2) + "";
-
+    var boxLabelText;
+    if (boxPoseFIXED.poseStatus & Argon.PoseStatus.KNOWN) {
+        boxLabelText = "a wooden box!<br>lla = " + toFixed(boxCartographicDeg[0], 6) + ", ";
+        boxLabelText += toFixed(boxCartographicDeg[1], 6) + ", " + toFixed(boxCartographicDeg[2], 2) + "";
+    } else {
+        boxLabelText = "a wooden box!<br>Location unknown";        
+    }
     if (lastInfoText !== infoText) { // prevent unecessary DOM invalidations
         locationElements[0].innerHTML = infoText;
         locationElements[1].innerHTML = infoText;
@@ -284,8 +319,10 @@ app.renderEvent.addEventListener(() => {
     // set the renderers to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
-    const viewport = app.view.viewport;
-    renderer.setSize(viewport.width, viewport.height);
+    const view = app.view;
+    renderer.setSize(view.renderWidth, view.renderHeight, false);    
+
+    const viewport = view.viewport;
     cssRenderer.setSize(viewport.width, viewport.height);
     hud.setSize(viewport.width, viewport.height);
 
@@ -295,6 +332,15 @@ app.renderEvent.addEventListener(() => {
       holder.style.display = 'none';
     } else {
       holder.style.display = 'block';
+    }
+
+    // if the viewport width and the renderwidth are different
+    // we assume we are rendering on a different surface than
+    // the main display, so we reset the pixel ratio to 1
+    if (viewport.width != view.renderWidth) {
+        renderer.setPixelRatio(1);
+    } else {
+        renderer.setPixelRatio(window.devicePixelRatio);
     }
 
     // there is 1 subview in monocular mode, 2 in stereo mode    
@@ -308,20 +354,23 @@ app.renderEvent.addEventListener(() => {
         // for the camera. 
         camera.projectionMatrix.fromArray(<any>subview.frustum.projectionMatrix);
 
+        // set the webGL rendering parameters and render this view
         // set the viewport for this view
-        let {x,y,width,height} = subview.viewport;
+        var {x,y,width,height} = subview.renderViewport;
+
+        renderer.setViewport(x,y,width,height);
+        renderer.setScissor(x,y,width,height);
+        renderer.setScissorTest(true);
+        renderer.render(scene, camera);
+
+        // set the viewport for this view
+        var {x,y,width,height} = subview.viewport;
 
         // set the CSS rendering up, by computing the FOV, and render this view
         camera.fov = THREE.Math.radToDeg(frustum.fovy);
 
         cssRenderer.setViewport(x,y,width,height, subview.index);
         cssRenderer.render(scene, camera, subview.index);
-
-        // set the webGL rendering parameters and render this view
-        renderer.setViewport(x,y,width,height);
-        renderer.setScissor(x,y,width,height);
-        renderer.setScissorTest(true);
-        renderer.render(scene, camera);
 
         // adjust the hud
         hud.setViewport(x,y,width,height, subview.index);

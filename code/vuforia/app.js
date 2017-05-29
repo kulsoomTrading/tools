@@ -15,10 +15,16 @@ scene.autoUpdate = false;
 // We use the standard WebGLRenderer when we only need WebGL-based content
 var renderer = new THREE.WebGLRenderer({
     alpha: true,
-    logarithmicDepthBuffer: true
+    logarithmicDepthBuffer: true,
+    antialias: true
 });
 // account for the pixel density of the device
 renderer.setPixelRatio(window.devicePixelRatio);
+renderer.domElement.style.position = 'absolute';
+renderer.domElement.style.bottom = '0';
+renderer.domElement.style.left = '0';
+renderer.domElement.style.width = '100%';
+renderer.domElement.style.height = '100%';
 app.view.element.appendChild(renderer.domElement);
 // to easily control stuff on the display
 var hud = new THREE.CSS3DArgonHUD();
@@ -32,20 +38,6 @@ app.view.element.appendChild(hud.domElement);
 // let's show the rendering stats
 var stats = new Stats();
 hud.hudElements[0].appendChild(stats.dom);
-// Tell argon what local coordinate system you want.  The default coordinate
-// frame used by Argon is Cesium's FIXED frame, which is centered at the center
-// of the earth and oriented with the earth's axes.  
-// The FIXED frame is inconvenient for a number of reasons: the numbers used are
-// large and cause issues with rendering, and the orientation of the user's "local
-// view of the world" is different that the FIXED orientation (my perception of "up"
-// does not correspond to one of the FIXED axes).  
-// Therefore, Argon uses a local coordinate frame that sits on a plane tangent to 
-// the earth near the user's current location.  This frame automatically changes if the
-// user moves more than a few kilometers.
-// The EUS frame cooresponds to the typical 3D computer graphics coordinate frame, so we use
-// that here.  The other option Argon supports is localOriginEastNorthUp, which is
-// more similar to what is used in the geospatial industry
-app.context.setDefaultReferenceFrame(app.context.localOriginEastUpSouth);
 // create a bit of animated 3D text that says "argon.js" to display 
 var uniforms = {
     amplitude: { type: "f", value: 0.0 }
@@ -194,15 +186,25 @@ app.renderEvent.addEventListener(function () {
     // update the rendering stats
     stats.update();
     // get the subviews for the current frame
-    var subviews = app.view.getSubviews();
+    var subviews = app.view.subviews;
     // if we have 1 subView, we're in mono mode.  If more, stereo.
     var monoMode = subviews.length == 1;
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both subviews if we are in stereo viewing mode
-    var viewport = app.view.getViewport();
-    renderer.setSize(viewport.width, viewport.height);
+    var view = app.view;
+    renderer.setSize(view.renderWidth, view.renderHeight, false);
+    var viewport = view.viewport;
     hud.setSize(viewport.width, viewport.height);
+    // if the viewport width and the renderwidth are different
+    // we assume we are rendering on a different surface than
+    // the main display, so we reset the pixel ratio to 1
+    if (viewport.width != view.renderWidth) {
+        renderer.setPixelRatio(1);
+    }
+    else {
+        renderer.setPixelRatio(window.devicePixelRatio);
+    }
     // there is 1 subview in monocular mode, 2 in stereo mode    
     for (var _i = 0, subviews_1 = subviews; _i < subviews_1.length; _i++) {
         var subview = subviews_1[_i];
@@ -212,9 +214,9 @@ app.renderEvent.addEventListener(function () {
         camera.quaternion.copy(subview.pose.orientation);
         // the underlying system provide a full projection matrix
         // for the camera. 
-        camera.projectionMatrix.fromArray(subview.projectionMatrix);
-        // set the viewport for this subview
-        var _a = subview.viewport, x = _a.x, y = _a.y, width = _a.width, height = _a.height;
+        camera.projectionMatrix.fromArray(subview.frustum.projectionMatrix);
+        // set the viewport for this view
+        var _a = subview.renderViewport, x = _a.x, y = _a.y, width = _a.width, height = _a.height;
         renderer.setViewport(x, y, width, height);
         // set the webGL rendering parameters and render this view
         renderer.setScissor(x, y, width, height);
@@ -222,6 +224,7 @@ app.renderEvent.addEventListener(function () {
         renderer.render(scene, camera);
         // adjust the hud, but only in mono
         if (monoMode) {
+            var _b = subview.viewport, x = _b.x, y = _b.y, width = _b.width, height = _b.height;
             hud.setViewport(x, y, width, height, subview.index);
             hud.render(subview.index);
         }

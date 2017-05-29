@@ -1,5 +1,6 @@
 /// <reference types="@argonjs/argon" />
 /// <reference types="three" />
+/// <reference types="stats" />
 
 // add a field to Object3D
 declare namespace THREE {
@@ -24,7 +25,7 @@ const CesiumMath = Argon.Cesium.CesiumMath;
 const app = Argon.init();
 
 // this app uses geoposed content, so subscribe to geolocation updates
-app.context.subscribeGeolocation();
+app.context.subscribeGeolocation({enableHighAccuracy: true});
 
 // install a secondary reality that the user can select from on the desktop
 app.reality.install(Argon.resolveURL('../streetview-reality/index.html'));
@@ -32,7 +33,8 @@ app.reality.install(Argon.resolveURL('../streetview-reality/index.html'));
 // We use the standard WebGLRenderer when we only need WebGL-based content
 const renderer = new THREE.WebGLRenderer({
     alpha: true,
-    logarithmicDepthBuffer: true
+    logarithmicDepthBuffer: true,
+    antialias: true
 });
 
 // account for the pixel density of the device
@@ -40,9 +42,6 @@ renderer.setPixelRatio(window.devicePixelRatio);
 renderer.sortObjects = false;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
-
-// add it to the view
-app.view.element.appendChild(renderer.domElement);
 
 // to easily control stuff on the display
 const hud = new (<any>THREE).CSS3DArgonHUD();
@@ -60,7 +59,12 @@ hud.hudElements[0].appendChild(hudContainer);
 var description = document.getElementById( 'description' );
 hud.hudElements[0].appendChild(description);
 
-app.view.element.appendChild(hud.domElement);
+// add layers to the view
+app.view.setLayers([
+    {source: renderer.domElement},
+    {source: hud.domElement}
+])
+
 
 // add a performance stats thing to the display
 var stats = new Stats();
@@ -86,29 +90,13 @@ button.addEventListener( 'click', function ( event ) {
 
 }, false );
 
-// Tell argon what local coordinate system you want.  The default coordinate
-// frame used by Argon is Cesium's FIXED frame, which is centered at the center
-// of the earth and oriented with the earth's axes.
-// The FIXED frame is inconvenient for a number of reasons: the numbers used are
-// large and cause issues with rendering, and the orientation of the user's "local
-// view of the world" is different that the FIXED orientation (my perception of "up"
-// does not correspond to one of the FIXED axes).
-// Therefore, Argon uses a local coordinate frame that sits on a plane tangent to
-// the earth near the user's current location.  This frame automatically changes if the
-// user moves more than a few kilometers.
-// The EUS frame cooresponds to the typical 3D computer graphics coordinate frame, so we use
-// that here.  The other option Argon supports is localOriginEastNorthUp, which is
-// more similar to what is used in the geospatial industry
-app.context.setDefaultReferenceFrame(app.context.localOriginEastUpSouth);
-
-
 // set up the scene, a perspective camera and objects for the user's location and the boxes
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera();
-const userLocation = new THREE.Object3D;
+const user = new THREE.Object3D;
 const boxScene = new THREE.Object3D;
 scene.add(camera);
-scene.add(userLocation);
+scene.add(user);
 scene.add(boxScene);
 
 // an entity for the collection of boxes, which are rooted to the world together
@@ -147,6 +135,7 @@ var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
 var offset = new THREE.Vector3();
 var intersection = new THREE.Vector3();
+var tempPos = new THREE.Vector3();
 var INTERSECTED, SELECTED;
 var touchID;  // which touch caused the selection?
 
@@ -246,6 +235,10 @@ app.view.uiEvent.addEventListener((evt: any) => {
 
     switch (event.type) {
         case "touchmove":
+            if ((<any>window).PointerEvent) {
+                evt.forwardEvent();
+                return; // ignore duplicate events
+            }
             //console.log ("touch move: ");
             //console.log(event);
             event.preventDefault();
@@ -260,6 +253,7 @@ app.view.uiEvent.addEventListener((evt: any) => {
                 return;
             }
 
+        case "pointermove":
         case "mousemove":
             // if crosshair interaction, mousemove passed on
             if (isCrosshair) {
@@ -283,15 +277,15 @@ app.view.uiEvent.addEventListener((evt: any) => {
                 raycaster.setFromCamera( mouse, camera );
 
                 // recompute the plane each time, in case the camera moved
-                var worldLoc = userLocation.localToWorld(SELECTED.position);
+                var worldLoc = user.localToWorld(tempPos.copy(SELECTED.position));
                 plane.setFromNormalAndCoplanarPoint(
                         camera.getWorldDirection( plane.normal ),
-                    //userLocation.getWorldDirection( new THREE.Vector3(0,0,1) ),
+                    //user.getWorldDirection( new THREE.Vector3(0,0,1) ),
                     worldLoc );
 
                 if ( raycaster.ray.intersectPlane( plane, intersection ) ) {
                     // planes, rays and intersections are in the local "world" 3D coordinates
-                    var ptInWorld = userLocation.worldToLocal(intersection).sub( offset );
+                    var ptInWorld = user.worldToLocal(intersection).sub( offset );
                     SELECTED.position.copy( ptInWorld );
                     SELECTED.entity.position.setValue(SELECTED.position, app.context.user);
                 }
@@ -302,6 +296,10 @@ app.view.uiEvent.addEventListener((evt: any) => {
             return;
 
       case "touchstart":
+            if ((<any>window).PointerEvent) {
+                evt.forwardEvent();
+                return; // ignore duplicate events
+            }
             console.log ("touch start: ");
             console.log(event);
             event.preventDefault();
@@ -347,6 +345,8 @@ app.view.uiEvent.addEventListener((evt: any) => {
             if(handleSelection()) {
                 if (event.type == "touchstart") {
                     touchID = event.changedTouches[ti].identifier;
+                }
+                if (event.type == "touchstart" || event.type == "pointerdown") {
                     if (!isCrosshair) {
                         if ( INTERSECTED ) INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
                         INTERSECTED = SELECTED;
@@ -360,6 +360,10 @@ app.view.uiEvent.addEventListener((evt: any) => {
             break;
 
         case "touchend":
+            if ((<any>window).PointerEvent) {
+                evt.forwardEvent();
+                return; // ignore duplicate events
+            }
             console.log("touch end: ");
             console.log(event);
             event.preventDefault();
@@ -388,7 +392,7 @@ app.view.uiEvent.addEventListener((evt: any) => {
 
             if ( SELECTED ) {
                 if (handleRelease()) {
-                    if (event.type == "touchend" && !isCrosshair) {
+                    if ((event.type == "touchend" || event.type == "pointerup") && !isCrosshair) {
                         if ( INTERSECTED ) INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
                         INTERSECTED = null;
                     }
@@ -426,7 +430,7 @@ function handleRelease() : boolean {
     SELECTED.position.copy(boxPose.position);
     SELECTED.quaternion.copy(boxPose.orientation);
 
-    userLocation.remove(SELECTED);
+    user.remove(SELECTED);
     boxScene.add(SELECTED);
 
     SELECTED = null;
@@ -468,11 +472,11 @@ function handleSelection() : boolean {
         // console.log("------");
 
         boxScene.remove(object);
-        userLocation.add(object);
+        user.add(object);
 
         SELECTED = object;
 
-        // get the pose in the local coordinates of userLocation
+        // get the pose in the local coordinates of user
         var boxPose = app.context.getEntityPose(SELECTED.entity, app.context.user);
         SELECTED.position.copy(boxPose.position);
         SELECTED.quaternion.copy(boxPose.orientation);
@@ -486,12 +490,13 @@ function handleSelection() : boolean {
         // console.log("------");
 
         if (!isCrosshair) {
-            var worldLoc = userLocation.localToWorld(SELECTED.position);
+            var worldLoc = user.localToWorld(tempPos.copy(SELECTED.position));
             plane.setFromNormalAndCoplanarPoint(
                     camera.getWorldDirection( plane.normal ),
                     worldLoc );
             if ( raycaster.ray.intersectPlane( plane, intersection ) ) {
-                offset.copy( userLocation.worldToLocal(( intersection ).sub( worldLoc )));
+                //offset.copy( user.worldToLocal(( intersection ).sub( worldLoc )));
+                offset.copy( user.worldToLocal(intersection).sub(SELECTED.position));
             }
         }
         return true;
@@ -550,8 +555,8 @@ app.updateEvent.addEventListener((frame) => {
     // assuming we know the user's pose, set the pose of our
     // THREE user object to match it
     if (userPose.poseStatus & Argon.PoseStatus.KNOWN) {
-        userLocation.position.copy(<any>userPose.position);
-        userLocation.quaternion.copy(<any>userPose.orientation);
+        user.position.copy(<any>userPose.position);
+        user.quaternion.copy(<any>userPose.orientation);
     } else {
         return;
     }
@@ -633,12 +638,28 @@ app.renderEvent.addEventListener((frame) => {
     // if we have 1 subView, we're in mono mode.  If more, stereo.
     var monoMode = (app.view.subviews).length == 1;
 
+    if (!monoMode) {
+        button.style.display = 'none'; 
+    } else {
+        button.style.display = 'inline-block'; 
+    }
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
-    const viewport = app.view.viewport;
-    renderer.setSize(viewport.width, viewport.height);
+    const view = app.view;
+    renderer.setSize(view.renderWidth, view.renderHeight, false);    
+
+    const viewport = view.viewport;
     hud.setSize(viewport.width, viewport.height);
+
+    // if the viewport width and the renderwidth are different
+    // we assume we are rendering on a different surface than
+    // the main display, so we reset the pixel ratio to 1
+    if (viewport.width != view.renderWidth) {
+        renderer.setPixelRatio(1);
+    } else {
+        renderer.setPixelRatio(window.devicePixelRatio);
+    }
 
     // there is 1 subview in monocular mode, 2 in stereo mode
     for (let subview of app.view.subviews) {
@@ -651,7 +672,7 @@ app.renderEvent.addEventListener((frame) => {
         camera.projectionMatrix.fromArray(<any>subview.frustum.projectionMatrix);
 
         // set the viewport for this view
-        let {x,y,width,height} = subview.viewport;
+        var {x,y,width,height} = subview.renderViewport;
         renderer.setViewport(x,y,width,height);
 
         // set the webGL rendering parameters and render this view
@@ -660,10 +681,11 @@ app.renderEvent.addEventListener((frame) => {
         renderer.render(scene, camera);
 
         // adjust the hud, but only in mono
-        if (monoMode) {
+  //      if (monoMode) {
+            var {x,y,width,height} = subview.viewport;
             hud.setViewport(x,y,width,height, subview.index);
             hud.render(subview.index);
-        }
+    //    }
     }
     stats.update();
 

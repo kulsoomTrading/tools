@@ -8,34 +8,20 @@ const app = Argon.init('#my-pano-argon-app');
 // for the user's location
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera();
-const userLocation = new THREE.Object3D;
+const stage = new THREE.Object3D;
 scene.add(camera);
-scene.add(userLocation);
+scene.add(stage);
 
 // We use the standard WebGLRenderer when we only need WebGL-based content
 const renderer = new THREE.WebGLRenderer({ 
     alpha: true, 
-    logarithmicDepthBuffer: true
+    logarithmicDepthBuffer: true,
+    antialias: true
 });
 
 // account for the pixel density of the device
 renderer.setPixelRatio(window.devicePixelRatio);
-app.view.element.insertBefore(renderer.domElement, app.view.element.firstChild);
-
-// Tell argon what local coordinate system you want.  The default coordinate
-// frame used by Argon is Cesium's FIXED frame, which is centered at the center
-// of the earth and oriented with the earth's axes.  
-// The FIXED frame is inconvenient for a number of reasons: the numbers used are
-// large and cause issues with rendering, and the orientation of the user's "local
-// view of the world" is different that the FIXED orientation (my perception of "up"
-// does not correspond to one of the FIXED axes).  
-// Therefore, Argon uses a local coordinate frame that sits on a plane tangent to 
-// the earth near the user's current location.  This frame automatically changes if the
-// user moves more than a few kilometers.
-// The EUS frame cooresponds to the typical 3D computer graphics coordinate frame, so we use
-// that here.  The other option Argon supports is localOriginEastNorthUp, which is
-// more similar to what is used in the geospatial industry
-app.context.setDefaultReferenceFrame(app.context.localOriginEastUpSouth);
+app.view.setLayers([{source: renderer.domElement}]);
 
 // add some ambient so things aren't so harshly illuminated
 var ambientlight = new THREE.AmbientLight( 0x404040 ); // soft white ambient light 
@@ -192,21 +178,22 @@ loader.load( '../resources/fonts/helvetiker_regular.typeface.json', function ( f
 // rendered, before the renderEvent.  The state of your application
 // should be updated here.
 app.updateEvent.addEventListener(() => {
-    // get the position and orientation (the "pose") of the user
-    // in the local coordinate frame.
-    const userPose = app.context.getEntityPose(app.context.user);
+    // get the pose of the "stage" to anchor our content. 
+    // The "stage" defines an East-Up-South coordinate system 
+    // (assuming geolocation is available).
+    const stagePose = app.context.getEntityPose(app.context.stage);
+    // set the pose of our THREE stage object
+    if (stagePose.poseStatus & Argon.PoseStatus.KNOWN) {
+        stage.position.copy(<any>stagePose.position);
+        stage.quaternion.copy(<any>stagePose.orientation);
+    }
+
     
     // show a 3d label when displaying a particular panorama
     if (currentPanorama && currentPanorama.name === 'High Museum') {
-        userLocation.add(myMysteriousLabel);
+        stage.add(myMysteriousLabel);
     } else {
-        userLocation.remove(myMysteriousLabel);
-    }
-
-    // assuming we know the user's pose, set the position of our 
-    // THREE user object to match it
-    if (userPose.poseStatus & Argon.PoseStatus.KNOWN) {
-        userLocation.position.copy(<any>userPose.position);
+        stage.remove(myMysteriousLabel);
     }
 })
 
@@ -215,9 +202,19 @@ app.renderEvent.addEventListener(() => {
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
-    const viewport = app.view.viewport;
-    renderer.setSize(viewport.width, viewport.height);
+    const view = app.view;
+    renderer.setSize(view.renderWidth, view.renderHeight, false);    
     
+    const viewport = view.viewport;
+    // if the viewport width and the renderwidth are different
+    // we assume we are rendering on a different surface than
+    // the main display, so we reset the pixel ratio to 1
+    if (viewport.width != view.renderWidth) {
+        renderer.setPixelRatio(1);
+    } else {
+        renderer.setPixelRatio(window.devicePixelRatio);
+    }
+
     // there is 1 subview in monocular mode, 2 in stereo mode    
     for (let subview of app.view.subviews) {
         // set the position and orientation of the camera for 
@@ -229,7 +226,7 @@ app.renderEvent.addEventListener(() => {
         camera.projectionMatrix.fromArray(<any>subview.frustum.projectionMatrix);
 
         // set the viewport for this view
-        let {x,y,width,height} = subview.viewport;
+        var {x,y,width,height} = subview.renderViewport;
         renderer.setViewport(x,y,width,height);
 
         // set the webGL rendering parameters and render this view

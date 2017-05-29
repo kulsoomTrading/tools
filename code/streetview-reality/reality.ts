@@ -35,6 +35,9 @@ app.view.element.appendChild(subviewElements[0]);
 app.view.element.appendChild(subviewElements[1]);
 app.view.element.appendChild(mapElement);
 
+// pass a dummy element to avoid webvr polyfill from messing with the streetview canvas
+app.view.setLayers([{source: document.createElement('div')}]); 
+
 const resize = ()=> {
     google.maps.event.trigger(map, 'resize');
     setTimeout(() => google.maps.event.trigger(map, 'resize'), 100);
@@ -113,6 +116,13 @@ let streetviews: Array<google.maps.StreetViewPanorama>;
 let currentPanoData: google.maps.StreetViewPanoramaData;
 const mapToggleControl = new MapToggleControl();
 
+
+var streetviewOptions = <google.maps.StreetViewPanoramaOptions>{
+    zoomControl: false,
+    motionTracking: true,
+    motionTrackingControl: false
+}
+
 const initStreetview = () => {
 
     // The photosphere is a much nicer viewer
@@ -120,15 +130,9 @@ const initStreetview = () => {
 
     map = new google.maps.Map(mapElement);
 
-    var options = <google.maps.StreetViewPanoramaOptions>{
-        zoomControl: false,
-        motionTracking: true,
-        motionTrackingControl: false
-    }
-
     streetviews = [
-        new google.maps.StreetViewPanorama(subviewElements[0], options),
-        new google.maps.StreetViewPanorama(subviewElements[1], options)
+        new google.maps.StreetViewPanorama(subviewElements[0], streetviewOptions)
+        // new google.maps.StreetViewPanorama(subviewElements[1], streetviewOptions)
     ];
 
     map.setStreetView(streetviews[0]);
@@ -142,12 +146,16 @@ const initStreetview = () => {
     const elevationService = new google.maps.ElevationService();
     let elevation = 0;
 
+    const identityHeadingPitchRoll = new Argon.Cesium.HeadingPitchRoll;
+
     google.maps.event.addListener(streetviews[0], 'position_changed', () => {
         const position = streetviews[0].getPosition();
         // update the position with previous elevation
         const positionValue = Cartesian3.fromDegrees(position.lng(), position.lat(), elevation, undefined, scratchCartesian);
         (panoEntity.position as Argon.Cesium.ConstantPositionProperty).setValue(positionValue, Argon.Cesium.ReferenceFrame.FIXED);
-        const orientationValue = Argon.Cesium.Transforms.headingPitchRollQuaternion(positionValue, 0, 0, 0);
+        const eusTransform = Argon.eastUpSouthToFixedFrame(positionValue, undefined, scratchMatrix4);
+        const eusRotation = Argon.Cesium.Matrix4.getRotation(eusTransform, scratchMatrix3);
+        const orientationValue = Argon.Cesium.Quaternion.fromRotationMatrix(eusRotation, scratchQuaternion);
         (panoEntity.orientation as Argon.Cesium.ConstantProperty).setValue(orientationValue);
         // update the position with correct elevation as long as we haven't moved
         elevationService.getElevationForLocations({ locations: [position] }, (results, status) => {
@@ -202,21 +210,6 @@ const initStreetview = () => {
     }, 1000);
 };
 
-// Tell argon what local coordinate system you want.  The default coordinate
-// frame used by Argon is Cesium's FIXED frame, which is centered at the center
-// of the earth and oriented with the earth's axes.  
-// The FIXED frame is inconvenient for a number of reasons: the numbers used are
-// large and cause issues with rendering, and the orientation of the user's "local
-// view of the world" is different that the FIXED orientation (my perception of "up"
-// does not correspond to one of the FIXED axes).  
-// Therefore, Argon uses a local coordinate frame that sits on a plane tangent to 
-// the earth near the user's current location.  This frame automatically changes if the
-// user moves more than a few kilometers.
-// The EUS frame cooresponds to the typical 3D computer graphics coordinate frame, so we use
-// that here.  The other option Argon supports is localOriginEastNorthUp, which is
-// more similar to what is used in the geospatial industry
-app.context.setDefaultReferenceFrame(app.context.localOriginEastUpSouth);
-
 // Create an entity to represent the panorama
 const panoEntity = new Argon.Cesium.Entity({
     id:'streetview_pano',
@@ -227,6 +220,7 @@ const panoEntity = new Argon.Cesium.Entity({
 // Creating a lot of garbage slows everything down. Not fun.
 // Let's create some recyclable objects that we can use later.
 const scratchMatrix3 = new Matrix3;
+const scratchMatrix4 = new Matrix4;
 const scratchCartesian = new Cartesian3;
 const scratchQuaternion = new Quaternion;
 const scratchQuaternionPitch = new Quaternion;
@@ -239,7 +233,7 @@ const x90Neg = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, - Math.PI / 2);
 
 let lastZoomLevel:number;
 
-const viewport = <Argon.Viewport>{};
+const viewport = new Argon.CanvasViewport;
 const subviews = <Argon.SerializedSubview[]>[];
 
 const frameStateOptions = {
@@ -257,7 +251,7 @@ app.device.frameStateEvent.addEventListener((frameState)=>{
     if (!streetviews) initStreetview();
     if (!app.visibility.isVisible) {
         streetviews[0].setVisible(false);
-        streetviews[1].setVisible(false);
+        streetviews[1] && streetviews[1].setVisible(false);
     }
 
     // Position the stage as a child of the pano entity
@@ -268,7 +262,7 @@ app.device.frameStateEvent.addEventListener((frameState)=>{
     Argon.Viewport.clone(frameState.viewport, viewport);
     Argon.SerializedSubviewList.clone(frameState.subviews, subviews);
 
-    if (frameState.strict || subviews.length > 1) {
+    if (app.device.strict || subviews.length > 1) {
         mapToggleControl.element.style.display = 'none';
     } else {
         mapToggleControl.element.style.display = '';
@@ -312,8 +306,12 @@ app.device.frameStateEvent.addEventListener((frameState)=>{
     const pitchValue = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, pitch, scratchQuaternionPitch);
     const headingValue = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, heading, scratchQuaternionHeading)
     orientationValue = Quaternion.fromHeadingPitchRoll(-heading, 0, pitch + Math.PI / 2, scratchQuaternion);
+    orientationValue = Quaternion.multiply(x90Neg, orientationValue, orientationValue); // convert from ENU to EUS
 
-    (app.context.user.position as Argon.Cesium.ConstantPositionProperty).setValue(Cartesian3.ZERO, app.context.stage);
+    (app.context.user.position as Argon.Cesium.ConstantPositionProperty).setValue(
+        Cartesian3.fromElements(0,Argon.AVERAGE_EYE_HEIGHT,0, scratchCartesian), 
+        app.context.stage
+    );
     (app.context.user.orientation as Argon.Cesium.ConstantProperty).setValue(orientationValue);
 
     // get the current fov
@@ -325,7 +323,7 @@ app.device.frameStateEvent.addEventListener((frameState)=>{
     // may not perfectly match the streetview imagagery at a large fov
     // const MIN_ZOOM_LEVEL = 1.5;
 
-    if (!isFinite(zoomLevel) || frameState.strict || app.session.manager.version[0] === 0) {
+    if (!isFinite(zoomLevel) || app.device.strict || app.session.manager.version[0] === 0) {
         const targetFrustum = Argon.decomposePerspectiveProjectionMatrix(subviews[0].projectionMatrix, frustum)
 
         // calculate streetview zoom level
@@ -408,10 +406,11 @@ app.renderEvent.addEventListener(() => {
     const subviews = app.view.subviews;
 
     if (subviews.length === 1) {
-        streetviews[1].setVisible(false);
+        streetviews[1] && streetviews[1].setVisible(false);
         subviewElements[1].style.visibility = 'hidden';
     } else {
         mapToggleControl.showing = false;
+        streetviews[1] = streetviews[1] || new google.maps.StreetViewPanorama(subviewElements[1], streetviewOptions);
         streetviews[1].setVisible(true);
         subviewElements[1].style.visibility = 'visible';
         streetviews[1].setPano(streetviews[0].getPano());
@@ -425,7 +424,7 @@ app.renderEvent.addEventListener(() => {
         mapElement.style.visibility = 'hidden';
     }
 
-    if (subviews.length === 1) {
+    if (subviews.length === 1 && streetviews[1]) {
         subviewElements[1].style.visibility = 'hidden';
         (subviewElements[1].querySelector('canvas') as HTMLElement).style.visibility = 'hidden';
     }
