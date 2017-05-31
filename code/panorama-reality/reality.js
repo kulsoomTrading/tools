@@ -172,7 +172,7 @@ app.reality.connectEvent.addEventListener(function (controlSession) {
         var entityPromise = new Promise(function (resolve, reject) {
             if (Argon.Cesium.defined(pano.longitude) &&
                 Argon.Cesium.defined(pano.latitude)) {
-                var cartographic = new Argon.Cesium.Cartographic(pano.longitude, pano.latitude, pano.height);
+                var cartographic = Argon.Cesium.Cartographic.fromDegrees(pano.longitude, pano.latitude, pano.height);
                 var updatedCartographicPromise = void 0;
                 if (Argon.Cesium.defined(pano.height)) {
                     updatedCartographicPromise = Promise.resolve(cartographic);

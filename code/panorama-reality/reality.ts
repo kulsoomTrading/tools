@@ -234,7 +234,7 @@ app.reality.connectEvent.addEventListener((controlSession)=>{
             if (Argon.Cesium.defined(pano.longitude) &&
                 Argon.Cesium.defined(pano.latitude)) {
 
-                const cartographic = new Argon.Cesium.Cartographic(pano.longitude, pano.latitude, pano.height);
+                const cartographic = Argon.Cesium.Cartographic.fromDegrees(pano.longitude, pano.latitude, pano.height);
 
                 let updatedCartographicPromise:Promise<Argon.Cesium.Cartographic>;
                 if (Argon.Cesium.defined(pano.height)) {
