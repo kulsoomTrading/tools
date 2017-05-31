@@ -19,8 +19,7 @@ scene.add(camera);
 // We use the standard WebGLRenderer when we only need WebGL-based content
 var renderer = new THREE.WebGLRenderer({
     alpha: true,
-    logarithmicDepthBuffer: true,
-    antialias: true
+    logarithmicDepthBuffer: true
 });
 // account for the pixel density of the device
 renderer.setPixelRatio(window.devicePixelRatio);
