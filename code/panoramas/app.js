@@ -13,7 +13,7 @@ scene.add(stage);
 var renderer = new THREE.WebGLRenderer({
     alpha: true,
     logarithmicDepthBuffer: true,
-    antialias: true
+    antialias: Argon.suggestedWebGLContextAntialiasAttribute
 });
 // account for the pixel density of the device
 renderer.setPixelRatio(window.devicePixelRatio);
@@ -178,16 +178,7 @@ app.renderEvent.addEventListener(function () {
     // both views if we are in stereo viewing mode
     var view = app.view;
     renderer.setSize(view.renderWidth, view.renderHeight, false);
-    var viewport = view.viewport;
-    // if the viewport width and the renderwidth are different
-    // we assume we are rendering on a different surface than
-    // the main display, so we reset the pixel ratio to 1
-    if (viewport.width != view.renderWidth) {
-        renderer.setPixelRatio(1);
-    }
-    else {
-        renderer.setPixelRatio(window.devicePixelRatio);
-    }
+    renderer.setPixelRatio(app.suggestedPixelRatio);
     // there is 1 subview in monocular mode, 2 in stereo mode    
     for (var _i = 0, _a = app.view.subviews; _i < _a.length; _i++) {
         var subview = _a[_i];

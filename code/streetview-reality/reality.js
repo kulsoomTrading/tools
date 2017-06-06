@@ -118,6 +118,7 @@ var initStreetview = function () {
     map = new google.maps.Map(mapElement);
     streetviews = [
         new google.maps.StreetViewPanorama(subviewElements[0], streetviewOptions)
+        // new google.maps.StreetViewPanorama(subviewElements[1], streetviewOptions)
     ];
     map.setStreetView(streetviews[0]);
     // Enable the pan control so we can customize to trigger device orientation based pose
@@ -210,6 +211,7 @@ var frameStateOptions = {
     overrideStage: true,
     overrideUser: true
 };
+var scratchHeadingPitchRoll = new Argon.Cesium.HeadingPitchRoll;
 // Reality views must raise frame events at regular intervals in order to 
 // drive updates for the entire system.
 app.device.frameStateEvent.addEventListener(function (frameState) {
@@ -270,9 +272,8 @@ app.device.frameStateEvent.addEventListener(function (frameState) {
     var pov = streetviews[0].getPov();
     var heading = -pov.heading * CesiumMath.RADIANS_PER_DEGREE;
     var pitch = pov.pitch * CesiumMath.RADIANS_PER_DEGREE;
-    var pitchValue = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, pitch, scratchQuaternionPitch);
-    var headingValue = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, heading, scratchQuaternionHeading);
-    orientationValue = Quaternion.fromHeadingPitchRoll(-heading, 0, pitch + Math.PI / 2, scratchQuaternion);
+    Argon.Cesium.HeadingPitchRoll.fromDegrees(pov.heading, 0, pov.pitch + 90, scratchHeadingPitchRoll);
+    orientationValue = Quaternion.fromHeadingPitchRoll(scratchHeadingPitchRoll);
     orientationValue = Quaternion.multiply(x90Neg, orientationValue, orientationValue); // convert from ENU to EUS
     app.context.user.position.setValue(Cartesian3.fromElements(0, Argon.AVERAGE_EYE_HEIGHT, 0, scratchCartesian), app.context.stage);
     app.context.user.orientation.setValue(orientationValue);
@@ -289,6 +290,9 @@ app.device.frameStateEvent.addEventListener(function (frameState) {
         var fovyRad = targetFrustum.fovy;
         var fovxRad = Math.atan(Math.tan(fovyRad * 0.5) * subviewAspect) * 2.0;
         zoomLevel = 1 - Math.log2(fovxRad * Argon.Cesium.CesiumMath.DEGREES_PER_RADIAN / 90);
+        // streetviews.forEach((streetview) => {
+        //     streetview.setZoom(zoomLevel);
+        // });
     }
     // if (zoomLevel < MIN_ZOOM_LEVEL) zoomLevel = MIN_ZOOM_LEVEL;
     if (zoomLevel === 0)

@@ -19,7 +19,7 @@ scene.add(camera);
 // We use the standard WebGLRenderer when we only need WebGL-based content
 var renderer = new THREE.WebGLRenderer({
     alpha: true,
-    logarithmicDepthBuffer: true
+    logarithmicDepthBuffer: true,
 });
 // account for the pixel density of the device
 renderer.setPixelRatio(window.devicePixelRatio);
@@ -111,7 +111,6 @@ app.device.frameStateEvent.addEventListener(function (frameState) {
             // const drag = Quaternion.multiply(dragPitch, dragYaw, dragYaw);
             headingPitchRoll.heading -= frustum.fov * (dragMovement.endPosition.x - dragMovement.startPosition.x) / app.view.viewport.width;
             headingPitchRoll.pitch -= frustum.fovy * (dragMovement.endPosition.y - dragMovement.startPosition.y) / app.view.viewport.height;
-            // currentOrientation = Quaternion.multiply(currentOrientation, dragYaw, dragYaw);
         }
         var currentOrientation = Quaternion.fromHeadingPitchRoll(headingPitchRoll, scratchQuaternion);
         Quaternion.multiply(NEG_X_90, currentOrientation, currentOrientation);

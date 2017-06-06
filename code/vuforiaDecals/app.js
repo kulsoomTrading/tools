@@ -19,7 +19,7 @@ gvuBrochureObject.add(headModel);
 var renderer = new THREE.WebGLRenderer({
     alpha: true,
     logarithmicDepthBuffer: true,
-    antialias: true
+    antialias: Argon.suggestedWebGLContextAntialiasAttribute
 });
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.domElement.style.position = 'absolute';
@@ -363,17 +363,9 @@ app.renderEvent.addEventListener(function () {
     // both views if we are in stereo viewing mode
     var view = app.view;
     renderer.setSize(view.renderWidth, view.renderHeight, false);
+    renderer.setPixelRatio(app.suggestedPixelRatio);
     var viewport = view.viewport;
     hud.setSize(viewport.width, viewport.height);
-    // if the viewport width and the renderwidth are different
-    // we assume we are rendering on a different surface than
-    // the main display, so we reset the pixel ratio to 1
-    if (viewport.width != view.renderWidth) {
-        renderer.setPixelRatio(1);
-    }
-    else {
-        renderer.setPixelRatio(window.devicePixelRatio);
-    }
     for (var _i = 0, _a = app.view.subviews; _i < _a.length; _i++) {
         var subview = _a[_i];
         // set the position and orientation of the camera for 

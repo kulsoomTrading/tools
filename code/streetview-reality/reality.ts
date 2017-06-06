@@ -241,6 +241,8 @@ const frameStateOptions = {
     overrideUser: true
 }
 
+const scratchHeadingPitchRoll = new Argon.Cesium.HeadingPitchRoll;
+
 // Reality views must raise frame events at regular intervals in order to 
 // drive updates for the entire system.
 app.device.frameStateEvent.addEventListener((frameState)=>{
@@ -303,9 +305,8 @@ app.device.frameStateEvent.addEventListener((frameState)=>{
     const pov = streetviews[0].getPov();
     const heading = - pov.heading * CesiumMath.RADIANS_PER_DEGREE;
     const pitch = pov.pitch * CesiumMath.RADIANS_PER_DEGREE;
-    const pitchValue = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, pitch, scratchQuaternionPitch);
-    const headingValue = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, heading, scratchQuaternionHeading)
-    orientationValue = Quaternion.fromHeadingPitchRoll(-heading, 0, pitch + Math.PI / 2, scratchQuaternion);
+    Argon.Cesium.HeadingPitchRoll.fromDegrees( pov.heading, 0, pov.pitch + 90, scratchHeadingPitchRoll); 
+    orientationValue = Quaternion.fromHeadingPitchRoll(scratchHeadingPitchRoll);
     orientationValue = Quaternion.multiply(x90Neg, orientationValue, orientationValue); // convert from ENU to EUS
 
     (app.context.user.position as Argon.Cesium.ConstantPositionProperty).setValue(
