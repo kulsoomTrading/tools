@@ -34,7 +34,7 @@ app.reality.install(Argon.resolveURL('../streetview-reality/index.html'));
 const renderer = new THREE.WebGLRenderer({
     alpha: true,
     logarithmicDepthBuffer: true,
-    antialias: true
+    antialias: Argon.suggestedWebGLContextAntialiasAttribute
 });
 
 // account for the pixel density of the device
@@ -647,7 +647,8 @@ app.renderEvent.addEventListener((frame) => {
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
     const view = app.view;
-    renderer.setSize(view.renderWidth, view.renderHeight, false);    
+    renderer.setSize(view.renderWidth, view.renderHeight, false);  
+    renderer.setPixelRatio(app.suggestedPixelRatio);  
 
     const viewport = view.viewport;
     hud.setSize(viewport.width, viewport.height);

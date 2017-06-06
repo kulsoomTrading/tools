@@ -22,13 +22,17 @@ scene.add(camera);
 
 // We use the standard WebGLRenderer when we only need WebGL-based content
 const renderer = new THREE.WebGLRenderer({ 
-    alpha: true,
+    alpha: true, 
     logarithmicDepthBuffer: true,
+    antialias: true
 });
+
+var infobox: HTMLElement = document.getElementById( 'info' );
+infobox.innerHTML = "waiting!";
 
 // account for the pixel density of the device
 renderer.setPixelRatio(window.devicePixelRatio);
-app.view.setLayers([{source: renderer.domElement}]);
+app.view.setLayers([{source: renderer.domElement}, {source: infobox}]);
 
 // Tell argon what local coordinate system you want.  The default coordinate
 // frame used by Argon is Cesium's FIXED frame, which is centered at the center
@@ -74,9 +78,7 @@ panoSpheres.forEach((mesh)=>{
 })
 var currentSphere = 0;
 
-const Z_90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Z, Argon.Cesium.CesiumMath.PI_OVER_TWO);
-const NEG_X_90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, -Argon.Cesium.CesiumMath.PI_OVER_TWO);
-// const NEG_Y_90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, Argon.Cesium.CesiumMath.PI_OVER_TWO);
+const X_90 = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, Argon.Cesium.CesiumMath.PI_OVER_TWO);
 
 // Creating a lot of garbage slows everything down. Not fun.
 // Let's create some recyclable objects that we can use later.
@@ -96,7 +98,22 @@ const frameStateOptions = {
     overrideUser: false
 }
 
-const headingPitchRoll = new Argon.Cesium.HeadingPitchRoll(0,-Math.PI/2,0);
+//// 
+const DEG45 = Math.sin(THREE.Math.degToRad(45));
+var webkitCompassHeading = null;
+var webkitCompassAccuracy = 0;
+var deviceOrientationListener = function (e) {
+    webkitCompassHeading = e['webkitCompassHeading'];
+    webkitCompassAccuracy = +e['webkitCompassAccuracy'];
+};
+window.addEventListener('deviceorientation', deviceOrientationListener);
+var euler = new THREE.Euler();
+var quat = new THREE.Quaternion();
+var mat = new THREE.Matrix4();
+var vec = new THREE.Vector3(0,1,0);
+var vec2 = new THREE.Vector3(0,0,-1).normalize();
+var vec3 = new THREE.Vector3(0,1,-2).normalize();
+var vec4 = new THREE.Vector3(0,1,1).normalize();
 
 // Reality views must raise frame events at regular intervals in order to 
 // drive updates for the entire system
@@ -106,7 +123,7 @@ app.device.frameStateEvent.addEventListener((frameState)=>{
     Argon.decomposePerspectiveProjectionMatrix(subviews[0].projectionMatrix, frustum);
     frustum.fov = app.view.subviews[0] && app.view.subviews[0].frustum.fov || CesiumMath.PI_OVER_THREE;
 
-    if ( !app.device.strict ) {
+    if ( !frameState.strict ) {
 
         if (aggregator.isMoving(Argon.Cesium.CameraEventType.WHEEL)) {
             const wheelMovement = aggregator.getMovement(Argon.Cesium.CameraEventType.WHEEL);
@@ -139,34 +156,70 @@ app.device.frameStateEvent.addEventListener((frameState)=>{
         app.device.stage, 
         scratchQuaternion
     );
-
+    
     if (!deviceUserOrientation) {
         frameStateOptions.overrideUser = true;
 
-        // let currentOrientation = 
-        //     currentPano && Argon.getEntityOrientationInReferenceFrame(app.context.user, time, currentPano.entity, scratchQuaternion) || 
-        //     Quaternion.clone(Quaternion.IDENTITY, scratchQuaternion);
+        let currentOrientation = 
+            currentPano && Argon.getEntityOrientationInReferenceFrame(app.context.user, time, currentPano.entity, scratchQuaternion) || 
+            Quaternion.clone(X_90, scratchQuaternion);
 
         if (aggregator.isMoving(Argon.Cesium.CameraEventType.LEFT_DRAG)) {
             const dragMovement = aggregator.getMovement(Argon.Cesium.CameraEventType.LEFT_DRAG);
             // const dragPitch = Quaternion.fromAxisAngle(Cartesian3.UNIT_X, frustum.fov * (dragMovement.endPosition.y - dragMovement.startPosition.y) / app.viewport.current.height, scratchQuaternionDragPitch);
-            // const dragYaw = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, frustum.fov * (dragMovement.endPosition.x - dragMovement.startPosition.x) / app.view.viewport.width, scratchQuaternionDragYaw);
+            const dragYaw = Quaternion.fromAxisAngle(Cartesian3.UNIT_Y, frustum.fov * (dragMovement.endPosition.x - dragMovement.startPosition.x) / app.view.viewport.width, scratchQuaternionDragYaw);
             // const drag = Quaternion.multiply(dragPitch, dragYaw, dragYaw);
 
-            headingPitchRoll.heading -= frustum.fov * (dragMovement.endPosition.x - dragMovement.startPosition.x) / app.view.viewport.width;
-            headingPitchRoll.pitch -= frustum.fovy * (dragMovement.endPosition.y - dragMovement.startPosition.y) / app.view.viewport.height;
-            // currentOrientation = Quaternion.multiply(currentOrientation, dragYaw, dragYaw);
+            currentOrientation = Quaternion.multiply(currentOrientation, dragYaw, dragYaw);
         }
 
-        const currentOrientation = Quaternion.fromHeadingPitchRoll(headingPitchRoll, scratchQuaternion);
-        Quaternion.multiply(NEG_X_90, currentOrientation, currentOrientation);
-        Quaternion.multiply(currentOrientation, Z_90,currentOrientation);
-        // Quaternion.multiply(currentOrientation, X_90, currentOrientation);
+        // print device orientation
+        quat.set(currentOrientation.x, currentOrientation.y, currentOrientation.z, currentOrientation.w);
+
         (app.context.user.position as Argon.Cesium.ConstantPositionProperty).setValue(Cartesian3.ZERO, app.context.stage);
         (app.context.user.orientation as Argon.Cesium.ConstantProperty).setValue(currentOrientation);
     } else {
         frameStateOptions.overrideUser = false;
+
+        // print device orientation
+        quat.set(deviceUserOrientation.x, deviceUserOrientation.y, deviceUserOrientation.z, deviceUserOrientation.w);
     }
+
+    euler.setFromQuaternion(quat, "XYZ");
+    mat.setRotationFromQuaternion(quat);
+    var innerHTML = "Angle: yaw=" + THREE.Math.radToDeg(euler.x).toPrecision(6) + " pitch=" + THREE.Math.radToDeg(euler.y).toPrecision(6) + " roll=" + THREE.Math.radToDeg(euler.z).toPrecision(6);
+    vec.set(0,1,0);
+    vec.applyMatrix4(mat);
+    vec2.set(0,0,-1);
+    vec2.applyMatrix4(mat);
+    vec3.set(0,1,-2).normalize();
+    vec3.applyMatrix4(mat);
+    vec4.set(0,1,2).normalize();
+    vec4.applyMatrix4(mat);
+
+    var yaw;
+    if (vec.z > DEG45) {
+        yaw = THREE.Math.radToDeg(Math.atan2(vec3.y, vec3.x)); 
+    } else if (vec.z < -(DEG45)) {
+        yaw = THREE.Math.radToDeg(Math.atan2(vec4.y, vec4.x)); 
+    } else {
+        yaw = THREE.Math.radToDeg(Math.atan2(vec.y, vec.x));
+    }
+    yaw -= 90;
+    if (yaw < 0) {
+        yaw += 360;
+    }
+    yaw = 360 - yaw;
+    innerHTML += "<br> yaw = " + yaw.toPrecision(6);
+
+    if (webkitCompassHeading) {
+        innerHTML += "<br> webkitHeading = " + webkitCompassHeading;
+    }
+    innerHTML += "<br>     y axis = [" + vec.x.toPrecision(6) + ", " + vec.y.toPrecision(6) + ", " + vec.z.toPrecision(6) + "]";
+    innerHTML += "<br>    -z axis = [" + vec2.x.toPrecision(6) + ", " + vec2.y.toPrecision(6) + ", " + vec2.z.toPrecision(6) + "]";
+    innerHTML += "<br>0,1,-1 axis = [" + vec3.x.toPrecision(6) + ", " + vec3.y.toPrecision(6) + ", " + vec3.z.toPrecision(6) + "]";
+    innerHTML += "<br>0,1,1  axis = [" + vec4.x.toPrecision(6) + ", " + vec4.y.toPrecision(6) + ", " + vec4.z.toPrecision(6) + "]";
+    infobox.innerHTML = innerHTML;
 
     aggregator.reset();
 
@@ -230,28 +283,35 @@ app.reality.connectEvent.addEventListener((controlSession)=>{
         
         const offsetRadians = (pano.offsetDegrees || 0) * CesiumMath.DEGREES_PER_RADIAN;
         
-        const entityPromise = new Promise<Argon.Cesium.Entity>((resolve, reject)=>{
-            if (Argon.Cesium.defined(pano.longitude) &&
-                Argon.Cesium.defined(pano.latitude)) {
+        Argon.updateHeightFromTerrain()
 
-                const cartographic = Argon.Cesium.Cartographic.fromDegrees(pano.longitude, pano.latitude, pano.height);
+        app.entity.createFixed(new Argon.Cesium.Cartographic(pano.longitude, pano.latitude, pano.height))
 
-                let updatedCartographicPromise:Promise<Argon.Cesium.Cartographic>;
-                if (Argon.Cesium.defined(pano.height)) {
-                    updatedCartographicPromise = Promise.resolve(cartographic);
-                } else {
-                    updatedCartographicPromise = Argon.updateHeightFromTerrain(cartographic);
-                }
+        const entity = new Argon.Cesium.Entity;
+        if (Argon.Cesium.defined(pano.longitude) &&
+            Argon.Cesium.defined(pano.latitude)) {
 
-                updatedCartographicPromise.then((cart)=>{
-                    resolve(app.entity.createFixed(cart, Argon.eastUpSouthToFixedFrame));
-                });
+            const cartographic = Argon.Cesium.Cartographic.fromDegrees(pano.longitude, pano.latitude, pano.height);
 
+            let updatedCartographicPromise:Promise<Argon.Cesium.Cartographic>;
+            if (Argon.Cesium.defined(pano.height)) {
+                updatedCartographicPromise = Promise.resolve(cartographic);
             } else {
-                resolve(new Argon.Cesium.Entity);
+                updatedCartographicPromise = Argon.updateHeightFromTerrain(cartographic);
             }
-        });
 
+
+            const positionProperty = new Argon.Cesium.ConstantPositionProperty(undefined);
+            const positionValue = Cartesian3.fromDegrees(pano.longitude, pano.latitude, pano.height || 0);
+            positionProperty.setValue(positionValue, Argon.Cesium.ReferenceFrame.FIXED);
+            entity.position = positionProperty;
+            const orientationProperty = new Argon.Cesium.ConstantProperty();
+            // calculate the orientation for the ENU coodrinate system at the given position
+            const orientationValue = Argon.Cesium.Transforms.headingPitchRollQuaternion(positionValue, identityHeadingPitchRoll);
+            // TODO: apply offsetDegrees to orientation
+            orientationProperty.setValue(orientationValue);
+            entity.orientation = orientationProperty;
+        }
         
         var texture = new Promise<THREE.Texture>((resolve)=>{
             loader.load(pano.url, function ( texture ) {
@@ -260,23 +320,21 @@ app.reality.connectEvent.addEventListener((controlSession)=>{
             });
         });
         
-        entityPromise.then((entity)=>{
-            panoramas.set(pano.url, {
-                url: pano.url,
-                longitude: pano.longitude,
-                latitude: pano.latitude,
-                height: pano.height,
-                offsetDegrees: pano.offsetDegrees,
-                entity,
-                texture
-            });
+        panoramas.set(pano.url, {
+            url: pano.url,
+            longitude: pano.longitude,
+            latitude: pano.latitude,
+            height: pano.height,
+            offsetDegrees: pano.offsetDegrees,
+            entity,
+            texture
         });
         
         // We can optionally return a value (or a promise of a value) in a message handler. 
         // In this case, if three.js throws an error while attempting to load
         // the texture, the error will be passed to the remote session. Otherwise,
         // this function will respond as fulfilled when the texture is loaded. 
-        return texture.then(()=>entityPromise).then(()=>{});
+        return texture.then(()=>{})
     }
     controlSession.on['edu.gatech.ael.panorama.deletePanorama'] = ({url}) => {
         panoramas.delete(url);
@@ -300,7 +358,7 @@ function showPanorama(options:ShowPanoramaOptions) {
     const url = options.url;
     const transition:Transition = options.transition || {};
     const easing = resolve(transition.easing, TWEEN.Easing) || TWEEN.Easing.Linear.None;
-        
+    
     if (!url) throw new Error('Expected a url');
     if (!easing) throw new Error('Unknown easing: ' + easing);
     
