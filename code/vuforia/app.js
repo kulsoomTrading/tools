@@ -45,9 +45,37 @@ var uniforms = {
 var argonTextObject = new THREE.Object3D();
 argonTextObject.position.z = -0.5;
 userLocation.add(argonTextObject);
+var stonesTextObject = new THREE.Object3D();
+userLocation.add(stonesTextObject);
+stonesTextObject.visible = false;
+var chipsTextObject = new THREE.Object3D();
+userLocation.add(chipsTextObject);
+chipsTextObject.visible = false;
 var loader = new THREE.FontLoader();
 loader.load('../resources/fonts/helvetiker_bold.typeface.json', function (font) {
-    var textGeometry = new THREE.TextGeometry("argon.js", {
+    var shaderMaterial = new THREE.ShaderMaterial({
+        uniforms: uniforms,
+        vertexShader: "\n            uniform float amplitude;\n            attribute vec3 customColor;\n            attribute vec3 displacement;\n            varying vec3 vNormal;\n            varying vec3 vColor;\n            void main() {\n                vNormal = normal;\n                vColor = customColor;\n                vec3 newPosition = position + normal * amplitude * displacement;\n                gl_Position = projectionMatrix * modelViewMatrix * vec4( newPosition, 1.0 );\n            }\n        ",
+        fragmentShader: "\n            varying vec3 vNormal;\n            varying vec3 vColor;\n            void main() {\n                const float ambient = 0.4;\n                vec3 light = vec3( 1.0 );\n                light = normalize( light );\n                float directional = max( dot( vNormal, light ), 0.0 );\n                gl_FragColor = vec4( ( directional + ambient ) * vColor, 1.0 );\n            }\n        "
+    });
+    var argonTextMesh = createTextMesh(font, "argon.js", shaderMaterial);
+    argonTextObject.add(argonTextMesh);
+    argonTextObject.scale.set(0.001, 0.001, 0.001);
+    argonTextObject.position.z = -0.50;
+    var stonesTextMesh = createTextMesh(font, "stones", shaderMaterial);
+    stonesTextObject.add(stonesTextMesh);
+    stonesTextObject.scale.set(0.001, 0.001, 0.001);
+    var chipsTextMesh = createTextMesh(font, "chips", shaderMaterial);
+    chipsTextObject.add(chipsTextMesh);
+    chipsTextObject.scale.set(0.001, 0.001, 0.001);
+    // add an argon updateEvent listener to slowly change the text over time.
+    // we don't have to pack all our logic into one listener.
+    app.context.updateEvent.addEventListener(function () {
+        uniforms.amplitude.value = 1.0 + Math.sin(Date.now() * 0.001 * 0.5);
+    });
+});
+function createTextMesh(font, text, material) {
+    var textGeometry = new THREE.TextGeometry(text, {
         font: font,
         size: 40,
         height: 5,
@@ -86,21 +114,9 @@ loader.load('../resources/fonts/helvetiker_bold.typeface.json', function (font) 
     }
     bufferGeometry.addAttribute('customColor', new THREE.BufferAttribute(colors, 3));
     bufferGeometry.addAttribute('displacement', new THREE.BufferAttribute(displacement, 3));
-    var shaderMaterial = new THREE.ShaderMaterial({
-        uniforms: uniforms,
-        vertexShader: "\n            uniform float amplitude;\n            attribute vec3 customColor;\n            attribute vec3 displacement;\n            varying vec3 vNormal;\n            varying vec3 vColor;\n            void main() {\n                vNormal = normal;\n                vColor = customColor;\n                vec3 newPosition = position + normal * amplitude * displacement;\n                gl_Position = projectionMatrix * modelViewMatrix * vec4( newPosition, 1.0 );\n            }\n        ",
-        fragmentShader: "\n            varying vec3 vNormal;\n            varying vec3 vColor;\n            void main() {\n                const float ambient = 0.4;\n                vec3 light = vec3( 1.0 );\n                light = normalize( light );\n                float directional = max( dot( vNormal, light ), 0.0 );\n                gl_FragColor = vec4( ( directional + ambient ) * vColor, 1.0 );\n            }\n        "
-    });
-    var textMesh = new THREE.Mesh(bufferGeometry, shaderMaterial);
-    argonTextObject.add(textMesh);
-    argonTextObject.scale.set(0.001, 0.001, 0.001);
-    argonTextObject.position.z = -0.50;
-    // add an argon updateEvent listener to slowly change the text over time.
-    // we don't have to pack all our logic into one listener.
-    app.context.updateEvent.addEventListener(function () {
-        uniforms.amplitude.value = 1.0 + Math.sin(Date.now() * 0.001 * 0.5);
-    });
-});
+    var textMesh = new THREE.Mesh(bufferGeometry, material);
+    return textMesh;
+}
 app.vuforia.isAvailable().then(function (available) {
     // vuforia not available on this platform
     if (!available) {
@@ -161,6 +177,76 @@ app.vuforia.isAvailable().then(function (available) {
             });
             // activate the dataset.
             api.objectTracker.activateDataSet(dataSet);
+        });
+        // We can load a second dataset and have both active simultaneously.
+        // Load the Vuforia Stones and Chips targets, and set the MaxSimultaneousImageTargets hint
+        // to 2 so two targets can be tracked simultaneously.
+        api.objectTracker.createDataSet("../resources/datasets/StonesAndChips.xml").then(function (dataSet) {
+            // the data set has been succesfully downloaded
+            // tell vuforia to load the dataset.  
+            dataSet.load().then(function () {
+                // when it is loaded, we retrieve a list of trackables defined in the
+                // dataset and set up the content for the target
+                var trackables = dataSet.getTrackables();
+                // tell argon we want to track a specific trackable.  Each trackable
+                // has a Cesium entity associated with it, and is expressed in a 
+                // coordinate frame relative to the camera.  Because they are Cesium
+                // entities, we can ask for their pose in any coordinate frame we know
+                // about.
+                var stonesEntity = app.context.subscribeToEntityById(trackables["stones"].id);
+                var chipsEntity = app.context.subscribeToEntityById(trackables["chips"].id);
+                // create a THREE object to put on the trackable
+                var stonesObject = new THREE.Object3D;
+                var chipsObject = new THREE.Object3D;
+                scene.add(stonesObject);
+                scene.add(chipsObject);
+                stonesObject.add(stonesTextObject);
+                chipsObject.add(chipsTextObject);
+                // the updateEvent is called each time the 3D world should be
+                // rendered, before the renderEvent.  The state of your application
+                // should be updated here.
+                app.context.updateEvent.addEventListener(function () {
+                    // get the pose (in local coordinates) of each target
+                    var stonesPose = app.context.getEntityPose(stonesEntity);
+                    var chipsPose = app.context.getEntityPose(chipsEntity);
+                    // if the pose is known the target is visible, so set the
+                    // THREE object to the location and orientation
+                    if (stonesPose.poseStatus & Argon.PoseStatus.KNOWN) {
+                        stonesObject.position.copy(stonesPose.position);
+                        stonesObject.quaternion.copy(stonesPose.orientation);
+                    }
+                    if (chipsPose.poseStatus & Argon.PoseStatus.KNOWN) {
+                        chipsObject.position.copy(chipsPose.position);
+                        chipsObject.quaternion.copy(chipsPose.orientation);
+                    }
+                    // when the target is first seen after not being seen, the 
+                    // status is FOUND.  Here, we show the content.
+                    // when the target is first lost after being seen, the status 
+                    // is LOST.  Here, we hide the content.
+                    if (stonesPose.poseStatus & Argon.PoseStatus.FOUND) {
+                        stonesTextObject.visible = true;
+                    }
+                    else if (stonesPose.poseStatus & Argon.PoseStatus.LOST) {
+                        stonesTextObject.visible = false;
+                    }
+                    if (chipsPose.poseStatus & Argon.PoseStatus.FOUND) {
+                        chipsTextObject.visible = true;
+                    }
+                    else if (chipsPose.poseStatus & Argon.PoseStatus.LOST) {
+                        chipsTextObject.visible = false;
+                    }
+                });
+            })["catch"](function (err) {
+                console.log("could not load dataset: " + err.message);
+            });
+            // activate the dataset.
+            api.objectTracker.activateDataSet(dataSet);
+            // enable 2 simultaneously tracked targets
+            api.setHint(Argon.VuforiaHint.MaxSimultaneousImageTargets, 2).then(function (result) {
+                console.log("setHint " + (result ? "succeeded" : "failed"));
+            })["catch"](function (err) {
+                console.log("could not set hint: " + err.message);
+            });
         });
     })["catch"](function (err) {
         console.log("vuforia failed to initialize: " + err.message);
