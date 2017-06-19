@@ -22,6 +22,9 @@ var renderer = new THREE.WebGLRenderer({
     logarithmicDepthBuffer: true,
     antialias: Argon.suggestedWebGLContextAntialiasAttribute
 });
+renderer.autoClear = false;
+// set our desired reality 
+app.reality.request(Argon.RealityViewer.WEBRTC);
 var hud = new THREE.CSS3DArgonHUD();
 //  We also move the description box to the left Argon HUD.  
 // We don't duplicated it because we only use it in mono mode
@@ -112,6 +115,7 @@ app.updateEvent.addEventListener(function () {
 });
 // renderEvent is fired whenever argon wants the app to update its display
 app.renderEvent.addEventListener(function () {
+    renderer.resetGLState();
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
