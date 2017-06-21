@@ -6,7 +6,7 @@
 // so we need to put the assets on the web and point Cesium at them
 var CESIUM_BASE_URL = '../resources/cesium/';
 // set up Argon
-var app = Argon.init();
+var app = Argon.init(null, { 'sharedCanvas': true }, null);
 // this app uses geoposed content, so subscribe to geolocation updates
 app.context.subscribeGeolocation();
 // set up THREE.  Create a scene, a perspective camera and an object
@@ -115,7 +115,12 @@ app.updateEvent.addEventListener(function () {
 });
 // renderEvent is fired whenever argon wants the app to update its display
 app.renderEvent.addEventListener(function () {
-    renderer.resetGLState();
+    if (app.reality.isSharedCanvas) {
+        renderer.resetGLState();
+    }
+    else {
+        renderer.clear();
+    }
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
