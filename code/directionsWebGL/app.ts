@@ -33,6 +33,64 @@ renderer.autoClear = false;
 // set our desired reality 
 app.reality.request(Argon.RealityViewer.WEBRTC);
 
+let webrtcRealitySession:Argon.SessionPort;
+
+// start listening for connections to a reality
+app.reality.connectEvent.addEventListener((session)=>{
+    if (session.supportsProtocol('ar.jsartoolkit')) {
+        // save a reference to this session
+        webrtcRealitySession = session;
+
+        webrtcRealitySession.request('ar.jsartoolkit.init').then(()=>{
+            console.log("*** artoolkit init success!!! ");
+
+            webrtcRealitySession.request('ar.jsartoolkit.addMarker', {
+                url: "../resources/artoolkit/patt.hiro"
+            }).then((msg)=>{
+                if (!msg) return;
+
+                const hiroEntity = app.context.subscribeToEntityById(msg.id);
+
+                var sphere = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.5, 8, 8),
+                    new THREE.MeshNormalMaterial()
+                );
+                sphere.material.shading = THREE.FlatShading;
+                sphere.position.z = 0.5;
+
+                const hiroObject = new THREE.Object3D;
+                scene.add(hiroObject);
+                hiroObject.add(sphere);
+
+                // the updateEvent is called each time the 3D world should be
+                // rendered, before the renderEvent.  The state of your application
+                // should be updated here.
+                app.context.updateEvent.addEventListener(() => {
+                    // get the pose (in local coordinates) of the marker
+                    const hiroPose = app.context.getEntityPose(hiroEntity);
+
+                    // if the pose is known the target is visible, so set the
+                    // THREE object to the location and orientation
+                    if (hiroPose.poseStatus & Argon.PoseStatus.KNOWN) {
+                        hiroObject.position.copy(<any>hiroPose.position);
+                        hiroObject.quaternion.copy(<any>hiroPose.orientation);
+                    }
+
+                    // when the target is first seen after not being seen, the 
+                    // status is FOUND.  Here, we show the content.
+                    // when the target is first lost after being seen, the status 
+                    // is LOST.  Here, we hide the content.
+                    if (hiroPose.poseStatus & Argon.PoseStatus.FOUND) {
+                        sphere.visible = true;
+                    } else if (hiroPose.poseStatus & Argon.PoseStatus.LOST) {
+                        sphere.visible = false;
+                    }
+                })
+            }); 
+        });
+    }
+})
+
 const hud = new (<any>THREE).CSS3DArgonHUD();
 
 //  We also move the description box to the left Argon HUD.  
@@ -68,7 +126,7 @@ var ambientlight = new THREE.AmbientLight( 0x404040 ); // soft white ambient lig
 scene.add(ambientlight);
 
 // install a reality that the user can select from
-app.reality.install(Argon.resolveURL('../streetview-reality/index.html'));
+//app.reality.install(Argon.resolveURL('../streetview-reality/index.html'));
 
 // create 6 3D words for the 6 directions.  
 var loader = new THREE.FontLoader();
