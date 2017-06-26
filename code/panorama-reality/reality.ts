@@ -11,7 +11,7 @@ const CesiumMath = Argon.Cesium.CesiumMath;
 // Defining a protocol allows apps to communicate with the reality in a
 // reliable way. 
 const app = Argon.initRealityViewer({
-    protocols: ['ael.gatech.panorama@v1']
+    protocols: ['edu.gatech.ael.panorama@v1']
 });
 
 // set up THREE.  Create a scene, a perspective camera and an object
