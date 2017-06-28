@@ -4,8 +4,8 @@
 /// <reference types="stats" />
 
 // set up Argon.  Share the canvas so the webrtc reality can draw the
-// video background in it (TODO)
-const app = Argon.init(null, {'sharedCanvas': false}, null);
+// video background in it
+const app = Argon.init(null, {'sharedCanvas': true}, null);
 
 // set up THREE.  Create a scene, a perspective camera and an object
 // for the user's location
@@ -48,6 +48,12 @@ app.view.element.appendChild(hud.domElement);
 // let's show the rendering stats
 var stats = new Stats();
 hud.hudElements[0].appendChild( stats.dom );
+
+// set the layers of our view
+app.view.setLayers([
+    { source: renderer.domElement }, 
+    { source: hud.domElement }
+]);
 
 // create a bit of animated 3D text that says "argon.js" to display 
 var uniforms = {
@@ -238,9 +244,7 @@ app.renderEvent.addEventListener(() => {
         // if this is a shared canvas we can't depend on our GL state
         // being exactly how we left it last frame
         renderer.resetGLState();
-    }
-
-    if (!app.reality.isSharedCanvas) {
+    } else {
         // not a shared canvas, we need to clear it before rendering
         renderer.clear();
     }
