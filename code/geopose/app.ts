@@ -123,12 +123,20 @@ scene.add(gatechGeoTarget);
 var boxGeoObject = new THREE.Object3D;
 
 var box = new THREE.Object3D();
+
+// In a 6DOF reality(such as Tango-reality), create a box to put on the floor at the center of the stage
+var floorBox = new THREE.Object3D();
+
 var loader = new THREE.TextureLoader();
 loader.load( 'box.png', function ( texture ) {
     var geometry = new THREE.BoxGeometry(1, 1, 1);
     var material = new THREE.MeshBasicMaterial( { map: texture } );
     var mesh = new THREE.Mesh( geometry, material );
     box.add( mesh );
+    
+    var geometry2 = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+    var mesh2 = new THREE.Mesh( geometry2, material );
+    floorBox.add( mesh2 );
 })
 
 var boxGeoEntity = new Argon.Cesium.Entity({
@@ -141,6 +149,14 @@ boxGeoObject.add(box);
 boxGeoObject.position.z = -10;
 scene.add(boxGeoObject);            
 
+// A line between the two boxes
+var lineGeometry = new THREE.Geometry();
+lineGeometry.vertices.push(new THREE.Vector3());
+lineGeometry.vertices.push(new THREE.Vector3());
+var lineMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff });
+var boxToboxLine = new THREE.Line(lineGeometry, lineMaterial);
+
+
 // Create a DIV to use to label the position and distance of the cube
 let boxLocDiv = document.getElementById("box-location");
 let boxLocDiv2 = boxLocDiv.cloneNode(true) as HTMLElement;
@@ -148,6 +164,14 @@ const boxLabel = new THREE.CSS3DSprite([boxLocDiv, boxLocDiv2]);
 boxLabel.scale.set(0.02, 0.02, 0.02);
 boxLabel.position.set(0,1.25,0);
 boxGeoObject.add(boxLabel);
+
+// Create a DIV to use to label the box on the floor in 6DOF realities
+let floorBoxLocDiv = document.getElementById("floorbox-location");
+let floorBoxLocDiv2 = floorBoxLocDiv.cloneNode(true) as HTMLElement;
+const floorBoxLabel = new THREE.CSS3DSprite([floorBoxLocDiv, floorBoxLocDiv2]);
+floorBoxLabel.scale.set(0.002, 0.002, 0.002);
+floorBoxLabel.position.set(0,0.2,0);
+floorBox.add(floorBoxLabel);
 
 // putting position and orientation in the constructor above is the 
 // equivalent of doing this:
@@ -163,6 +187,7 @@ var boxInit = false;
 var boxCartographicDeg = [0,0,0];
 var lastInfoText = "";
 var lastBoxText = "";
+var lastFloorBoxText = "";
 
 // make floating point output a little less ugly
 function toFixed(value, precision) {
@@ -217,6 +242,12 @@ app.updateEvent.addEventListener((frame) => {
             // we will keep trying to reset it to FIXED until it works!
             boxInit = true;
         }
+
+        // add the additional box only in 6DOF realities
+        if (app.context.userTracking === '6DOF') {
+            scene.add(floorBox);
+            scene.add(boxToboxLine);
+        }
     }
 
     // get the local coordinates of the local box, and set the THREE object
@@ -224,6 +255,8 @@ app.updateEvent.addEventListener((frame) => {
     if (boxPose.poseStatus & Argon.PoseStatus.KNOWN) {
         boxGeoObject.position.copy(<any>boxPose.position);        
         boxGeoObject.quaternion.copy(<any>boxPose.orientation);
+        // update one end of the line to be at the local box
+        lineGeometry.vertices[0].copy(<any>boxPose.position);
     }
 
     // get the local coordinates of the GT box, and set the THREE object
@@ -237,6 +270,19 @@ app.updateEvent.addEventListener((frame) => {
         gatechGeoTarget.position.x = 1000;
     }
 
+    if (app.context.userTracking === '6DOF') {
+        // get the local coordinates of the local box, and set the THREE object
+        var floorBoxPose = app.context.getEntityPose(app.context.floor);
+        if (floorBoxPose.poseStatus & Argon.PoseStatus.KNOWN) {
+            floorBox.position.copy(<any>floorBoxPose.position);        
+            floorBox.quaternion.copy(<any>floorBoxPose.orientation);
+            // update the other end of the line to be at the floor box
+            lineGeometry.vertices[1].copy(<any>floorBoxPose.position);
+        }
+
+        lineGeometry.verticesNeedUpdate = true;
+    }
+    
     // rotate the boxes at a constant speed, independent of frame rates     
     // to make it a little less boring
     buzz.rotateY(2 * frame.deltaTime/10000);
@@ -253,8 +299,10 @@ app.updateEvent.addEventListener((frame) => {
 	var userPos = user.getWorldPosition();
     var buzzPos = buzz.getWorldPosition();
     var boxPos = box.getWorldPosition();
+    var boxPos2 = floorBox.getWorldPosition();
     var distanceToBox = userPos.distanceTo( boxPos );
     var distanceToBuzz = userPos.distanceTo( buzzPos );
+    var distanceToBox2 = userPos.distanceTo( boxPos2 );
 
     // cartographicDegrees is a 3 element array containing [longitude, latitude, height]
     var gpsCartographicDeg = [0,0,0];
@@ -293,6 +341,8 @@ app.updateEvent.addEventListener((frame) => {
 
     infoText += " distance to Buzz box @ GT (" + toFixed(distanceToBuzz,2) + ")<br>";
     infoText += "box is " + toFixed(distanceToBox,2) + " meters away";
+    if (app.context.userTracking === '6DOF')
+        infoText += "<br>floor-box is " + toFixed(distanceToBox2,2) + " meters away";
 
     var boxLabelText;
     if (boxPoseFIXED.poseStatus & Argon.PoseStatus.KNOWN) {
@@ -301,6 +351,7 @@ app.updateEvent.addEventListener((frame) => {
     } else {
         boxLabelText = "a wooden box!<br>Location unknown";        
     }
+
     if (lastInfoText !== infoText) { // prevent unecessary DOM invalidations
         locationElements[0].innerHTML = infoText;
         locationElements[1].innerHTML = infoText;
@@ -311,6 +362,16 @@ app.updateEvent.addEventListener((frame) => {
         boxLocDiv.innerHTML = boxLabelText;
         boxLocDiv2.innerHTML = boxLabelText;
         lastBoxText = boxLabelText;
+    }
+
+    // Add a label to the box on the floor
+    if (app.context.userTracking === '6DOF') {
+        var floorBoxLabelText = "a wooden box,<br>on the floor!";
+        if (lastFloorBoxText !== floorBoxLabelText) { // prevent unecessary DOM invalidations
+            floorBoxLocDiv.innerHTML = floorBoxLabelText;
+            floorBoxLocDiv2.innerHTML = floorBoxLabelText;
+            lastFloorBoxText = floorBoxLabelText;
+        }
     }
 })
     
