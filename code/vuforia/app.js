@@ -130,117 +130,119 @@ app.vuforia.isAvailable().then(function (available) {
         // the vuforia API is ready, so we can start using it.
         // tell argon to download a vuforia dataset.  The .xml and .dat file must be together
         // in the web directory, even though we just provide the .xml file url here 
-        api.objectTracker.createDataSet("../resources/datasets/ArgonTutorial.xml").then(function (dataSet) {
+        api.objectTracker.createDataSetFromURL("../resources/datasets/ArgonTutorial.xml").then(function (dataSetID) {
             // the data set has been succesfully downloaded
             // tell vuforia to load the dataset.  
-            dataSet.load().then(function () {
+            api.objectTracker.loadDataSet(dataSetID).then(function (trackables) {
                 // when it is loaded, we retrieve a list of trackables defined in the
                 // dataset and set up the content for the target
-                var trackables = dataSet.getTrackables();
                 // tell argon we want to track a specific trackable.  Each trackable
                 // has a Cesium entity associated with it, and is expressed in a 
                 // coordinate frame relative to the camera.  Because they are Cesium
                 // entities, we can ask for their pose in any coordinate frame we know
                 // about.
-                var gvuBrochureEntity = app.context.subscribeToEntityById(trackables["GVUBrochure"].id);
-                // create a THREE object to put on the trackable
-                var gvuBrochureObject = new THREE.Object3D;
-                scene.add(gvuBrochureObject);
-                // the updateEvent is called each time the 3D world should be
-                // rendered, before the renderEvent.  The state of your application
-                // should be updated here.
-                app.context.updateEvent.addEventListener(function () {
-                    // get the pose (in local coordinates) of the gvuBrochure target
-                    var gvuBrochurePose = app.context.getEntityPose(gvuBrochureEntity);
-                    // if the pose is known the target is visible, so set the
-                    // THREE object to the location and orientation
-                    if (gvuBrochurePose.poseStatus & Argon.PoseStatus.KNOWN) {
-                        gvuBrochureObject.position.copy(gvuBrochurePose.position);
-                        gvuBrochureObject.quaternion.copy(gvuBrochurePose.orientation);
-                    }
-                    // when the target is first seen after not being seen, the 
-                    // status is FOUND.  Here, we move the 3D text object from the
-                    // world to the target.
-                    // when the target is first lost after being seen, the status 
-                    // is LOST.  Here, we move the 3D text object back to the world
-                    if (gvuBrochurePose.poseStatus & Argon.PoseStatus.FOUND) {
-                        gvuBrochureObject.add(argonTextObject);
-                        argonTextObject.position.z = 0;
-                    }
-                    else if (gvuBrochurePose.poseStatus & Argon.PoseStatus.LOST) {
-                        argonTextObject.position.z = -0.50;
-                        userLocation.add(argonTextObject);
-                    }
+                app.context.subscribe(trackables["GVUBrochure"].id).then(function (gvuBrochureEntity) {
+                    // create a THREE object to put on the trackable
+                    var gvuBrochureObject = new THREE.Object3D;
+                    scene.add(gvuBrochureObject);
+                    // the updateEvent is called each time the 3D world should be
+                    // rendered, before the renderEvent.  The state of your application
+                    // should be updated here.
+                    app.context.updateEvent.addEventListener(function () {
+                        // get the pose (in local coordinates) of the gvuBrochure target
+                        var gvuBrochurePose = app.context.getEntityPose(gvuBrochureEntity);
+                        // if the pose is known the target is visible, so set the
+                        // THREE object to the location and orientation
+                        if (gvuBrochurePose.poseStatus & Argon.PoseStatus.KNOWN) {
+                            gvuBrochureObject.position.copy(gvuBrochurePose.position);
+                            gvuBrochureObject.quaternion.copy(gvuBrochurePose.orientation);
+                        }
+                        // when the target is first seen after not being seen, the 
+                        // status is FOUND.  Here, we move the 3D text object from the
+                        // world to the target.
+                        // when the target is first lost after being seen, the status 
+                        // is LOST.  Here, we move the 3D text object back to the world
+                        if (gvuBrochurePose.poseStatus & Argon.PoseStatus.FOUND) {
+                            gvuBrochureObject.add(argonTextObject);
+                            argonTextObject.position.z = 0;
+                        }
+                        else if (gvuBrochurePose.poseStatus & Argon.PoseStatus.LOST) {
+                            argonTextObject.position.z = -0.50;
+                            userLocation.add(argonTextObject);
+                        }
+                    });
                 });
-            })["catch"](function (err) {
+            })
+                .then(function () { return api.objectTracker.activateDataSet(dataSetID); })["catch"](function (err) {
                 console.log("could not load dataset: " + err.message);
             });
-            // activate the dataset.
-            api.objectTracker.activateDataSet(dataSet);
         });
         // We can load a second dataset and have both active simultaneously.
         // Load the Vuforia Stones and Chips targets, and set the MaxSimultaneousImageTargets hint
         // to 2 so two targets can be tracked simultaneously.
-        api.objectTracker.createDataSet("../resources/datasets/StonesAndChips.xml").then(function (dataSet) {
+        api.objectTracker.createDataSetFromURL("../resources/datasets/StonesAndChips.xml").then(function (dataSetID) {
             // the data set has been succesfully downloaded
             // tell vuforia to load the dataset.  
-            dataSet.load().then(function () {
+            api.objectTracker.loadDataSet(dataSetID).then(function (trackables) {
                 // when it is loaded, we retrieve a list of trackables defined in the
                 // dataset and set up the content for the target
-                var trackables = dataSet.getTrackables();
                 // tell argon we want to track a specific trackable.  Each trackable
                 // has a Cesium entity associated with it, and is expressed in a 
                 // coordinate frame relative to the camera.  Because they are Cesium
                 // entities, we can ask for their pose in any coordinate frame we know
                 // about.
-                var stonesEntity = app.context.subscribeToEntityById(trackables["stones"].id);
-                var chipsEntity = app.context.subscribeToEntityById(trackables["chips"].id);
-                // create a THREE object to put on the trackable
-                var stonesObject = new THREE.Object3D;
-                var chipsObject = new THREE.Object3D;
-                scene.add(stonesObject);
-                scene.add(chipsObject);
-                stonesObject.add(stonesTextObject);
-                chipsObject.add(chipsTextObject);
-                // the updateEvent is called each time the 3D world should be
-                // rendered, before the renderEvent.  The state of your application
-                // should be updated here.
-                app.context.updateEvent.addEventListener(function () {
-                    // get the pose (in local coordinates) of each target
-                    var stonesPose = app.context.getEntityPose(stonesEntity);
-                    var chipsPose = app.context.getEntityPose(chipsEntity);
-                    // if the pose is known the target is visible, so set the
-                    // THREE object to the location and orientation
-                    if (stonesPose.poseStatus & Argon.PoseStatus.KNOWN) {
-                        stonesObject.position.copy(stonesPose.position);
-                        stonesObject.quaternion.copy(stonesPose.orientation);
-                    }
-                    if (chipsPose.poseStatus & Argon.PoseStatus.KNOWN) {
-                        chipsObject.position.copy(chipsPose.position);
-                        chipsObject.quaternion.copy(chipsPose.orientation);
-                    }
-                    // when the target is first seen after not being seen, the 
-                    // status is FOUND.  Here, we show the content.
-                    // when the target is first lost after being seen, the status 
-                    // is LOST.  Here, we hide the content.
-                    if (stonesPose.poseStatus & Argon.PoseStatus.FOUND) {
-                        stonesTextObject.visible = true;
-                    }
-                    else if (stonesPose.poseStatus & Argon.PoseStatus.LOST) {
-                        stonesTextObject.visible = false;
-                    }
-                    if (chipsPose.poseStatus & Argon.PoseStatus.FOUND) {
-                        chipsTextObject.visible = true;
-                    }
-                    else if (chipsPose.poseStatus & Argon.PoseStatus.LOST) {
-                        chipsTextObject.visible = false;
-                    }
+                app.context.subscribe(trackables["stones"].id).then(function (stonesEntity) {
+                    // create a THREE object to put on the trackable
+                    var stonesObject = new THREE.Object3D;
+                    scene.add(stonesObject);
+                    stonesObject.add(stonesTextObject);
+                    // the updateEvent is called each time the 3D world should be
+                    // rendered, before the renderEvent.  The state of your application
+                    // should be updated here.
+                    app.context.updateEvent.addEventListener(function () {
+                        // get the pose (in local coordinates) of each target
+                        var stonesPose = app.context.getEntityPose(stonesEntity);
+                        // if the pose is known the target is visible, so set the
+                        // THREE object to the location and orientation
+                        if (stonesPose.poseStatus & Argon.PoseStatus.KNOWN) {
+                            stonesObject.position.copy(stonesPose.position);
+                            stonesObject.quaternion.copy(stonesPose.orientation);
+                        }
+                        // when the target is first seen after not being seen, the 
+                        // status is FOUND.  Here, we show the content.
+                        // when the target is first lost after being seen, the status 
+                        // is LOST.  Here, we hide the content.
+                        if (stonesPose.poseStatus & Argon.PoseStatus.FOUND) {
+                            stonesTextObject.visible = true;
+                        }
+                        else if (stonesPose.poseStatus & Argon.PoseStatus.LOST) {
+                            stonesTextObject.visible = false;
+                        }
+                    });
                 });
-            })["catch"](function (err) {
+                // Do the same thing for the chips target
+                app.context.subscribe(trackables["chips"].id).then(function (chipsEntity) {
+                    var chipsObject = new THREE.Object3D;
+                    scene.add(chipsObject);
+                    chipsObject.add(chipsTextObject);
+                    app.context.updateEvent.addEventListener(function () {
+                        var chipsPose = app.context.getEntityPose(chipsEntity);
+                        if (chipsPose.poseStatus & Argon.PoseStatus.KNOWN) {
+                            chipsObject.position.copy(chipsPose.position);
+                            chipsObject.quaternion.copy(chipsPose.orientation);
+                        }
+                        if (chipsPose.poseStatus & Argon.PoseStatus.FOUND) {
+                            chipsTextObject.visible = true;
+                        }
+                        else if (chipsPose.poseStatus & Argon.PoseStatus.LOST) {
+                            chipsTextObject.visible = false;
+                        }
+                    });
+                });
+            })
+                .then(function () { return api.objectTracker.activateDataSet(dataSetID); })["catch"](function (err) {
                 console.log("could not load dataset: " + err.message);
             });
-            // activate the dataset.
-            api.objectTracker.activateDataSet(dataSet);
             // enable 2 simultaneously tracked targets
             api.setHint(Argon.VuforiaHint.MaxSimultaneousImageTargets, 2).then(function (result) {
                 console.log("setHint " + (result ? "succeeded" : "failed"));
