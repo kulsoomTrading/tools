@@ -70,11 +70,11 @@ var loader = new THREE.FontLoader();
 loader.load( '../resources/fonts/helvetiker_regular.typeface.json', function ( font ) {    
     const textOptions = {
         font:<any>font,
-        size: 15,
-        height: 10,
-        curveSegments: 10,
-        bevelThickness: 1,
-        bevelSize: 1,
+        size: 0.15,
+        height: 0.1,
+        curveSegments: 5,
+        bevelThickness: 0.01,
+        bevelSize: 0.01,
         bevelEnabled: true
     }
     
@@ -95,12 +95,14 @@ loader.load( '../resources/fonts/helvetiker_regular.typeface.json', function ( f
         stage.add(textMesh);
     }
     
-    createDirectionLabel("North", {z:-100}, {});
-    createDirectionLabel("South", {z:100}, {y:Math.PI});
-    createDirectionLabel("East", {x:100}, {y:-Math.PI/2});
-    createDirectionLabel("West", {x:-100}, {y:Math.PI/2});
-    createDirectionLabel("Up", {y:100}, {x:Math.PI/2});
-    createDirectionLabel("Down", {y:-100}, {x:-Math.PI/2});
+    let userHeight = app.context.getEntityPose(app.context.user).position.y;
+    userHeight = (userHeight == 0) ? app.device.suggestedUserHeight : userHeight;
+    createDirectionLabel("North", {y:userHeight, z:-1}, {});
+    createDirectionLabel("South", {y:userHeight, z:1}, {y:Math.PI});
+    createDirectionLabel("East", {x:1, y:userHeight}, {y:-Math.PI/2});
+    createDirectionLabel("West", {x:-1, y:userHeight}, {y:Math.PI/2});
+    createDirectionLabel("Up", {y:userHeight*2}, {x:Math.PI/2});
+    createDirectionLabel("Down", {y:0}, {x:-Math.PI/2});
 })
 
 
@@ -111,12 +113,14 @@ app.updateEvent.addEventListener(() => {
     // get the position and orientation of the "stage",
     // to anchor our content. The "stage" defines an East-Up-South
     // coordinate system (assuming geolocation is available).
-    const stagePose = app.context.getEntityPose(app.context.stage);
+    const stagePose = (app.context.userTracking === "6DOF") ?
+        app.context.getEntityPose(app.context.stage, Argon.Cesium.ReferenceFrame.FIXED)
+        : app.context.getEntityPose(app.context.stage);
 
     // assuming we know the user's pose, set the position of our 
     // THREE user object to match it
     if (stagePose.poseStatus & Argon.PoseStatus.KNOWN) {
-        stage.position.copy(<any>stagePose.position);
+        // stage.position.copy(<any>stagePose.position);
         stage.quaternion.copy(<any>stagePose.orientation);
     }
 

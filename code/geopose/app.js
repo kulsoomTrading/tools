@@ -111,7 +111,8 @@ var box = new THREE.Object3D();
 var floorBox = new THREE.Object3D();
 var loader = new THREE.TextureLoader();
 loader.load('box.png', function (texture) {
-    var geometry = new THREE.BoxGeometry(1, 1, 1);
+    // Set box size to 20 cm
+    var geometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
     var material = new THREE.MeshBasicMaterial({ map: texture });
     var mesh = new THREE.Mesh(geometry, material);
     box.add(mesh);
@@ -125,7 +126,8 @@ var boxGeoEntity = new Argon.Cesium.Entity({
     orientation: Cesium.Quaternion.IDENTITY
 });
 boxGeoObject.add(box);
-boxGeoObject.position.z = -10;
+// Set initial box position 2 meters in front of user
+boxGeoObject.position.z = -2;
 scene.add(boxGeoObject);
 // A line between the two boxes
 var lineGeometry = new THREE.Geometry();
@@ -137,8 +139,8 @@ var boxToboxLine = new THREE.Line(lineGeometry, lineMaterial);
 var boxLocDiv = document.getElementById("box-location");
 var boxLocDiv2 = boxLocDiv.cloneNode(true);
 var boxLabel = new THREE.CSS3DSprite([boxLocDiv, boxLocDiv2]);
-boxLabel.scale.set(0.02, 0.02, 0.02);
-boxLabel.position.set(0, 1.25, 0);
+boxLabel.scale.set(0.002, 0.002, 0.002);
+boxLabel.position.set(0, 0.2, 0);
 boxGeoObject.add(boxLabel);
 // Create a DIV to use to label the box on the floor in 6DOF realities
 var floorBoxLocDiv = document.getElementById("floorbox-location");
@@ -191,10 +193,10 @@ app.updateEvent.addEventListener(function (frame) {
     // the box somewhere near us 
     if (!boxInit) {
         var defaultFrame = app.context.getDefaultReferenceFrame();
-        // set the box's position to 10 meters away from the user.
-        // First, clone the userPose postion, and add 10 to the X
+        // set the box's position to 2 meters away from the user.
+        // First, clone the userPose postion, and subtract 2 from the Z
         var boxPos_1 = userPose.position.clone();
-        boxPos_1.z -= 10;
+        boxPos_1.z -= 2;
         // set the value of the box Entity to this local position, by
         // specifying the frame of reference to our local frame
         boxGeoEntity.position.setValue(boxPos_1, defaultFrame);

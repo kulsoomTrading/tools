@@ -57,11 +57,11 @@ var loader = new THREE.FontLoader();
 loader.load('../resources/fonts/helvetiker_regular.typeface.json', function (font) {
     var textOptions = {
         font: font,
-        size: 15,
-        height: 10,
-        curveSegments: 10,
-        bevelThickness: 1,
-        bevelSize: 1,
+        size: 0.15,
+        height: 0.1,
+        curveSegments: 5,
+        bevelThickness: 0.01,
+        bevelSize: 0.01,
         bevelEnabled: true
     };
     var textMaterial = new THREE.MeshStandardMaterial({
@@ -85,12 +85,14 @@ loader.load('../resources/fonts/helvetiker_regular.typeface.json', function (fon
             textMesh.rotation.z = rotation.z;
         stage.add(textMesh);
     }
-    createDirectionLabel("North", { z: -100 }, {});
-    createDirectionLabel("South", { z: 100 }, { y: Math.PI });
-    createDirectionLabel("East", { x: 100 }, { y: -Math.PI / 2 });
-    createDirectionLabel("West", { x: -100 }, { y: Math.PI / 2 });
-    createDirectionLabel("Up", { y: 100 }, { x: Math.PI / 2 });
-    createDirectionLabel("Down", { y: -100 }, { x: -Math.PI / 2 });
+    var userHeight = app.context.getEntityPose(app.context.user).position.y;
+    userHeight = (userHeight == 0) ? app.device.suggestedUserHeight : userHeight;
+    createDirectionLabel("North", { y: userHeight, z: -1 }, {});
+    createDirectionLabel("South", { y: userHeight, z: 1 }, { y: Math.PI });
+    createDirectionLabel("East", { x: 1, y: userHeight }, { y: -Math.PI / 2 });
+    createDirectionLabel("West", { x: -1, y: userHeight }, { y: Math.PI / 2 });
+    createDirectionLabel("Up", { y: userHeight * 2 }, { x: Math.PI / 2 });
+    createDirectionLabel("Down", { y: 0 }, { x: -Math.PI / 2 });
 });
 // the updateEvent is called each time the 3D world should be
 // rendered, before the renderEvent.  The state of your application
@@ -99,11 +101,13 @@ app.updateEvent.addEventListener(function () {
     // get the position and orientation of the "stage",
     // to anchor our content. The "stage" defines an East-Up-South
     // coordinate system (assuming geolocation is available).
-    var stagePose = app.context.getEntityPose(app.context.stage);
+    var stagePose = (app.context.userTracking === "6DOF") ?
+        app.context.getEntityPose(app.context.stage, Argon.Cesium.ReferenceFrame.FIXED)
+        : app.context.getEntityPose(app.context.stage);
     // assuming we know the user's pose, set the position of our 
     // THREE user object to match it
     if (stagePose.poseStatus & Argon.PoseStatus.KNOWN) {
-        stage.position.copy(stagePose.position);
+        // stage.position.copy(<any>stagePose.position);
         stage.quaternion.copy(stagePose.orientation);
     }
     // get sun and moon positions, add/remove lights as necessary
