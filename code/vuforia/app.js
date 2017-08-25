@@ -8,9 +8,9 @@ var app = Argon.init();
 // for the user's location
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera();
-var userLocation = new THREE.Object3D();
+var stage = new THREE.Object3D();
 scene.add(camera);
-scene.add(userLocation);
+scene.add(stage);
 scene.autoUpdate = false;
 // We use the standard WebGLRenderer when we only need WebGL-based content
 var renderer = new THREE.WebGLRenderer({
@@ -43,13 +43,13 @@ var uniforms = {
     amplitude: { type: "f", value: 0.0 }
 };
 var argonTextObject = new THREE.Object3D();
-argonTextObject.position.z = -0.5;
-userLocation.add(argonTextObject);
+argonTextObject.position.set(0, 0.8, -0.5);
+stage.add(argonTextObject);
 var stonesTextObject = new THREE.Object3D();
-userLocation.add(stonesTextObject);
+stage.add(stonesTextObject);
 stonesTextObject.visible = false;
 var chipsTextObject = new THREE.Object3D();
-userLocation.add(chipsTextObject);
+stage.add(chipsTextObject);
 chipsTextObject.visible = false;
 var loader = new THREE.FontLoader();
 loader.load('../resources/fonts/helvetiker_bold.typeface.json', function (font) {
@@ -61,7 +61,6 @@ loader.load('../resources/fonts/helvetiker_bold.typeface.json', function (font) 
     var argonTextMesh = createTextMesh(font, "argon.js", shaderMaterial);
     argonTextObject.add(argonTextMesh);
     argonTextObject.scale.set(0.001, 0.001, 0.001);
-    argonTextObject.position.z = -0.50;
     var stonesTextMesh = createTextMesh(font, "stones", shaderMaterial);
     stonesTextObject.add(stonesTextMesh);
     stonesTextObject.scale.set(0.001, 0.001, 0.001);
@@ -163,12 +162,12 @@ app.vuforia.isAvailable().then(function (available) {
                         // when the target is first lost after being seen, the status 
                         // is LOST.  Here, we move the 3D text object back to the world
                         if (gvuBrochurePose.poseStatus & Argon.PoseStatus.FOUND) {
+                            argonTextObject.position.set(0, 0, 0);
                             gvuBrochureObject.add(argonTextObject);
-                            argonTextObject.position.z = 0;
                         }
                         else if (gvuBrochurePose.poseStatus & Argon.PoseStatus.LOST) {
-                            argonTextObject.position.z = -0.50;
-                            userLocation.add(argonTextObject);
+                            argonTextObject.position.set(0, 0.8, -0.5);
+                            stage.add(argonTextObject);
                         }
                     });
                 });
@@ -260,11 +259,12 @@ app.vuforia.isAvailable().then(function (available) {
 app.context.updateEvent.addEventListener(function () {
     // get the position and orientation (the "pose") of the user
     // in the local coordinate frame.
-    var userPose = app.context.getEntityPose(app.context.user);
+    var stagePose = app.context.getEntityPose(app.context.stage);
     // assuming we know the user's pose, set the position of our 
     // THREE user object to match it
-    if (userPose.poseStatus & Argon.PoseStatus.KNOWN) {
-        userLocation.position.copy(userPose.position);
+    if (stagePose.poseStatus & Argon.PoseStatus.KNOWN) {
+        stage.position.copy(stagePose.position);
+        stage.quaternion.copy(stagePose.orientation);
     }
     // udpate our scene matrices
     scene.updateMatrixWorld(false);
