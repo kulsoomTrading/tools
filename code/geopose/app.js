@@ -252,7 +252,7 @@ app.updateEvent.addEventListener(function (frame) {
         }
     }
     else {
-        infoText += "Your location is unknown<br>";
+        infoText += "Waiting for geolocation...<br>";
     }
     var geoBoxFixedPose = app.context.getEntityPose(geoBoxEntity, ReferenceFrame.FIXED);
     if (geoBoxFixedPose.poseStatus & Argon.PoseStatus.KNOWN) {
