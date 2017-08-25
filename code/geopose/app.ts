@@ -19,10 +19,8 @@ app.context.subscribeGeolocation({enableHighAccuracy: true});
 // for the user's location
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera();
-const stage = new THREE.Object3D;
 const user = new THREE.Object3D;
 scene.add(camera);
-scene.add(stage);
 scene.add(user);
 
 // The CSS3DArgonRenderer supports mono and stereo views.  Currently
@@ -64,21 +62,6 @@ var holder = document.createElement( 'div' );
 var hudDescription = document.getElementById( 'description' );
 holder.appendChild(hudDescription);
 hudContent.appendChild(holder);
-
-// Tell argon what local coordinate system you want.  The default coordinate
-// frame used by Argon is Cesium's FIXED frame, which is centered at the center
-// of the earth and oriented with the earth's axes.  
-// The FIXED frame is inconvenient for a number of reasons: the numbers used are
-// large and cause issues with rendering, and the orientation of the user's "local
-// view of the world" is different that the FIXED orientation (my perception of "up"
-// does not correspond to one of the FIXED axes).  
-// Therefore, Argon uses a local coordinate frame that sits on a plane tangent to 
-// the earth near the user's current location.  This frame automatically changes if the
-// user moves more than a few kilometers.
-// The EUS frame cooresponds to the typical 3D computer graphics coordinate frame, so we use
-// that here.  The other option Argon supports is localOriginEastNorthUp, which is
-// more similar to what is used in the geospatial industry
-app.context.setDefaultReferenceFrame(app.context.localOriginEastUpSouth);
 
 // All geospatial objects need to have an Object3D linked to a Cesium Entity.
 // We need to do this because Argon needs a mapping between Entities and Object3Ds.
@@ -140,10 +123,11 @@ loader.load( 'box.png', function ( texture ) {
     floorBox.add( mesh2 );
 })
 
-var boxGeoEntity = new Argon.Cesium.Entity({
+// Create a box that we indend to have geoposed. 
+var geoBoxEntity = new Argon.Cesium.Entity({
     name: "I have a box",
-    position: Cartesian3.ZERO,
-    orientation: Cesium.Quaternion.IDENTITY
+    position: new Argon.Cesium.ConstantPositionProperty(undefined),
+    orientation: new Argon.Cesium.ConstantProperty(undefined)
 });
 
 boxGeoObject.add(box);
@@ -185,7 +169,7 @@ floorBox.add(floorBoxLabel);
 //     boxOrientation.setValue(Cesium.Quaternion.IDENTITY);
 //     boxGeoEntity.orientation = boxOrientation;
 
-var boxInit = false;
+
 var boxCartographicDeg = [0,0,0];
 var lastInfoText = "";
 var lastBoxText = "";
@@ -204,61 +188,37 @@ app.updateEvent.addEventListener((frame) => {
     // get the position and orientation (the "pose") of the user
     // in the local coordinate frame.
     const userPose = app.context.getEntityPose(app.context.user);
-    // set the pose of our THREE user object
-    if (userPose.poseStatus & Argon.PoseStatus.KNOWN) {
-        user.position.copy(<any>userPose.position);
-        user.quaternion.copy(<any>userPose.orientation);
-    }
+    user.position.copy(<any>userPose.position);
+    user.quaternion.copy(<any>userPose.orientation);
 
-    
-    // get the pose of the "stage" to anchor our content. 
-    // The "stage" defines an East-Up-South coordinate system 
-    // (assuming geolocation is available).
-    const stagePose = app.context.getEntityPose(app.context.stage);
-    // set the pose of our THREE stage object
-    if (stagePose.poseStatus & Argon.PoseStatus.KNOWN) {
-        stage.position.copy(<any>stagePose.position);
-        stage.quaternion.copy(<any>stagePose.orientation);
-    }
-
-    // the first time through, we create a geospatial position for
-    // the box somewhere near us 
-    if (!boxInit) {
-        const defaultFrame = app.context.getDefaultReferenceFrame();
-        
-        // set the box's position to 2 meters away from the user.
-        // First, clone the userPose postion, and subtract 2 from the Z
-        const boxPos = userPose.position.clone();
-        boxPos.z -= 2;
-        // set the value of the box Entity to this local position, by
-        // specifying the frame of reference to our local frame
-        (<any>boxGeoEntity.position).setValue(boxPos, defaultFrame);        
-
-        // orient the box according to the local world frame
-        (<any>boxGeoEntity.orientation).setValue(Cesium.Quaternion.IDENTITY);
-
+    // If our geoBoxEntity is not relative to FIXED, try to convert its reference frame to FIXED
+    if (geoBoxEntity.position.referenceFrame !== ReferenceFrame.FIXED) {
         // now, we want to move the box's coordinates to the FIXED frame, so
         // the box doesn't move if the local coordinate system origin changes.
-        if (Argon.convertEntityReferenceFrame(boxGeoEntity, frame.time, 
-                                              ReferenceFrame.FIXED)) {
+        if (Argon.convertEntityReferenceFrame(geoBoxEntity, frame.time, 
+                        ReferenceFrame.FIXED)) {
             // we will keep trying to reset it to FIXED until it works!
-            boxInit = true;
         }
+    }
 
-        // add the additional box only in 6DOF realities
-        if (app.context.userTracking === '6DOF') {
-            scene.add(floorBox);
-            scene.add(boxToboxLine);
+    // if the geoBoxEntity still does not have a known pose, 
+    // place it 2 meters in front of the user, on the stage
+    const geoBoxPose = app.context.getEntityPose(geoBoxEntity);
+    if ((geoBoxPose.status & Argon.PoseStatus.KNOWN) === 0) {
+        (<any>geoBoxEntity.position).setValue(new Cartesian3(0, 0, -2), app.context.user);
+        (<any>geoBoxEntity.orientation).setValue(Cesium.Quaternion.IDENTITY);
+        if (!Argon.convertEntityReferenceFrame(geoBoxEntity, frame.time, app.context.stage)) {
+            console.warn('Unable to convert to stage frame!');
         }
     }
 
     // get the local coordinates of the local box, and set the THREE object
-    var boxPose = app.context.getEntityPose(boxGeoEntity);
-    if (boxPose.poseStatus & Argon.PoseStatus.KNOWN) {
-        boxGeoObject.position.copy(<any>boxPose.position);        
-        boxGeoObject.quaternion.copy(<any>boxPose.orientation);
+    var boxPose = app.context.getEntityPose(geoBoxEntity);
+    if (geoBoxPose.poseStatus & Argon.PoseStatus.KNOWN) {
+        boxGeoObject.position.copy(<any>geoBoxPose.position);        
+        boxGeoObject.quaternion.copy(<any>geoBoxPose.orientation);
         // update one end of the line to be at the local box
-        lineGeometry.vertices[0].copy(<any>boxPose.position);
+        lineGeometry.vertices[0].copy(<any>geoBoxPose.position);
     }
 
     // get the local coordinates of the GT box, and set the THREE object
@@ -272,17 +232,23 @@ app.updateEvent.addEventListener((frame) => {
         gatechGeoTarget.position.x = 1000;
     }
 
+
+    // add the additional box only in 6DOF realities
     if (app.context.userTracking === '6DOF') {
         // get the local coordinates of the local box, and set the THREE object
         var floorBoxPose = app.context.getEntityPose(app.context.floor);
-        if (floorBoxPose.poseStatus & Argon.PoseStatus.KNOWN) {
-            floorBox.position.copy(<any>floorBoxPose.position);        
-            floorBox.quaternion.copy(<any>floorBoxPose.orientation);
-            // update the other end of the line to be at the floor box
-            lineGeometry.vertices[1].copy(<any>floorBoxPose.position);
-        }
+        floorBox.position.copy(<any>floorBoxPose.position);        
+        floorBox.quaternion.copy(<any>floorBoxPose.orientation);
 
+        // update the other end of the line to be at the floor box
+        lineGeometry.vertices[1].copy(<any>floorBoxPose.position);
+        
         lineGeometry.verticesNeedUpdate = true;
+        scene.add(floorBox);
+        scene.add(boxToboxLine);
+    } else {
+        scene.remove(floorBox);
+        scene.remove(boxToboxLine);
     }
     
     // rotate the boxes at a constant speed, independent of frame rates     
@@ -312,6 +278,7 @@ app.updateEvent.addEventListener((frame) => {
     // create some feedback text
     var infoText = "Geospatial Argon example:<br>"
 
+    // Why does user not move? check local movement & movement relative to fixed
     // get user position in global coordinates
     const userPoseFIXED = app.context.getEntityPose(app.context.user, ReferenceFrame.FIXED);
     if (userPoseFIXED.poseStatus & Argon.PoseStatus.KNOWN) {
@@ -329,9 +296,9 @@ app.updateEvent.addEventListener((frame) => {
             infoText += "Your location is unknown<br>";
     }
 
-    const boxPoseFIXED = app.context.getEntityPose(boxGeoEntity, ReferenceFrame.FIXED);
-    if (boxPoseFIXED.poseStatus & Argon.PoseStatus.KNOWN) {
-        const boxLLA = Cesium.Ellipsoid.WGS84.cartesianToCartographic(boxPoseFIXED.position);
+    const geoBoxFixedPose = app.context.getEntityPose(geoBoxEntity, ReferenceFrame.FIXED);
+    if (geoBoxFixedPose.poseStatus & Argon.PoseStatus.KNOWN) {
+        const boxLLA = Cesium.Ellipsoid.WGS84.cartesianToCartographic(geoBoxFixedPose.position);
         if (boxLLA) {
             boxCartographicDeg = [
                 CesiumMath.toDegrees(boxLLA.longitude),
@@ -347,7 +314,7 @@ app.updateEvent.addEventListener((frame) => {
         infoText += "<br>floor-box is " + toFixed(distanceToBox2,2) + " meters away";
 
     var boxLabelText;
-    if (boxPoseFIXED.poseStatus & Argon.PoseStatus.KNOWN) {
+    if (geoBoxFixedPose.poseStatus & Argon.PoseStatus.KNOWN) {
         boxLabelText = "a wooden box!<br>lla = " + toFixed(boxCartographicDeg[0], 6) + ", ";
         boxLabelText += toFixed(boxCartographicDeg[1], 6) + ", " + toFixed(boxCartographicDeg[2], 2) + "";
     } else {

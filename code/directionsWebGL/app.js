@@ -13,11 +13,11 @@ app.context.subscribeGeolocation();
 // for the user's location
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera();
-var stageEUS = new THREE.Object3D;
+var stage = new THREE.Object3D;
 scene.add(camera);
-scene.add(stageEUS);
+scene.add(stage);
 if (app.context.userTracking === '6DOF')
-    stageEUS.add(new THREE.AxisHelper(0.3));
+    stage.add(new THREE.AxisHelper(0.3));
 // We use the standard WebGLRenderer when we only need WebGL-based content
 var renderer = new THREE.WebGLRenderer({
     alpha: true,
@@ -85,7 +85,7 @@ loader.load('../resources/fonts/helvetiker_regular.typeface.json', function (fon
             textMesh.rotation.y = rotation.y;
         if (rotation.z)
             textMesh.rotation.z = rotation.z;
-        stageEUS.add(textMesh);
+        stage.add(textMesh);
     }
     var userHeight = app.device.suggestedUserHeight;
     createDirectionLabel("North", { y: userHeight, z: -1 }, {});
@@ -102,12 +102,20 @@ app.updateEvent.addEventListener(function () {
     // get the position and orientation of the "stage",
     // to anchor our content. The "stage" defines an East-Up-South
     // coordinate system (assuming geolocation is available).
-    var stagePose = app.context.getEntityPose(app.context.stageEUS);
-    // assuming we know the user's pose, set the position of our 
-    // THREE user object to match it
-    if (stagePose.poseStatus & Argon.PoseStatus.KNOWN) {
-        stageEUS.position.copy(stagePose.position);
-        stageEUS.quaternion.copy(stagePose.orientation);
+    var stageEUSPose = app.context.getEntityPose(app.context.stageEUS);
+    // If we know the user's geopose, set the position of our 
+    // THREE user object to match the stageEUS frame
+    if (stageEUSPose.poseStatus & Argon.PoseStatus.KNOWN) {
+        stage.position.copy(stageEUSPose.position);
+        stage.quaternion.copy(stageEUSPose.orientation);
+    }
+    else {
+        // If not, position the labels on the non-geopose stage
+        var stagePose = app.context.getEntityPose(app.context.stage);
+        if (stagePose.poseStatus & Argon.PoseStatus.KNOWN) {
+            stage.position.copy(stagePose.position);
+            stage.quaternion.copy(stagePose.orientation);
+        }
     }
     // get sun and moon positions, add/remove lights as necessary
     var date = app.context.time;
