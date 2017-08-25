@@ -13,9 +13,11 @@ app.context.subscribeGeolocation();
 // for the user's location
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera();
-var stage = new THREE.Object3D;
+var stageEUS = new THREE.Object3D;
 scene.add(camera);
-scene.add(stage);
+scene.add(stageEUS);
+if (app.context.userTracking === '6DOF')
+    stageEUS.add(new THREE.AxisHelper(0.3));
 // We use the standard WebGLRenderer when we only need WebGL-based content
 var renderer = new THREE.WebGLRenderer({
     alpha: true,
@@ -83,10 +85,9 @@ loader.load('../resources/fonts/helvetiker_regular.typeface.json', function (fon
             textMesh.rotation.y = rotation.y;
         if (rotation.z)
             textMesh.rotation.z = rotation.z;
-        stage.add(textMesh);
+        stageEUS.add(textMesh);
     }
-    var userHeight = app.context.getEntityPose(app.context.user).position.y;
-    userHeight = (userHeight == 0) ? app.device.suggestedUserHeight : userHeight;
+    var userHeight = app.device.suggestedUserHeight;
     createDirectionLabel("North", { y: userHeight, z: -1 }, {});
     createDirectionLabel("South", { y: userHeight, z: 1 }, { y: Math.PI });
     createDirectionLabel("East", { x: 1, y: userHeight }, { y: -Math.PI / 2 });
@@ -101,14 +102,12 @@ app.updateEvent.addEventListener(function () {
     // get the position and orientation of the "stage",
     // to anchor our content. The "stage" defines an East-Up-South
     // coordinate system (assuming geolocation is available).
-    var stagePose = (app.context.userTracking === "6DOF") ?
-        app.context.getEntityPose(app.context.stage, Argon.Cesium.ReferenceFrame.FIXED)
-        : app.context.getEntityPose(app.context.stage);
+    var stagePose = app.context.getEntityPose(app.context.stageEUS);
     // assuming we know the user's pose, set the position of our 
     // THREE user object to match it
     if (stagePose.poseStatus & Argon.PoseStatus.KNOWN) {
-        // stage.position.copy(<any>stagePose.position);
-        stage.quaternion.copy(stagePose.orientation);
+        stageEUS.position.copy(stagePose.position);
+        stageEUS.quaternion.copy(stagePose.orientation);
     }
     // get sun and moon positions, add/remove lights as necessary
     var date = app.context.time;
