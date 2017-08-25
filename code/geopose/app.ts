@@ -293,7 +293,7 @@ app.updateEvent.addEventListener((frame) => {
             infoText += toFixed(gpsCartographicDeg[1], 6) + ", " + toFixed(gpsCartographicDeg[2], 2) + ")<br>";
         } 
     } else {
-            infoText += "Your location is unknown<br>";
+            infoText += "Waiting for geolocation...<br>";
     }
 
     const geoBoxFixedPose = app.context.getEntityPose(geoBoxEntity, ReferenceFrame.FIXED);
