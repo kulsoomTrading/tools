@@ -167,17 +167,6 @@ var subViews:Argon.Subview[] = null;
 var rAFpending = false;
 
 app.renderEvent.addEventListener(() => {
-    // only schedule a new callback if the old one has completed
-    if (!rAFpending) {
-        rAFpending = true;
-        viewport = app.view.viewport;
-        subViews = app.view.subviews;
-        window.requestAnimationFrame(renderFunc);
-    }
-});
-
-// the animation callback.  
-function renderFunc() {
     // if we have 1 subView, we're in mono mode.  If more, stereo.
     var monoMode = subViews.length == 1;
 
@@ -215,4 +204,4 @@ function renderFunc() {
             hud.render(subview.index);
         }
     }
-}
+});

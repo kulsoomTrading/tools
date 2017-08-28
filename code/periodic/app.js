@@ -437,12 +437,7 @@ var subViews = null;
 app.renderEvent.addEventListener(function () {
     viewport = app.view.getViewport();
     subViews = app.view.getSubviews();
-//    renderFunc();
-        window.requestAnimationFrame(renderFunc);
-});
 
-// the animation callback.  
-function renderFunc() {
     rAFpending = false;
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
@@ -484,4 +479,4 @@ function renderFunc() {
         renderer.render(scene, camera, _i);
         hud.render(_i);
     }
-}
+});
