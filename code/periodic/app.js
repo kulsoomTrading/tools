@@ -130,7 +130,6 @@ var tableContent = [
 
 // set up Argon
 var app = Argon.init();
-app.view.element.style.zIndex = 0;
 
 var camera, scene, renderer, hud;
 var periodicTable, stage;
@@ -163,8 +162,10 @@ renderer = new THREE.CSS3DArgonRenderer();
 hud = new THREE.CSS3DArgonHUD();
 
 // argon creates the domElement for the view, which we add our renderer dom to
-app.view.element.appendChild(renderer.domElement);
-app.view.element.appendChild(hud.domElement);
+app.view.setLayers([
+  {source: renderer.domElement}, 
+  {source: hud.domElement}
+])
 
 // argon will pass us the camera projection details in each renderEvent callback.  This
 // is necessary to handle different devices, stereo/mono switching, etc.   argon will also
@@ -183,7 +184,6 @@ scene = new THREE.Scene();
 // change at any time)
 
 periodicTable = new THREE.Object3D()
-periodicTable.position.set(0, 0.8, 0);
 periodicTable.scale.setScalar(0.001);
 
 stage = new THREE.Object3D;
@@ -423,6 +423,12 @@ app.updateEvent.addEventListener(function () {
     stage.position.copy(stagePose.position);
     stage.quaternion.copy(stagePose.orientation);
 
+    if (app.context.userTracking === '6DOF') {
+      periodicTable.position.set(0, 0.8, 0);
+    } else {
+      periodicTable.position.set(0, 0, 0);
+    }
+
     // update the moving DIVs, if need be
     TWEEN.update();  
 });
@@ -435,8 +441,8 @@ app.updateEvent.addEventListener(function () {
 var viewport = null;
 var subViews = null;
 app.renderEvent.addEventListener(function () {
-    viewport = app.view.getViewport();
-    subViews = app.view.getSubviews();
+    viewport = app.view.viewport;
+    subViews = app.view.subviews;
 
     rAFpending = false;
     // set the renderer to know the current size of the viewport.
