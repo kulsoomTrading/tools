@@ -156,21 +156,13 @@ app.updateEvent.addEventListener(() => {
         stage.quaternion.copy(<any>stagePose.orientation);
     }
 })
-    
-// for the CSS renderer, we want to use requestAnimationFrame to 
-// limit the number of repairs of the DOM.  Otherwise, as the 
-// DOM elements are updated, extra repairs of the DOM could be 
-// initiated.  Extra repairs do not appear to happen within the 
-// animation callback.
-var viewport = null;
-var subViews:Argon.Subview[] = null;
-var rAFpending = false;
-
 app.renderEvent.addEventListener(() => {
+
+    const viewport = app.view.viewport;
+    const subViews = app.view.subviews;
+
     // if we have 1 subView, we're in mono mode.  If more, stereo.
     var monoMode = subViews.length == 1;
-
-    rAFpending = false;
 
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
