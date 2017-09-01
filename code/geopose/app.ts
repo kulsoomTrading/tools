@@ -185,20 +185,21 @@ function toFixed(value, precision) {
 // rendered, before the renderEvent.  The state of your application
 // should be updated here.
 app.updateEvent.addEventListener((frame) => {
-    // get the position and orientation (the "pose") of the user
-    // in the local coordinate frame.
+    // get the user pose in the local coordinate frame.
     const userPose = app.context.getEntityPose(app.context.user);
     user.position.copy(<any>userPose.position);
     user.quaternion.copy(<any>userPose.orientation);
 
-    // If our geoBoxEntity is not relative to FIXED, try to convert its reference frame to FIXED
-    if (geoBoxEntity.position.referenceFrame !== ReferenceFrame.FIXED) {
+    // get the user pose relative to FIXED
+    const userPoseFIXED = app.context.getEntityPose(app.context.user, ReferenceFrame.FIXED);
+
+    // If user has a FIXED pose and our geoBoxEntity is not positioned relative to FIXED, 
+    // try to convert its reference frame to FIXED
+    if (userPoseFIXED.status & Argon.PoseStatus.KNOWN &&
+        geoBoxEntity.position.referenceFrame !== ReferenceFrame.FIXED) {
         // now, we want to move the box's coordinates to the FIXED frame, so
         // the box doesn't move if the local coordinate system origin changes.
-        if (Argon.convertEntityReferenceFrame(geoBoxEntity, frame.time, 
-                        ReferenceFrame.FIXED)) {
-            // we will keep trying to reset it to FIXED until it works!
-        }
+        Argon.convertEntityReferenceFrame(geoBoxEntity, frame.time, ReferenceFrame.FIXED)
     }
 
     // if the geoBoxEntity still does not have a known pose, 
@@ -280,7 +281,6 @@ app.updateEvent.addEventListener((frame) => {
 
     // Why does user not move? check local movement & movement relative to fixed
     // get user position in global coordinates
-    const userPoseFIXED = app.context.getEntityPose(app.context.user, ReferenceFrame.FIXED);
     if (userPoseFIXED.poseStatus & Argon.PoseStatus.KNOWN) {
         const userLLA = Cesium.Ellipsoid.WGS84.cartesianToCartographic(userPoseFIXED.position);
         if (userLLA) {
