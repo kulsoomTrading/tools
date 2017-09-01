@@ -16,6 +16,8 @@ var camera = new THREE.PerspectiveCamera();
 var stage = new THREE.Object3D;
 scene.add(camera);
 scene.add(stage);
+var directions = new THREE.Object3D;
+stage.add(directions);
 if (app.context.userTracking === '6DOF')
     stage.add(new THREE.AxisHelper(0.3));
 // We use the standard WebGLRenderer when we only need WebGL-based content
@@ -85,15 +87,14 @@ loader.load('../resources/fonts/helvetiker_regular.typeface.json', function (fon
             textMesh.rotation.y = rotation.y;
         if (rotation.z)
             textMesh.rotation.z = rotation.z;
-        stage.add(textMesh);
+        directions.add(textMesh);
     }
-    var userHeight = app.device.suggestedUserHeight;
-    createDirectionLabel("North", { y: userHeight, z: -1 }, {});
-    createDirectionLabel("South", { y: userHeight, z: 1 }, { y: Math.PI });
-    createDirectionLabel("East", { x: 1, y: userHeight }, { y: -Math.PI / 2 });
-    createDirectionLabel("West", { x: -1, y: userHeight }, { y: Math.PI / 2 });
-    createDirectionLabel("Up", { y: userHeight * 2 }, { x: Math.PI / 2 });
-    createDirectionLabel("Down", { y: 0 }, { x: -Math.PI / 2 });
+    createDirectionLabel("North", { z: -1 }, {});
+    createDirectionLabel("South", { z: 1 }, { y: Math.PI });
+    createDirectionLabel("East", { x: 1 }, { y: -Math.PI / 2 });
+    createDirectionLabel("West", { x: -1 }, { y: Math.PI / 2 });
+    createDirectionLabel("Up", { y: 1 }, { x: Math.PI / 2 });
+    createDirectionLabel("Down", { y: -1 }, { x: -Math.PI / 2 });
 });
 // the updateEvent is called each time the 3D world should be
 // rendered, before the renderEvent.  The state of your application
@@ -120,6 +121,14 @@ app.updateEvent.addEventListener(function () {
     // get sun and moon positions, add/remove lights as necessary
     var date = app.context.time;
     sunMoonLights.update(date, app.context.defaultReferenceFrame);
+    // place directions content at appropriate height on stage
+    if (app.context.userTracking === '6DOF') {
+        directions.position.y = Argon.AVERAGE_EYE_HEIGHT;
+    }
+    else {
+        var userStagePose = app.context.getEntityPose(app.context.user, app.context.stage);
+        directions.position.y = userStagePose.position.y;
+    }
 });
 // renderEvent is fired whenever argon wants the app to update its display
 app.renderEvent.addEventListener(function () {
