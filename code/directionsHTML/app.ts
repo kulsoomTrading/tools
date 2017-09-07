@@ -144,11 +144,11 @@ stage.add(cssObjectZneg)
 // the updateEvent is called each time the 3D world should be
 // rendered, before the renderEvent.  The state of your application
 // should be updated here.
-app.updateEvent.addEventListener(() => {
+app.updateEvent.on(() => {
     // get the pose of the "stage" to anchor our content. 
     // The "stage" defines an East-Up-South coordinate system 
     // (assuming geolocation is available).
-    const stagePose = app.context.getEntityPose(app.context.stage);
+    const stagePose = app.getEntityPose(app.stage);
 
     // set the pose of our THREE stage object
     if (stagePose.poseStatus & Argon.PoseStatus.KNOWN) {
@@ -156,7 +156,8 @@ app.updateEvent.addEventListener(() => {
         stage.quaternion.copy(<any>stagePose.orientation);
     }
 })
-app.renderEvent.addEventListener(() => {
+
+app.renderEvent.on(() => {
 
     const viewport = app.view.viewport;
     const subViews = app.view.subviews;

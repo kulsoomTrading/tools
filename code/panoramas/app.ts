@@ -77,6 +77,7 @@ let currentPanorama:PanoramaInfo;
 
 // get the menu element
 var menu = document.getElementById('menu');
+menu.style.zIndex = '2';
 
 // add buttons to the menu for each panorama
 panoramas.forEach((p)=>{
@@ -99,15 +100,15 @@ panoramas.forEach((p)=>{
     })
 })
 
-app.focusEvent.addEventListener(()=>{
+app.focusEvent.on(()=>{
     document.getElementById('menu').style.display = 'block';
 })
-app.blurEvent.addEventListener(()=>{
+app.blurEvent.on(()=>{
     document.getElementById('menu').style.display = 'none';
 })
 
 // start listening for connections to a reality
-app.reality.connectEvent.addEventListener((session)=>{
+app.reality.connectEvent.on((session)=>{
     // check if the connected supports our panorama protocol
     if (session.supportsProtocol('edu.gatech.ael.panorama')) {
         // save a reference to this session so our buttons can send messages
@@ -129,7 +130,7 @@ app.reality.connectEvent.addEventListener((session)=>{
             currentPanorama = panoramas[0];
         })
         // hide the menu when the reality session closes
-        session.closeEvent.addEventListener(()=>{
+        session.closeEvent.on(()=>{
             document.getElementById('menu').style.visibility = 'collapse';
             panoRealitySession = undefined;
             currentPanorama = undefined;
@@ -177,11 +178,11 @@ loader.load( '../resources/fonts/helvetiker_regular.typeface.json', function ( f
 // the updateEvent is called each time the 3D world should be
 // rendered, before the renderEvent.  The state of your application
 // should be updated here.
-app.updateEvent.addEventListener(() => {
+app.updateEvent.on(() => {
     // get the pose of the "stage" to anchor our content. 
     // The "stage" defines an East-Up-South coordinate system 
     // (assuming geolocation is available).
-    const stagePose = app.context.getEntityPose(app.context.stage);
+    const stagePose = app.getEntityPose(app.stage);
     // set the pose of our THREE stage object
     if (stagePose.poseStatus & Argon.PoseStatus.KNOWN) {
         stage.position.copy(<any>stagePose.position);
@@ -198,7 +199,7 @@ app.updateEvent.addEventListener(() => {
 })
 
 // renderEvent is fired whenever argon wants the app to update its display
-app.renderEvent.addEventListener(() => {
+app.renderEvent.on(() => {
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode

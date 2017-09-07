@@ -8,7 +8,7 @@ var CESIUM_BASE_URL = '../resources/cesium/';
 // set up Argon
 var app = Argon.init();
 // this app uses geoposed content, so subscribe to geolocation updates
-app.context.subscribeGeolocation();
+app.subscribeGeolocation();
 // set up THREE.  Create a scene, a perspective camera and an object
 // for the user's location
 var scene = new THREE.Scene();
@@ -18,8 +18,6 @@ scene.add(camera);
 scene.add(stage);
 var directions = new THREE.Object3D;
 stage.add(directions);
-if (app.context.userTracking === '6DOF')
-    stage.add(new THREE.AxisHelper(0.3));
 // We use the standard WebGLRenderer when we only need WebGL-based content
 var renderer = new THREE.WebGLRenderer({
     alpha: true,
@@ -103,7 +101,7 @@ app.updateEvent.addEventListener(function () {
     // get the position and orientation of the "stage",
     // to anchor our content. The "stage" defines an East-Up-South
     // coordinate system (assuming geolocation is available).
-    var stageEUSPose = app.context.getEntityPose(app.context.stageEUS);
+    var stageEUSPose = app.getEntityPose(app.stageEUS);
     // If we know the user's geopose, set the position of our 
     // THREE user object to match the stageEUS frame
     if (stageEUSPose.poseStatus & Argon.PoseStatus.KNOWN) {
@@ -112,7 +110,7 @@ app.updateEvent.addEventListener(function () {
     }
     else {
         // If not, position the labels on the non-geopose stage
-        var stagePose = app.context.getEntityPose(app.context.stage);
+        var stagePose = app.getEntityPose(app.stage);
         if (stagePose.poseStatus & Argon.PoseStatus.KNOWN) {
             stage.position.copy(stagePose.position);
             stage.quaternion.copy(stagePose.orientation);
@@ -120,10 +118,10 @@ app.updateEvent.addEventListener(function () {
     }
     // get sun and moon positions, add/remove lights as necessary
     var date = app.context.time;
-    sunMoonLights.update(date, app.context.defaultReferenceFrame);
+    sunMoonLights.update(date, app.context.origin);
     // place directions content at appropriate height on stage depending on user tracking and display mode
-    if (app.context.userTracking === '6DOF') {
-        if (app.device.displayMode === 'head') {
+    if (app.userTracking === '6DOF') {
+        if (app.displayMode === 'head') {
             directions.position.y = Argon.AVERAGE_EYE_HEIGHT;
         }
         else {
@@ -131,7 +129,7 @@ app.updateEvent.addEventListener(function () {
         }
     }
     else {
-        var userStagePose = app.context.getEntityPose(app.context.user, app.context.stage);
+        var userStagePose = app.getEntityPose(app.user, app.stage);
         directions.position.y = userStagePose.position.y;
     }
 });

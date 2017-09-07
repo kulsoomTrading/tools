@@ -11,7 +11,7 @@ var CESIUM_BASE_URL='../resources/cesium/';
 const app = Argon.init();
 
 // this app uses geoposed content, so subscribe to geolocation updates
-app.context.subscribeGeolocation();
+app.subscribeGeolocation();
 
 // set up THREE.  Create a scene, a perspective camera and an object
 // for the user's location
@@ -23,9 +23,6 @@ scene.add(stage);
 
 const directions = new THREE.Object3D;
 stage.add(directions);
-
-if (app.context.userTracking === '6DOF')
-    stage.add(new THREE.AxisHelper(0.3));
 
 // We use the standard WebGLRenderer when we only need WebGL-based content
 const renderer = new THREE.WebGLRenderer({ 
@@ -116,7 +113,7 @@ app.updateEvent.addEventListener(() => {
     // get the position and orientation of the "stage",
     // to anchor our content. The "stage" defines an East-Up-South
     // coordinate system (assuming geolocation is available).
-    const stageEUSPose = app.context.getEntityPose(app.context.stageEUS);
+    const stageEUSPose = app.getEntityPose(app.stageEUS);
 
     // If we know the user's geopose, set the position of our 
     // THREE user object to match the stageEUS frame
@@ -125,7 +122,7 @@ app.updateEvent.addEventListener(() => {
         stage.quaternion.copy(<any>stageEUSPose.orientation);
     } else {
         // If not, position the labels on the non-geopose stage
-        const stagePose = app.context.getEntityPose(app.context.stage);
+        const stagePose = app.getEntityPose(app.stage);
         if (stagePose.poseStatus & Argon.PoseStatus.KNOWN) {
             stage.position.copy(<any>stagePose.position);
             stage.quaternion.copy(<any>stagePose.orientation);
@@ -134,17 +131,17 @@ app.updateEvent.addEventListener(() => {
 
     // get sun and moon positions, add/remove lights as necessary
     var date = app.context.time;
-    sunMoonLights.update(date, app.context.defaultReferenceFrame);
+    sunMoonLights.update(date, app.context.origin);
     
     // place directions content at appropriate height on stage depending on user tracking and display mode
-    if (app.context.userTracking === '6DOF') {
-        if (app.device.displayMode === 'head') {
+    if (app.userTracking === '6DOF') {
+        if (app.displayMode === 'head') {
             directions.position.y = Argon.AVERAGE_EYE_HEIGHT;
         } else {
             directions.position.y = Argon.AVERAGE_EYE_HEIGHT / 2;
         }
     } else {
-        const userStagePose = app.context.getEntityPose(app.context.user, app.context.stage);
+        const userStagePose = app.getEntityPose(app.user, app.stage);
         directions.position.y = userStagePose.position.y;
     }
 })

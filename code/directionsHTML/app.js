@@ -112,18 +112,18 @@ stage.add(cssObjectZneg);
 // the updateEvent is called each time the 3D world should be
 // rendered, before the renderEvent.  The state of your application
 // should be updated here.
-app.updateEvent.addEventListener(function () {
+app.updateEvent.on(function () {
     // get the pose of the "stage" to anchor our content. 
     // The "stage" defines an East-Up-South coordinate system 
     // (assuming geolocation is available).
-    var stagePose = app.context.getEntityPose(app.context.stage);
+    var stagePose = app.getEntityPose(app.stage);
     // set the pose of our THREE stage object
     if (stagePose.poseStatus & Argon.PoseStatus.KNOWN) {
         stage.position.copy(stagePose.position);
         stage.quaternion.copy(stagePose.orientation);
     }
 });
-app.renderEvent.addEventListener(function () {
+app.renderEvent.on(function () {
     var viewport = app.view.viewport;
     var subViews = app.view.subviews;
     // if we have 1 subView, we're in mono mode.  If more, stereo.
