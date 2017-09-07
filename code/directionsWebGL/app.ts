@@ -136,9 +136,13 @@ app.updateEvent.addEventListener(() => {
     var date = app.context.time;
     sunMoonLights.update(date, app.context.defaultReferenceFrame);
     
-    // place directions content at appropriate height on stage
+    // place directions content at appropriate height depending on user tracking and display mode
     if (app.context.userTracking === '6DOF') {
-        directions.position.y = Argon.AVERAGE_EYE_HEIGHT;
+        if (app.device.displayMode === 'head') {
+            directions.position.y = Argon.AVERAGE_EYE_HEIGHT;
+        } else {
+            directions.position.y = Argon.AVERAGE_EYE_HEIGHT / 2;
+        }
     } else {
         const userStagePose = app.context.getEntityPose(app.context.user, app.context.stage);
         directions.position.y = userStagePose.position.y;
