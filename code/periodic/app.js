@@ -424,9 +424,14 @@ app.updateEvent.addEventListener(function () {
     stage.quaternion.copy(stagePose.orientation);
 
     if (app.context.userTracking === '6DOF') {
-      periodicTable.position.set(0, 0.8, 0);
+      if (app.displayMode === 'head') {
+        periodicTable.position.set(0, Argon.AVERAGE_EYE_HEIGHT, 0);
+      } else {
+        periodicTable.position.set(0, Argon.AVERAGE_EYE_HEIGHT / 2, 0);
+      }
     } else {
-      periodicTable.position.set(0, 0, 0);
+      const userStagePose = app.getEntityPose(app.user, app.stage);
+      periodicTable.position.set(0, userStagePose.y, 0);
     }
 
     // update the moving DIVs, if need be
