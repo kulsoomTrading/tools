@@ -254,6 +254,8 @@ app.device.frameStateEvent.addEventListener((frameState)=>{
     if (!app.visibility.isVisible) {
         streetviews[0].setVisible(false);
         streetviews[1] && streetviews[1].setVisible(false);
+    } else {
+        streetviews[0].setVisible(true);
     }
 
     // Position the stage as a child of the pano entity
@@ -343,6 +345,8 @@ app.device.frameStateEvent.addEventListener((frameState)=>{
     lastZoomLevel = zoomLevel;
 
     let fovx = 90 * Math.pow(2, 1 - zoomLevel) * CesiumMath.RADIANS_PER_DEGREE;
+    frustum.near = 0.1;
+    frustum.far = 10000;
     frustum.fov = subviewAspect < 1 ? 
         Math.atan(Math.tan(fovx * 0.5) / subviewAspect) * 2.0 : 
         fovx;

@@ -225,6 +225,9 @@ app.device.frameStateEvent.addEventListener(function (frameState) {
         streetviews[0].setVisible(false);
         streetviews[1] && streetviews[1].setVisible(false);
     }
+    else {
+        streetviews[0].setVisible(true);
+    }
     // Position the stage as a child of the pano entity
     app.context.stage.position.setValue(Cartesian3.ZERO, panoEntity);
     app.context.stage.orientation.setValue(Quaternion.IDENTITY);
@@ -299,6 +302,8 @@ app.device.frameStateEvent.addEventListener(function (frameState) {
         zoomLevel = 0.00000001; // because PerspectiveFrustum can't handle 180deg fov
     lastZoomLevel = zoomLevel;
     var fovx = 90 * Math.pow(2, 1 - zoomLevel) * CesiumMath.RADIANS_PER_DEGREE;
+    frustum.near = 0.1;
+    frustum.far = 10000;
     frustum.fov = subviewAspect < 1 ?
         Math.atan(Math.tan(fovx * 0.5) / subviewAspect) * 2.0 :
         fovx;
