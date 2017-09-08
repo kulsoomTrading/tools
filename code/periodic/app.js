@@ -414,16 +414,16 @@ function transform( targets, duration ) {
 // the updateEvent is called each time the 3D world should be
 // rendered, before the renderEvent.  The state of your application
 // should be updated here.  Here, we call TWEEN.update()
-app.updateEvent.addEventListener(function () {
+app.updateEvent.on(function () {
     // get the position and orientation (the "pose") of the stage
     // in the local coordinate frame.
-    var stagePose = app.context.getEntityPose(app.context.stage);
+    var stagePose = app.getEntityPose(app.stage);
 
     // set the position of our THREE user object to match it
     stage.position.copy(stagePose.position);
     stage.quaternion.copy(stagePose.orientation);
 
-    if (app.context.userTracking === '6DOF') {
+    if (app.userTracking === '6DOF') {
       if (app.displayMode === 'head') {
         periodicTable.position.set(0, Argon.AVERAGE_EYE_HEIGHT, 0);
       } else {
@@ -431,7 +431,7 @@ app.updateEvent.addEventListener(function () {
       }
     } else {
       const userStagePose = app.getEntityPose(app.user, app.stage);
-      periodicTable.position.set(0, userStagePose.y, 0);
+      periodicTable.position.set(0, userStagePose.position.y, 0);
     }
 
     // update the moving DIVs, if need be
@@ -445,7 +445,7 @@ app.updateEvent.addEventListener(function () {
 // animation callback.
 var viewport = null;
 var subViews = null;
-app.renderEvent.addEventListener(function () {
+app.renderEvent.on(function () {
     viewport = app.view.viewport;
     subViews = app.view.subviews;
 
