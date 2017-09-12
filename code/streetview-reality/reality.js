@@ -18,6 +18,7 @@ mapElement.style.width = '100%';
 mapElement.style.height = '50%';
 mapElement.style.bottom = '0px';
 mapElement.style.position = 'absolute';
+mapElement.style.zIndex = '2';
 mapElement.id = 'map';
 subviewElements[0].style.pointerEvents = 'auto';
 subviewElements[0].style.width = '100%';
