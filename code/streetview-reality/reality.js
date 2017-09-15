@@ -121,7 +121,6 @@ var initStreetview = function () {
     map = new google.maps.Map(mapElement);
     streetviews = [
         new google.maps.StreetViewPanorama(subviewElements[0], streetviewOptions)
-        // new google.maps.StreetViewPanorama(subviewElements[1], streetviewOptions)
     ];
     map.setStreetView(streetviews[0]);
     // Enable the pan control so we can customize to trigger device orientation based pose
@@ -296,9 +295,6 @@ app.device.frameStateEvent.addEventListener(function (frameState) {
         var fovyRad = targetFrustum.fovy;
         var fovxRad = Math.atan(Math.tan(fovyRad * 0.5) * subviewAspect) * 2.0;
         zoomLevel = 1 - Math.log2(fovxRad * Argon.Cesium.CesiumMath.DEGREES_PER_RADIAN / 90);
-        // streetviews.forEach((streetview) => {
-        //     streetview.setZoom(zoomLevel);
-        // });
     }
     // if (zoomLevel < MIN_ZOOM_LEVEL) zoomLevel = MIN_ZOOM_LEVEL;
     if (zoomLevel === 0)

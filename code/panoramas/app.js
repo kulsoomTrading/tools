@@ -57,6 +57,7 @@ var panoramas = [{
 var currentPanorama;
 // get the menu element
 var menu = document.getElementById('menu');
+menu.style.zIndex = '2';
 // add buttons to the menu for each panorama
 panoramas.forEach(function (p) {
     var button = document.createElement('button');

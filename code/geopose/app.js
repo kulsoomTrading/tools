@@ -10,7 +10,7 @@ var CesiumMath = Argon.Cesium.CesiumMath;
 var app = Argon.init();
 //app.view.element.style.zIndex = 0;
 // this app uses geoposed content, so subscribe to geolocation updates
-app.context.subscribeGeolocation({ enableHighAccuracy: true });
+app.subscribeGeolocation({ enableHighAccuracy: true });
 // set up THREE.  Create a scene, a perspective camera and an object
 // for the user's location
 var scene = new THREE.Scene();
@@ -155,13 +155,13 @@ function toFixed(value, precision) {
 // the updateEvent is called each time the 3D world should be
 // rendered, before the renderEvent.  The state of your application
 // should be updated here.
-app.updateEvent.addEventListener(function (frame) {
+app.updateEvent.on(function (frame) {
     // get the user pose in the local coordinate frame.
-    var userPose = app.context.getEntityPose(app.context.user);
+    var userPose = app.getEntityPose(app.user);
     user.position.copy(userPose.position);
     user.quaternion.copy(userPose.orientation);
     // get the user pose relative to FIXED
-    var userPoseFIXED = app.context.getEntityPose(app.context.user, ReferenceFrame.FIXED);
+    var userPoseFIXED = app.getEntityPose(app.user, ReferenceFrame.FIXED);
     // If user has a FIXED pose and our geoBoxEntity is not positioned relative to FIXED, 
     // try to convert its reference frame to FIXED
     if (userPoseFIXED.status & Argon.PoseStatus.KNOWN &&
@@ -172,16 +172,16 @@ app.updateEvent.addEventListener(function (frame) {
     }
     // if the geoBoxEntity still does not have a known pose, 
     // place it 2 meters in front of the user, on the stage
-    var geoBoxPose = app.context.getEntityPose(geoBoxEntity);
+    var geoBoxPose = app.getEntityPose(geoBoxEntity);
     if ((geoBoxPose.status & Argon.PoseStatus.KNOWN) === 0) {
-        geoBoxEntity.position.setValue(new Cartesian3(0, 0, -2), app.context.user);
+        geoBoxEntity.position.setValue(new Cartesian3(0, 0, -2), app.user);
         geoBoxEntity.orientation.setValue(Cesium.Quaternion.IDENTITY);
-        if (!Argon.convertEntityReferenceFrame(geoBoxEntity, frame.time, app.context.stage)) {
+        if (!Argon.convertEntityReferenceFrame(geoBoxEntity, frame.time, app.stage)) {
             console.warn('Unable to convert to stage frame!');
         }
     }
     // get the local coordinates of the local box, and set the THREE object
-    var boxPose = app.context.getEntityPose(geoBoxEntity);
+    var boxPose = app.getEntityPose(geoBoxEntity);
     if (geoBoxPose.poseStatus & Argon.PoseStatus.KNOWN) {
         boxGeoObject.position.copy(geoBoxPose.position);
         boxGeoObject.quaternion.copy(geoBoxPose.orientation);
@@ -189,7 +189,7 @@ app.updateEvent.addEventListener(function (frame) {
         lineGeometry.vertices[0].copy(geoBoxPose.position);
     }
     // get the local coordinates of the GT box, and set the THREE object
-    var geoPose = app.context.getEntityPose(gatechGeoEntity);
+    var geoPose = app.getEntityPose(gatechGeoEntity);
     if (geoPose.poseStatus & Argon.PoseStatus.KNOWN) {
         gatechGeoTarget.position.copy(geoPose.position);
     }
@@ -200,9 +200,9 @@ app.updateEvent.addEventListener(function (frame) {
         gatechGeoTarget.position.x = 1000;
     }
     // add the additional box only in 6DOF realities
-    if (app.context.userTracking === '6DOF') {
+    if (app.userTracking === '6DOF') {
         // get the local coordinates of the local box, and set the THREE object
-        var floorBoxPose = app.context.getEntityPose(app.context.floor);
+        var floorBoxPose = app.getEntityPose(app.context.floor);
         floorBox.position.copy(floorBoxPose.position);
         floorBox.quaternion.copy(floorBoxPose.orientation);
         // update the other end of the line to be at the floor box
@@ -254,7 +254,7 @@ app.updateEvent.addEventListener(function (frame) {
     else {
         infoText += "Waiting for geolocation...<br>";
     }
-    var geoBoxFixedPose = app.context.getEntityPose(geoBoxEntity, ReferenceFrame.FIXED);
+    var geoBoxFixedPose = app.getEntityPose(geoBoxEntity, ReferenceFrame.FIXED);
     if (geoBoxFixedPose.poseStatus & Argon.PoseStatus.KNOWN) {
         var boxLLA = Cesium.Ellipsoid.WGS84.cartesianToCartographic(geoBoxFixedPose.position);
         if (boxLLA) {
@@ -267,7 +267,7 @@ app.updateEvent.addEventListener(function (frame) {
     }
     infoText += " distance to Buzz box @ GT (" + toFixed(distanceToBuzz, 2) + ")<br>";
     infoText += "box is " + toFixed(distanceToBox, 2) + " meters away";
-    if (app.context.userTracking === '6DOF')
+    if (app.userTracking === '6DOF')
         infoText += "<br>floor-box is " + toFixed(distanceToBox2, 2) + " meters away";
     var boxLabelText;
     if (geoBoxFixedPose.poseStatus & Argon.PoseStatus.KNOWN) {
@@ -288,7 +288,7 @@ app.updateEvent.addEventListener(function (frame) {
         lastBoxText = boxLabelText;
     }
     // Add a label to the box on the floor
-    if (app.context.userTracking === '6DOF') {
+    if (app.userTracking === '6DOF') {
         var floorBoxLabelText = "a wooden box,<br>on the floor!";
         if (lastFloorBoxText !== floorBoxLabelText) {
             floorBoxLocDiv.innerHTML = floorBoxLabelText;
@@ -298,7 +298,7 @@ app.updateEvent.addEventListener(function (frame) {
     }
 });
 // renderEvent is fired whenever argon wants the app to update its display
-app.renderEvent.addEventListener(function () {
+app.renderEvent.on(function () {
     // set the renderers to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
