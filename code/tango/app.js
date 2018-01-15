@@ -1,14 +1,10 @@
 /// <reference types="@argonjs/argon"/>
 /// <reference types="three"/>
 /// <reference types="stats" />
-// any time we use an INERTIAL frame in Cesium, it needs to know where to find it's
-// ASSET folder on the web.  The SunMoonLights computation uses INERTIAL frames, so
-// so we need to put the assets on the web and point Cesium at them
-var CESIUM_BASE_URL = '../resources/cesium/';
 // set up Argon
-var app = Argon.init();
+var app = Argon.init(null, { 'sharedCanvas': true }, null);
 // this app uses geoposed content, so subscribe to geolocation updates
-app.subscribeGeolocation();
+app.context.subscribeGeolocation();
 // set up THREE.  Create a scene, a perspective camera and an object
 // for the user's location
 var scene = new THREE.Scene();
@@ -16,20 +12,21 @@ var camera = new THREE.PerspectiveCamera();
 var stage = new THREE.Object3D;
 scene.add(camera);
 scene.add(stage);
-var directions = new THREE.Object3D;
-stage.add(directions);
 // We use the standard WebGLRenderer when we only need WebGL-based content
 var renderer = new THREE.WebGLRenderer({
     alpha: true,
     logarithmicDepthBuffer: true,
     antialias: Argon.suggestedWebGLContextAntialiasAttribute
 });
+renderer.autoClear = false;
 var hud = new THREE.CSS3DArgonHUD();
 //  We also move the description box to the left Argon HUD.  
 // We don't duplicated it because we only use it in mono mode
 var holder = document.createElement('div');
 var hudDescription = document.getElementById('description');
+var hudButtons = document.getElementById('hud');
 holder.appendChild(hudDescription);
+holder.appendChild(hudButtons);
 hud.hudElements[0].appendChild(holder);
 // add a performance stats thing to the display
 var stats = new Stats();
@@ -40,20 +37,9 @@ app.view.setLayers([
     { source: renderer.domElement },
     { source: hud.domElement }
 ]);
-// In this example, we are using the actual position of the sun and moon to create lights.
-// The SunMoonLights functions are created by ArgonSunMoon.js, and turn on the sun or moon
-// when they are above the horizon.  This package could be improved a lot (such as by 
-// adjusting the color of light based on distance above horizon, taking the phase of the
-// moon into account, etc) but it provides a simple starting point.
-var sunMoonLights = new THREE.SunMoonLights();
-// the SunMoonLights.update routine will add/remove the sun/moon lights depending on if
-// the sun/moon are above the horizon
-scene.add(sunMoonLights.lights);
 // add some ambient so things aren't so harshly illuminated
-var ambientlight = new THREE.AmbientLight(0x404040); // soft white ambient light 
+var ambientlight = new THREE.AmbientLight(0x909090); // soft white ambient light 
 scene.add(ambientlight);
-// install a reality that the user can select from
-app.reality.install(Argon.resolveURL('../streetview-reality/index.html'));
 // create 6 3D words for the 6 directions.  
 var loader = new THREE.FontLoader();
 loader.load('../resources/fonts/helvetiker_regular.typeface.json', function (font) {
@@ -85,7 +71,7 @@ loader.load('../resources/fonts/helvetiker_regular.typeface.json', function (fon
             textMesh.rotation.y = rotation.y;
         if (rotation.z)
             textMesh.rotation.z = rotation.z;
-        directions.add(textMesh);
+        stage.add(textMesh);
     }
     createDirectionLabel("North", { z: -1 }, {});
     createDirectionLabel("South", { z: 1 }, { y: Math.PI });
@@ -101,40 +87,25 @@ app.updateEvent.addEventListener(function () {
     // get the position and orientation of the "stage",
     // to anchor our content. The "stage" defines an East-Up-South
     // coordinate system (assuming geolocation is available).
-    var stageEUSPose = app.getEntityPose(app.stageEUS);
-    // If we know the user's geopose, set the position of our 
-    // THREE user object to match the stageEUS frame
-    if (stageEUSPose.poseStatus & Argon.PoseStatus.KNOWN) {
-        stage.position.copy(stageEUSPose.position);
-        stage.quaternion.copy(stageEUSPose.orientation);
-    }
-    else {
-        // If not, position the labels on the non-geopose stage
-        var stagePose = app.getEntityPose(app.stage);
-        if (stagePose.poseStatus & Argon.PoseStatus.KNOWN) {
-            stage.position.copy(stagePose.position);
-            stage.quaternion.copy(stagePose.orientation);
-        }
-    }
-    // get sun and moon positions, add/remove lights as necessary
-    var date = app.context.time;
-    sunMoonLights.update(date, app.context.origin);
-    // place directions content at appropriate height on stage depending on user tracking and display mode
-    if (app.userTracking === '6DOF') {
-        if (app.displayMode === 'head') {
-            directions.position.y = Argon.AVERAGE_EYE_HEIGHT;
-        }
-        else {
-            directions.position.y = Argon.AVERAGE_EYE_HEIGHT / 2;
-        }
-    }
-    else {
-        var userStagePose = app.getEntityPose(app.user, app.stage);
-        directions.position.y = userStagePose.position.y;
+    var stagePose = app.context.getEntityPose(app.context.stage);
+    // assuming we know the user's pose, set the position of our 
+    // THREE user object to match it
+    if (stagePose.poseStatus & Argon.PoseStatus.KNOWN) {
+        stage.position.copy(stagePose.position);
+        stage.quaternion.copy(stagePose.orientation);
     }
 });
 // renderEvent is fired whenever argon wants the app to update its display
 app.renderEvent.addEventListener(function () {
+    if (app.reality.isSharedCanvas) {
+        // if this is a shared canvas we can't depend on our GL state
+        // being exactly how we left it last frame
+        renderer.resetGLState();
+    }
+    else {
+        // not a shared canvas, we need to clear it before rendering
+        renderer.clear();
+    }
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
     // both views if we are in stereo viewing mode
@@ -175,3 +146,76 @@ app.renderEvent.addEventListener(function () {
     }
     stats.update();
 });
+// Tango functionailities
+// --------------------------
+var tangoRealitySession;
+app.reality.connectEvent.addEventListener(function (session) {
+    // check if the connected supports our protocol
+    if (session.supportsProtocol('ar.tango')) {
+        // save a reference to this session so our buttons can send messages
+        tangoRealitySession = session;
+        document.getElementById('menu').style.visibility = 'visible';
+        var cloudBtn_1 = document.getElementById('pointcloud-btn');
+        var placeBtn = document.getElementById('placeobject-btn');
+        var occlusionBtn_1 = document.getElementById('occlusion-btn');
+        // Toggle point cloud vision on/off
+        cloudBtn_1.addEventListener('click', function () {
+            if (tangoRealitySession) {
+                tangoRealitySession.request('ar.tango.togglePointCloud')
+                    .then(function (_a) {
+                    var isOn = _a.result;
+                    cloudBtn_1.textContent = "PointCloud: " + (isOn ? 'ON' : 'OFF');
+                });
+            }
+        });
+        // Place an object at the surface located on the center of the screen.
+        placeBtn.addEventListener('click', function () {
+            if (tangoRealitySession) {
+                placeObject({ x: 0.5, y: 0.5 });
+            }
+        });
+        occlusionBtn_1.addEventListener('click', function () {
+            if (tangoRealitySession) {
+                tangoRealitySession.request('ar.tango.toggleOcclusion')
+                    .then(function (_a) {
+                    var isOn = _a.result;
+                    occlusionBtn_1.textContent = "Occlusion: " + (isOn ? 'ON' : 'OFF');
+                });
+            }
+        });
+    }
+});
+// Create a cube model of 10 cm size.
+var MODEL_SIZE_IN_METERS = 0.1;
+var model = new THREE.Mesh(new THREE.ConeBufferGeometry(MODEL_SIZE_IN_METERS / 2, MODEL_SIZE_IN_METERS), new THREE.MeshLambertMaterial({ color: 0x888888 }));
+// Apply a rotation to the model so it faces in the direction of the
+// normal of the plane when the picking based reorientation is done
+model.geometry.applyMatrix(new THREE.Matrix4().makeRotationZ(THREE.Math.degToRad(-90)));
+// Set a default position (10 meters above the user)
+model.position.set(0, 10, 0);
+scene.add(model);
+function placeObject(pos2D) {
+    if (tangoRealitySession) {
+        tangoRealitySession.request('ar.tango.getPickingPointAndPlaneInPointCloud', { x: pos2D.x, y: pos2D.y })
+            .then(function (_a) {
+            var point = _a.point, plane = _a.plane;
+            if (point && plane) {
+                var pointAndPlane = { point: ObjToFloatArray(point, 3), plane: ObjToFloatArray(plane, 4) };
+                THREE.WebAR.positionAndRotateObject3DWithPickingPointAndPlaneInPointCloud(pointAndPlane, model, MODEL_SIZE_IN_METERS / 2);
+            }
+            else {
+                console.warn("Point could not be specified in the point cloud.");
+            }
+        });
+    }
+    else {
+        console.warn("Reality not connect. Try again in a moment.");
+    }
+}
+function ObjToFloatArray(obj, len) {
+    var arr = new Float32Array(len);
+    for (var i = 0; i < len; i++) {
+        arr[i] = obj[i];
+    }
+    return arr;
+}

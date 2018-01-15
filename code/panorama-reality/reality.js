@@ -9,7 +9,7 @@ var CesiumMath = Argon.Cesium.CesiumMath;
 // Defining a protocol allows apps to communicate with the reality in a
 // reliable way. 
 var app = Argon.initRealityViewer({
-    protocols: ['ael.gatech.panorama@v1']
+    protocols: ['edu.gatech.ael.panorama@v1']
 });
 // set up THREE.  Create a scene, a perspective camera and an object
 // for the user's location
@@ -24,20 +24,6 @@ var renderer = new THREE.WebGLRenderer({
 // account for the pixel density of the device
 renderer.setPixelRatio(window.devicePixelRatio);
 app.view.setLayers([{ source: renderer.domElement }]);
-// Tell argon what local coordinate system you want.  The default coordinate
-// frame used by Argon is Cesium's FIXED frame, which is centered at the center
-// of the earth and oriented with the earth's axes.  
-// The FIXED frame is inconvenient for a number of reasons: the numbers used are
-// large and cause issues with rendering, and the orientation of the user's "local
-// view of the world" is different that the FIXED orientation (my perception of "up"
-// does not correspond to one of the FIXED axes).  
-// Therefore, Argon uses a local coordinate frame that sits on a plane tangent to 
-// the earth near the user's current location.  This frame automatically changes if the
-// user moves more than a few kilometers.
-// The EUS frame cooresponds to the typical 3D computer graphics coordinate frame, so we use
-// that here.  The other option Argon supports is localOriginEastNorthUp, which is
-// more similar to what is used in the geospatial industry
-app.context.defaultReferenceFrame = app.context.localOriginEastUpSouth;
 // A map to store our panoramas
 var panoramas = new Map();
 var currentPano;

@@ -22,15 +22,18 @@ mapElement.style.width = '100%';
 mapElement.style.height = '50%';
 mapElement.style.bottom = '0px';
 mapElement.style.position = 'absolute';
+mapElement.style.zIndex = '2';
 mapElement.id = 'map';
 subviewElements[0].style.pointerEvents = 'auto';
 subviewElements[0].style.width = '100%';
 subviewElements[0].style.height = '100%';
 subviewElements[0].style.position = 'absolute';
+subviewElements[0].style.zIndex = '2';
 subviewElements[1].style.width = '100%';
 subviewElements[1].style.height = '100%';
 subviewElements[1].style.position = 'absolute';
 subviewElements[1].style.pointerEvents = 'none';
+subviewElements[1].style.zIndex = '2';
 app.view.element.appendChild(subviewElements[0]);
 app.view.element.appendChild(subviewElements[1]);
 app.view.element.appendChild(mapElement);
@@ -254,6 +257,8 @@ app.device.frameStateEvent.addEventListener((frameState)=>{
     if (!app.visibility.isVisible) {
         streetviews[0].setVisible(false);
         streetviews[1] && streetviews[1].setVisible(false);
+    } else {
+        streetviews[0].setVisible(true);
     }
 
     // Position the stage as a child of the pano entity
@@ -343,6 +348,8 @@ app.device.frameStateEvent.addEventListener((frameState)=>{
     lastZoomLevel = zoomLevel;
 
     let fovx = 90 * Math.pow(2, 1 - zoomLevel) * CesiumMath.RADIANS_PER_DEGREE;
+    frustum.near = 0.1;
+    frustum.far = 10000;
     frustum.fov = subviewAspect < 1 ? 
         Math.atan(Math.tan(fovx * 0.5) / subviewAspect) * 2.0 : 
         fovx;

@@ -3,16 +3,17 @@
 /// <reference types="dat-gui" />
 /// <reference types="stats" />
 
-// set up Argon
-const app = Argon.init();
+// set up Argon.  Share the canvas so the webrtc reality can draw the
+// video background in it
+const app = Argon.init(null, {'sharedCanvas': true}, null);
 
 // set up THREE.  Create a scene, a perspective camera and an object
 // for the user's location
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera();
-const stage = new THREE.Object3D();
+const userLocation = new THREE.Object3D();
 scene.add(camera);
-scene.add(stage);
+scene.add(userLocation);
 scene.autoUpdate = false;
 
 // We use the standard WebGLRenderer when we only need WebGL-based content
@@ -30,6 +31,9 @@ renderer.domElement.style.width = '100%';
 renderer.domElement.style.height = '100%';
 app.view.element.appendChild(renderer.domElement);
 
+// do not clear the canvas when sharing it
+renderer.autoClear = false;
+
 // to easily control stuff on the display
 const hud = new (<any>THREE).CSS3DArgonHUD();
 
@@ -45,22 +49,20 @@ app.view.element.appendChild(hud.domElement);
 var stats = new Stats();
 hud.hudElements[0].appendChild( stats.dom );
 
+// set the layers of our view
+app.view.setLayers([
+    { source: renderer.domElement }, 
+    { source: hud.domElement }
+]);
+
 // create a bit of animated 3D text that says "argon.js" to display 
 var uniforms = {
     amplitude: { type: "f", value: 0.0 }
 }
 
 var argonTextObject = new THREE.Object3D();
-argonTextObject.position.set(0, 0.8, -0.5);
-stage.add(argonTextObject);
-
-var stonesTextObject = new THREE.Object3D();
-stage.add(stonesTextObject);
-stonesTextObject.visible = false;
-
-var chipsTextObject = new THREE.Object3D();
-stage.add(chipsTextObject);
-chipsTextObject.visible = false;
+argonTextObject.position.z = -0.5;
+userLocation.add(argonTextObject);
 
 var loader = new THREE.FontLoader();
 loader.load( '../resources/fonts/helvetiker_bold.typeface.json', function ( font ) {
@@ -95,14 +97,7 @@ loader.load( '../resources/fonts/helvetiker_bold.typeface.json', function ( font
     var argonTextMesh = createTextMesh(font, "argon.js", shaderMaterial);
     argonTextObject.add( argonTextMesh );
     argonTextObject.scale.set (0.001,0.001,0.001);
-
-    var stonesTextMesh = createTextMesh(font, "stones", shaderMaterial);
-    stonesTextObject.add( stonesTextMesh );
-    stonesTextObject.scale.set (0.001,0.001,0.001);
-
-    var chipsTextMesh = createTextMesh(font, "chips", shaderMaterial);
-    chipsTextObject.add( chipsTextMesh );
-    chipsTextObject.scale.set (0.001,0.001,0.001);
+    argonTextObject.position.z = -0.50;
 
     // add an argon updateEvent listener to slowly change the text over time.
     // we don't have to pack all our logic into one listener.
@@ -161,6 +156,8 @@ app.vuforia.isAvailable().then((available) => {
     // vuforia not available on this platform
     if (!available) {
         console.warn("vuforia not available on this platform.");
+        console.warn("attempting to initialize jsartoolkit instead.");
+        initializeJSARToolKit();
         return;
     } 
 
@@ -229,36 +226,107 @@ WEIir2WXzhypwLkG/dn+ZJW1ezOvTb4gVVILHrWhNh8=
 
         // tell argon to download a vuforia dataset.  The .xml and .dat file must be together
         // in the web directory, even though we just provide the .xml file url here 
-        api.objectTracker.createDataSetFromURL("../resources/datasets/ArgonTutorial.xml").then( (dataSetID)=>{
+        api.objectTracker.createDataSet("../resources/datasets/ArgonTutorial.xml").then( (dataSet)=>{
             // the data set has been succesfully downloaded
 
             // tell vuforia to load the dataset.  
-            api.objectTracker.loadDataSet(dataSetID).then( (trackables)=>{
+            dataSet.load().then(()=>{
                 // when it is loaded, we retrieve a list of trackables defined in the
                 // dataset and set up the content for the target
+                const trackables = dataSet.getTrackables();
 
                 // tell argon we want to track a specific trackable.  Each trackable
                 // has a Cesium entity associated with it, and is expressed in a 
                 // coordinate frame relative to the camera.  Because they are Cesium
                 // entities, we can ask for their pose in any coordinate frame we know
                 // about.
-                app.context.subscribe(trackables["GVUBrochure"].id).then((gvuBrochureEntity)=>{
-                    // create a THREE object to put on the trackable
-                    const gvuBrochureObject = new THREE.Object3D;
-                    scene.add(gvuBrochureObject);
+                const gvuBrochureEntity = app.context.subscribeToEntityById(trackables["GVUBrochure"].id)
+
+                // create a THREE object to put on the trackable
+                const gvuBrochureObject = new THREE.Object3D;
+                scene.add(gvuBrochureObject);
+
+                // the updateEvent is called each time the 3D world should be
+                // rendered, before the renderEvent.  The state of your application
+                // should be updated here.
+                app.context.updateEvent.addEventListener(() => {
+                    // get the pose (in local coordinates) of the gvuBrochure target
+                    const gvuBrochurePose = app.context.getEntityPose(gvuBrochureEntity);
+
+                    // if the pose is known the target is visible, so set the
+                    // THREE object to the location and orientation
+                    if (gvuBrochurePose.poseStatus & Argon.PoseStatus.KNOWN) {
+                        gvuBrochureObject.position.copy(<any>gvuBrochurePose.position);
+                        gvuBrochureObject.quaternion.copy(<any>gvuBrochurePose.orientation);
+                    }
+
+                    // when the target is first seen after not being seen, the 
+                    // status is FOUND.  Here, we move the 3D text object from the
+                    // world to the target.
+                    // when the target is first lost after being seen, the status 
+                    // is LOST.  Here, we move the 3D text object back to the world
+                    if (gvuBrochurePose.poseStatus & Argon.PoseStatus.FOUND) {
+                        gvuBrochureObject.add(argonTextObject);
+                        argonTextObject.position.z = 0;
+                    } else if (gvuBrochurePose.poseStatus & Argon.PoseStatus.LOST) {
+                        argonTextObject.position.z = -0.50;
+                        userLocation.add(argonTextObject);
+                    }
+                })
+            }).catch(function(err) {
+                console.log("could not load dataset: " + err.message);
+            });
+            
+            // activate the dataset.
+            api.objectTracker.activateDataSet(dataSet);
+        });
+    }).catch(function(err) {
+        console.log("vuforia failed to initialize: " + err.message);
+    });
+});
+
+function initializeJSARToolKit() {
+    // set our desired reality 
+    app.reality.request(Argon.RealityViewer.WEBRTC);
+
+    let webrtcRealitySession:Argon.SessionPort;
+
+    // start listening for connections to a reality
+    app.reality.connectEvent.addEventListener((session)=>{
+        if (session.supportsProtocol('ar.jsartoolkit')) {
+            // save a reference to this session
+            webrtcRealitySession = session;
+
+            webrtcRealitySession.request('ar.jsartoolkit.init').then(()=>{
+
+                webrtcRealitySession.request('ar.jsartoolkit.addMarker', {
+                    url: "../resources/artoolkit/patt.hiro"
+                }).then((msg)=>{
+                    if (!msg) return;
+
+                    // tell argon we want to track a specific marker.  Each marker
+                    // has a Cesium entity associated with it, and is expressed in a 
+                    // coordinate frame relative to the camera.  Because they are Cesium
+                    // entities, we can ask for their pose in any coordinate frame we know
+                    // about.
+                    const hiroEntity = app.context.subscribeToEntityById(msg.id);
+
+                    // create a THREE object to put on the marker
+                    const hiroObject = new THREE.Object3D;
+                    scene.add(hiroObject);
 
                     // the updateEvent is called each time the 3D world should be
                     // rendered, before the renderEvent.  The state of your application
                     // should be updated here.
                     app.context.updateEvent.addEventListener(() => {
-                        // get the pose (in local coordinates) of the gvuBrochure target
-                        const gvuBrochurePose = app.context.getEntityPose(gvuBrochureEntity);
+                        // get the pose (in local coordinates) of the marker
+                        const hiroPose = app.context.getEntityPose(hiroEntity);
 
                         // if the pose is known the target is visible, so set the
                         // THREE object to the location and orientation
-                        if (gvuBrochurePose.poseStatus & Argon.PoseStatus.KNOWN) {
-                            gvuBrochureObject.position.copy(<any>gvuBrochurePose.position);
-                            gvuBrochureObject.quaternion.copy(<any>gvuBrochurePose.orientation);
+                        if (hiroPose.poseStatus & Argon.PoseStatus.KNOWN) {
+                            hiroObject.position.copy(<any>hiroPose.position);
+                            hiroObject.quaternion.copy(<any>hiroPose.orientation);
                         }
 
                         // when the target is first seen after not being seen, the 
@@ -266,108 +334,25 @@ WEIir2WXzhypwLkG/dn+ZJW1ezOvTb4gVVILHrWhNh8=
                         // world to the target.
                         // when the target is first lost after being seen, the status 
                         // is LOST.  Here, we move the 3D text object back to the world
-                        if (gvuBrochurePose.poseStatus & Argon.PoseStatus.FOUND) {
-                            argonTextObject.position.set(0, 0, 0);
-                            gvuBrochureObject.add(argonTextObject);
-                        } else if (gvuBrochurePose.poseStatus & Argon.PoseStatus.LOST) {
-                            argonTextObject.position.set(0, 0.8, -0.5);
-                            stage.add(argonTextObject);
+                        if (hiroPose.poseStatus & Argon.PoseStatus.FOUND) {
+                            console.log("marker found");
+                            hiroObject.add(argonTextObject);
+                            // note: currently artoolkit markers are always considered 1 meter across
+                            // this scale is a temporary fix
+                            argonTextObject.scale.set (0.01,0.01,0.01);
+                            argonTextObject.position.z = 0;
+                        } else if (hiroPose.poseStatus & Argon.PoseStatus.LOST) {
+                            console.log("marker lost");
+                            argonTextObject.scale.set (0.001,0.001,0.001);
+                            argonTextObject.position.z = -0.50;
+                            userLocation.add(argonTextObject);
                         }
-                    });
-                });
-            })
-            .then(()=>api.objectTracker.activateDataSet(dataSetID))
-            .catch(function(err) {
-                console.log("could not load dataset: " + err.message);
+                    })
+                }); 
             });
-        });
-
-        // We can load a second dataset and have both active simultaneously.
-        // Load the Vuforia Stones and Chips targets, and set the MaxSimultaneousImageTargets hint
-        // to 2 so two targets can be tracked simultaneously.
-        api.objectTracker.createDataSetFromURL("../resources/datasets/StonesAndChips.xml").then( (dataSetID)=>{
-            // the data set has been succesfully downloaded
-
-            // tell vuforia to load the dataset.  
-            api.objectTracker.loadDataSet(dataSetID).then((trackables)=>{
-                // when it is loaded, we retrieve a list of trackables defined in the
-                // dataset and set up the content for the target
-
-                // tell argon we want to track a specific trackable.  Each trackable
-                // has a Cesium entity associated with it, and is expressed in a 
-                // coordinate frame relative to the camera.  Because they are Cesium
-                // entities, we can ask for their pose in any coordinate frame we know
-                // about.
-                app.context.subscribe(trackables["stones"].id).then( (stonesEntity) => {
-                    // create a THREE object to put on the trackable
-                    const stonesObject = new THREE.Object3D;
-                    scene.add(stonesObject);
-                    stonesObject.add(stonesTextObject);
-                    
-                    // the updateEvent is called each time the 3D world should be
-                    // rendered, before the renderEvent.  The state of your application
-                    // should be updated here.
-                    app.context.updateEvent.addEventListener(() => {
-                        // get the pose (in local coordinates) of each target
-                        const stonesPose = app.context.getEntityPose(stonesEntity);
-                    
-                        // if the pose is known the target is visible, so set the
-                        // THREE object to the location and orientation
-                        if (stonesPose.poseStatus & Argon.PoseStatus.KNOWN) {
-                            stonesObject.position.copy(<any>stonesPose.position);
-                            stonesObject.quaternion.copy(<any>stonesPose.orientation);
-                        }
-                    
-                        // when the target is first seen after not being seen, the 
-                        // status is FOUND.  Here, we show the content.
-                        // when the target is first lost after being seen, the status 
-                        // is LOST.  Here, we hide the content.
-                        if (stonesPose.poseStatus & Argon.PoseStatus.FOUND) {
-                            stonesTextObject.visible = true;
-                        } else if (stonesPose.poseStatus & Argon.PoseStatus.LOST) {
-                            stonesTextObject.visible = false;
-                        }
-                    });
-                });
-
-                // Do the same thing for the chips target
-                app.context.subscribe(trackables["chips"].id).then( (chipsEntity) => {
-                    const chipsObject = new THREE.Object3D;
-                    scene.add(chipsObject);
-                    chipsObject.add(chipsTextObject);
-
-                    app.context.updateEvent.addEventListener(() => {
-                        const chipsPose = app.context.getEntityPose(chipsEntity);
-
-                        if (chipsPose.poseStatus & Argon.PoseStatus.KNOWN) {
-                            chipsObject.position.copy(<any>chipsPose.position);
-                            chipsObject.quaternion.copy(<any>chipsPose.orientation);
-                        }
-
-                        if (chipsPose.poseStatus & Argon.PoseStatus.FOUND) {
-                            chipsTextObject.visible = true;
-                        } else if (chipsPose.poseStatus & Argon.PoseStatus.LOST) {
-                            chipsTextObject.visible = false;
-                        }
-                    });
-                });                
-            })
-            .then(()=>api.objectTracker.activateDataSet(dataSetID))
-            .catch(function(err) {
-                console.log("could not load dataset: " + err.message);
-            });
-
-            // enable 2 simultaneously tracked targets
-            api.setHint(Argon.VuforiaHint.MaxSimultaneousImageTargets, 2).then((result) => {
-                console.log("setHint " + (result ? "succeeded" : "failed"));
-            }).catch(function(err) {
-                console.log("could not set hint: " + err.message);
-            });
-        });
-    }).catch(function(err) {
-        console.log("vuforia failed to initialize: " + err.message);
-    });
-});
+        }
+    })
+}
 
 // the updateEvent is called each time the 3D world should be
 // rendered, before the renderEvent.  The state of your application
@@ -375,13 +360,12 @@ WEIir2WXzhypwLkG/dn+ZJW1ezOvTb4gVVILHrWhNh8=
 app.context.updateEvent.addEventListener(() => {
     // get the position and orientation (the "pose") of the user
     // in the local coordinate frame.
-    const stagePose = app.context.getEntityPose(app.context.stage);
+    const userPose = app.context.getEntityPose(app.context.user);
 
     // assuming we know the user's pose, set the position of our 
     // THREE user object to match it
-    if (stagePose.poseStatus & Argon.PoseStatus.KNOWN) {
-        stage.position.copy(<any>stagePose.position);
-        stage.quaternion.copy(<any>stagePose.orientation);
+    if (userPose.poseStatus & Argon.PoseStatus.KNOWN) {
+        userLocation.position.copy(<any>userPose.position);
     }
 
     // udpate our scene matrices
@@ -390,6 +374,16 @@ app.context.updateEvent.addEventListener(() => {
     
 // renderEvent is fired whenever argon wants the app to update its display
 app.renderEvent.addEventListener(() => {
+
+    if (app.reality.isSharedCanvas) {
+        // if this is a shared canvas we can't depend on our GL state
+        // being exactly how we left it last frame
+        renderer.resetGLState();
+    } else {
+        // not a shared canvas, we need to clear it before rendering
+        renderer.clear();
+    }
+
     // update the rendering stats
     stats.update();
     

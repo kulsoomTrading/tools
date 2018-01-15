@@ -144,11 +144,11 @@ stage.add(cssObjectZneg)
 // the updateEvent is called each time the 3D world should be
 // rendered, before the renderEvent.  The state of your application
 // should be updated here.
-app.updateEvent.addEventListener(() => {
+app.updateEvent.on(() => {
     // get the pose of the "stage" to anchor our content. 
     // The "stage" defines an East-Up-South coordinate system 
     // (assuming geolocation is available).
-    const stagePose = app.context.getEntityPose(app.context.stage);
+    const stagePose = app.getEntityPose(app.stage);
 
     // set the pose of our THREE stage object
     if (stagePose.poseStatus & Argon.PoseStatus.KNOWN) {
@@ -156,32 +156,14 @@ app.updateEvent.addEventListener(() => {
         stage.quaternion.copy(<any>stagePose.orientation);
     }
 })
-    
-// for the CSS renderer, we want to use requestAnimationFrame to 
-// limit the number of repairs of the DOM.  Otherwise, as the 
-// DOM elements are updated, extra repairs of the DOM could be 
-// initiated.  Extra repairs do not appear to happen within the 
-// animation callback.
-var viewport = null;
-var subViews:Argon.Subview[] = null;
-var rAFpending = false;
 
-app.renderEvent.addEventListener(() => {
-    // only schedule a new callback if the old one has completed
-    if (!rAFpending) {
-        rAFpending = true;
-        viewport = app.view.viewport;
-        subViews = app.view.subviews;
-        window.requestAnimationFrame(renderFunc);
-    }
-});
+app.renderEvent.on(() => {
 
-// the animation callback.  
-function renderFunc() {
+    const viewport = app.view.viewport;
+    const subViews = app.view.subviews;
+
     // if we have 1 subView, we're in mono mode.  If more, stereo.
     var monoMode = subViews.length == 1;
-
-    rAFpending = false;
 
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
@@ -215,4 +197,4 @@ function renderFunc() {
             hud.render(subview.index);
         }
     }
-}
+});

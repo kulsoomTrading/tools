@@ -21,7 +21,7 @@ app.reality.install(Argon.resolveURL('../streetview-reality/index.html'));
 var renderer = new THREE.WebGLRenderer({
     alpha: true,
     logarithmicDepthBuffer: true,
-    antialias: true
+    antialias: Argon.suggestedWebGLContextAntialiasAttribute
 });
 // account for the pixel density of the device
 renderer.setPixelRatio(window.devicePixelRatio);
@@ -107,6 +107,7 @@ var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
 var offset = new THREE.Vector3();
 var intersection = new THREE.Vector3();
+var tempPos = new THREE.Vector3();
 var INTERSECTED, SELECTED;
 var touchID; // which touch caused the selection?
 // need to keep track of if we've located the box scene at all, and if it's locked to the world
@@ -128,17 +129,6 @@ for (var i = 0; i < 50; i++) {
     object.castShadow = true;
     object.receiveShadow = true;
     boxScene.add(object);
-    // position the cube relative to the boxScene object and entity
-    object.entity = new Argon.Cesium.Entity({
-        name: "box " + i,
-        position: Cartesian3.ZERO,
-        orientation: Cesium.Quaternion.IDENTITY
-    });
-    // set the value of the box Entity to this local position, by
-    // specifying the frame of reference to our local frame
-    object.entity.position.setValue(object.position, boxSceneEntity);
-    // orient the box according to the local world frame
-    object.entity.orientation.setValue(object.quaternion);
     objects.push(object);
 }
 document.addEventListener('keydown', onDocumentKeyStart, false);
@@ -225,7 +215,7 @@ app.view.uiEvent.addEventListener(function (evt) {
                 mouse.y = y;
                 raycaster.setFromCamera(mouse, camera);
                 // recompute the plane each time, in case the camera moved
-                var worldLoc = user.localToWorld(SELECTED.position.clone());
+                var worldLoc = user.localToWorld(tempPos.copy(SELECTED.position));
                 plane.setFromNormalAndCoplanarPoint(camera.getWorldDirection(plane.normal), 
                 //user.getWorldDirection( new THREE.Vector3(0,0,1) ),
                 worldLoc);
@@ -233,7 +223,7 @@ app.view.uiEvent.addEventListener(function (evt) {
                     // planes, rays and intersections are in the local "world" 3D coordinates
                     var ptInWorld = user.worldToLocal(intersection).sub(offset);
                     SELECTED.position.copy(ptInWorld);
-                    SELECTED.entity.position.setValue(SELECTED.position, app.context.user);
+                    // SELECTED.entity.position.setValue(SELECTED.position, app.context.user);
                 }
             }
             else {
@@ -350,25 +340,22 @@ app.view.uiEvent.addEventListener(function (evt) {
 });
 function handleRelease() {
     var date = app.context.getTime();
-    if (!Argon.convertEntityReferenceFrame(SELECTED.entity, date, boxSceneEntity)) {
-        SELECTED = null;
-        touchID = null;
-        return false;
-    }
-    var boxPose = app.context.getEntityPose(SELECTED.entity);
+    THREE.SceneUtils.detach(SELECTED, user, scene);
+    THREE.SceneUtils.attach(SELECTED, scene, boxScene);
+    SELECTED = null;
+    touchID = null;
+    // var boxPose = app.context.getEntityPose(SELECTED.entity);
     // console.log("------");
     // console.log("touch released, pos=" + boxPose.position);
     // console.log("touch released, quat=" + boxPose.orientation);
     // console.log("touch released _value pos=" + SELECTED.entity.position._value)
     // console.log("touch released _value quat=" + SELECTED.entity.orientation._value)
     // console.log("------");
-    var boxPose = app.context.getEntityPose(SELECTED.entity, boxSceneEntity);
-    SELECTED.position.copy(boxPose.position);
-    SELECTED.quaternion.copy(boxPose.orientation);
-    user.remove(SELECTED);
-    boxScene.add(SELECTED);
-    SELECTED = null;
-    touchID = null;
+    // var boxPose = app.context.getEntityPose(SELECTED.entity, boxSceneEntity);
+    // SELECTED.position.copy(boxPose.position);
+    // SELECTED.quaternion.copy(boxPose.orientation);
+    // user.remove(SELECTED);
+    // boxScene.add(SELECTED);
     return true;
 }
 function handleSelection() {
@@ -381,37 +368,25 @@ function handleSelection() {
         var object = intersects[0].object;
         var date = app.context.getTime();
         var defaultFrame = app.context.getDefaultReferenceFrame();
-        var oldpose = app.context.getEntityPose(object.entity);
         console.log("------");
-        console.log("touch FIXED pos=" + oldpose.position);
-        console.log("touch FIXED quat=" + oldpose.orientation);
-        console.log("touch FIXED _value pos=" + object.entity.position._value);
-        console.log("touch FIXED _value quat=" + object.entity.orientation._value);
-        if (!Argon.convertEntityReferenceFrame(object.entity, date, app.context.user)) {
-            console.log("touch convert fail");
-            return false;
-        }
+        console.log("touch FIXED pos=" + JSON.stringify(object.position));
+        console.log("touch FIXED quat=" + JSON.stringify(object.quaternion));
+        THREE.SceneUtils.detach(object, boxScene, scene);
+        THREE.SceneUtils.attach(object, scene, user);
         // var newpose = app.context.getEntityPose(object.entity);
         // console.log("touch DEVICE pos=" + newpose.position);
         // console.log("touch DEVICE quat=" + newpose.orientation)
         // console.log("touch DEVICE _value pos=" + object.entity.position._value);
         // console.log("touch DEVICE _value quat=" + object.entity.orientation._value)
         // console.log("------");
-        boxScene.remove(object);
-        user.add(object);
         SELECTED = object;
-        // get the pose in the local coordinates of user
-        var boxPose = app.context.getEntityPose(SELECTED.entity, app.context.user);
-        SELECTED.position.copy(boxPose.position);
-        SELECTED.quaternion.copy(boxPose.orientation);
-        SELECTED.updateMatrixWorld(true);
         // console.log("touch DEVICE pos=" + boxPose.position);
         // console.log("touch DEVICE quat=" + boxPose.orientation)
         // console.log("touch DEVICE _value pos=" + (object.entity.position as any)._value);
         // console.log("touch DEVICE _value quat=" + (object.entity.orientation as any)._value)
         // console.log("------");
         if (!isCrosshair) {
-            var worldLoc = user.localToWorld(SELECTED.position.clone());
+            var worldLoc = user.localToWorld(tempPos.copy(SELECTED.position));
             plane.setFromNormalAndCoplanarPoint(camera.getWorldDirection(plane.normal), worldLoc);
             if (raycaster.ray.intersectPlane(plane, intersection)) {
                 //offset.copy( user.worldToLocal(( intersection ).sub( worldLoc )));
@@ -447,7 +422,7 @@ function handlePointerMove(x, y) {
     }
 }
 // since these don't move, we only update them when the origin changes
-app.context.localOriginChangeEvent.addEventListener(function () {
+app.context.originChangeEvent.addEventListener(function () {
     if (boxInit) {
         console.log("**** new frame of reference");
         var boxPose = app.context.getEntityPose(boxSceneEntity);
@@ -519,9 +494,12 @@ app.updateEvent.addEventListener(function (frame) {
             if (Argon.convertEntityReferenceFrame(boxSceneEntity, frame.time, ReferenceFrame.FIXED)) {
                 geoLocked = true;
                 console.log("Successfully positioned the boxes in the world");
+                // yay!  We're going to continue, either way, since we need it positioned somewhere!
             }
         }
     }
+    // In 6DOF realities, scale down the boxes
+    boxScene.scale.setScalar(app.context.userTracking === '6DOF' ? 0.1 : 1);
     // get the pose of the boxscene in local coordinates, only need to do this when we
     // set it or when the origin changes (see above)
     var boxPose = app.context.getEntityPose(boxSceneEntity);
@@ -529,12 +507,6 @@ app.updateEvent.addEventListener(function (frame) {
     boxScene.quaternion.copy(boxPose.orientation);
     if (isCrosshair) {
         handlePointerMove(0, 0);
-    }
-    // if one is selected, update it's pose since it's attached to the camera
-    if (SELECTED) {
-        var boxPose = app.context.getEntityPose(SELECTED.entity, app.context.user);
-        SELECTED.position.copy(boxPose.position);
-        SELECTED.quaternion.copy(boxPose.orientation);
     }
 });
 // renderEvent is fired whenever argon wants the app to update its display
@@ -552,6 +524,7 @@ app.renderEvent.addEventListener(function (frame) {
     // both views if we are in stereo viewing mode
     var view = app.view;
     renderer.setSize(view.renderWidth, view.renderHeight, false);
+    renderer.setPixelRatio(app.suggestedPixelRatio);
     var viewport = view.viewport;
     hud.setSize(viewport.width, viewport.height);
     // if the viewport width and the renderwidth are different
@@ -585,6 +558,7 @@ app.renderEvent.addEventListener(function (frame) {
         var _c = subview.viewport, x = _c.x, y = _c.y, width = _c.width, height = _c.height;
         hud.setViewport(x, y, width, height, subview.index);
         hud.render(subview.index);
+        //    }
     }
     stats.update();
 });

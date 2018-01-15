@@ -7,7 +7,7 @@
 
 // The original example is in the original-three-example.html file in this directory
   
-var table = [
+var tableContent = [
   [ "H", "Hydrogen", "1.00794", 1, 1 ],
   [ "He", "Helium", "4.002602", 18, 1 ],
   [ "Li", "Lithium", "6.941", 1, 2 ],
@@ -130,10 +130,9 @@ var table = [
 
 // set up Argon
 var app = Argon.init();
-app.view.element.style.zIndex = 0;
 
 var camera, scene, renderer, hud;
-var root, userLocation;
+var periodicTable, stage;
 
 var objects = [];
 var targets = { table: [], sphere: [], helix: [], grid: [] };
@@ -163,8 +162,10 @@ renderer = new THREE.CSS3DArgonRenderer();
 hud = new THREE.CSS3DArgonHUD();
 
 // argon creates the domElement for the view, which we add our renderer dom to
-app.view.element.appendChild(renderer.domElement);
-app.view.element.appendChild(hud.domElement);
+app.view.setLayers([
+  {source: renderer.domElement}, 
+  {source: hud.domElement}
+])
 
 // argon will pass us the camera projection details in each renderEvent callback.  This
 // is necessary to handle different devices, stereo/mono switching, etc.   argon will also
@@ -174,41 +175,23 @@ app.view.element.appendChild(hud.domElement);
 camera = new THREE.PerspectiveCamera();
 scene = new THREE.Scene();
 
-// add a new Object3D, root, that serves as the root of the 3D world in local coordinates.
+// add a new Object3D, periodicTable, that serves as the root of the periodic table in local coordinates.
 // Since the camera is moving in AR, and we want to move the content with us, but have it
-// oriented relative to the world, putting it in a sub-graph under the userLocation object
+// oriented relative to the world, putting it in a sub-graph under the stage object
 // let's us move the location of the content with us.  Content should not be added to the 
 // scene directly unless it is going to be updated as the user moves through the world 
 // (since the world coordinate system is abitrarily chosen to be near the user, and could
 // change at any time)
 
-root = new THREE.Object3D()
-userLocation = new THREE.Object3D;
+periodicTable = new THREE.Object3D()
+periodicTable.scale.setScalar(0.001);
 
-// Add the root node to our eyeOrigin
-userLocation.add(root)
+stage = new THREE.Object3D;
 
-// put the user and the camera in the world.  This allows us to update the userLocation
-// based on the user's currect location in local coordinates, and to update the camera
-// based on it's location and orientation in local coordinates
-scene.add(userLocation);
+// Add the periodicTable node to our stage
+stage.add(periodicTable)
+scene.add(stage);
 scene.add(camera);
-
-// Tell argon what local coordinate system you want.  The default coordinate
-// frame used by Argon is Cesium's FIXED frame, which is centered at the center
-// of the earth and oriented with the earth's axes.  
-// The FIXED frame is inconvenient for a number of reasons: the numbers used are
-// large and cause issues with rendering, and the orientation of the user's "local
-// view of the world" is different that the FIXED orientation (my perception of "up"
-// does not correspond to one of the FIXED axes).  
-// Therefore, Argon uses a local coordinate frame that sits on a plane tangent to 
-// the earth near the user's current location.  This frame automatically changes if the
-// user moves more than a few kilometers.
-// The EUS frame cooresponds to the typical 3D computer graphics coordinate frame, so we use
-// that here.  The other option Argon supports is localOriginEastNorthUp, which is
-// more similar to what is used in the geospatial industry
-app.context.setDefaultReferenceFrame(app.context.localOriginEastUpSouth);
-
 
 // need init to run after everything loads
 window.addEventListener( 'load', init );
@@ -220,14 +203,13 @@ window.addEventListener( 'load', init );
 function init() {
   // some of the exact locations of content below have been changed slightly from the original
   // example so that they work reasonably on smaller mobile phone screens.
-  for ( var i = 0; i < table.length; i ++ ) {
+  for ( var i = 0; i < tableContent.length; i ++ ) {
 
-    var item = table[ i ];
+    var item = tableContent[ i ];
 
     var element = document.createElement( 'div' );
     element.className = 'element';
     element.style.backgroundColor = 'rgba(0,127,127,' + ( Math.random() * 0.5 + 0.25 ) + ')';
-    //element.style.backgroundColor = 'rgba(0,127,127,1)';
 
     // if it's Argon make it bright red
     if (i==17) element.style.backgroundColor = 'rgba(127,0,0,1)';
@@ -255,14 +237,14 @@ function init() {
     objects.push( object );
 
     // Add each object our root node
-    root.add(object);
+    periodicTable.add(object);
   }
 
   // table
 
   for ( var i = 0; i < objects.length; i ++ ) {
 
-    var item = table[ i ];
+    var item = tableContent[ i ];
 
     var target = new THREE.Object3D();
 
@@ -276,7 +258,7 @@ function init() {
 
   // sphere
 
-  var vector = userLocation.position;
+  var vector = stage.position;
 
   for ( var i = 0; i < objects.length; i ++ ) {
 
@@ -432,15 +414,24 @@ function transform( targets, duration ) {
 // the updateEvent is called each time the 3D world should be
 // rendered, before the renderEvent.  The state of your application
 // should be updated here.  Here, we call TWEEN.update()
-app.updateEvent.addEventListener(function () {
-    // get the position and orientation (the "pose") of the user
+app.updateEvent.on(function () {
+    // get the position and orientation (the "pose") of the stage
     // in the local coordinate frame.
-    var userPose = app.context.getEntityPose(app.context.user);
+    var stagePose = app.getEntityPose(app.stage);
 
-    // assuming we know the user's pose, set the position of our 
-    // THREE user object to match it
-    if (userPose.poseStatus & Argon.PoseStatus.KNOWN) {
-        userLocation.position.copy(userPose.position);
+    // set the position of our THREE user object to match it
+    stage.position.copy(stagePose.position);
+    stage.quaternion.copy(stagePose.orientation);
+
+    if (app.userTracking === '6DOF') {
+      if (app.displayMode === 'head') {
+        periodicTable.position.set(0, Argon.AVERAGE_EYE_HEIGHT, 0);
+      } else {
+        periodicTable.position.set(0, Argon.AVERAGE_EYE_HEIGHT / 2, 0);
+      }
+    } else {
+      const userStagePose = app.getEntityPose(app.user, app.stage);
+      periodicTable.position.set(0, userStagePose.position.y, 0);
     }
 
     // update the moving DIVs, if need be
@@ -454,15 +445,10 @@ app.updateEvent.addEventListener(function () {
 // animation callback.
 var viewport = null;
 var subViews = null;
-app.renderEvent.addEventListener(function () {
-    viewport = app.view.getViewport();
-    subViews = app.view.getSubviews();
-//    renderFunc();
-        window.requestAnimationFrame(renderFunc);
-});
+app.renderEvent.on(function () {
+    viewport = app.view.viewport;
+    subViews = app.view.subviews;
 
-// the animation callback.  
-function renderFunc() {
     rAFpending = false;
     // set the renderer to know the current size of the viewport.
     // This is the full size of the viewport, which would include
@@ -504,4 +490,4 @@ function renderFunc() {
         renderer.render(scene, camera, _i);
         hud.render(_i);
     }
-}
+});
