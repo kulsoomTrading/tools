@@ -1,12 +1,12 @@
 // This example is taken from the threejs.org periodic table example,
-// to demonstrate how an existing threejs application is moved to the argon.js 
+// to demonstrate how an existing threejs application is moved to the argon.js
 // framework.
 
 // most importantly, argon applications should only render when asked to do so,
-// rather than in response to animation or other updates.  
+// rather than in response to animation or other updates.
 
 // The original example is in the original-three-example.html file in this directory
-  
+
 var tableContent = [
   [ "H", "Hydrogen", "1.00794", 1, 1 ],
   [ "He", "Helium", "4.002602", 18, 1 ],
@@ -58,7 +58,7 @@ var tableContent = [
   [ "Cd", "Cadmium", "112.411", 12, 5 ],
   [ "In", "Indium", "114.818", 13, 5 ],
   [ "Sn", "Tin", "118.71", 14, 5 ],
-   "Sb", "Antimony", "121.76", 15, 5 ,
+  [ "Sb", "Antimony", "121.76", 15, 5 ],
   [ "Te", "Tellurium", "127.6", 16, 5 ],
   [ "I", "Iodine", "126.90447", 17, 5 ],
   [ "Xe", "Xenon", "131.293", 18, 5 ],
@@ -137,19 +137,19 @@ var periodicTable, stage;
 var objects = [];
 var targets = { table: [], sphere: [], helix: [], grid: [] };
 
-// In a typical threejs example, the camera doesn't move and is controlled by the 
-// mouse.  We do not need that here.  Furthermore, our domElement for rendering is 
+// In a typical threejs example, the camera doesn't move and is controlled by the
+// mouse.  We do not need that here.  Furthermore, our domElement for rendering is
 // coordinated by argon to match the user's prefered rendering setup
 
-//   renderer = new THREE.CSS3DRenderer();
-//   renderer.setSize( window.innerWidth, window.innerHeight );
-//   renderer.domElement.style.position = 'absolute';
-//   renderer.domElement.style.top = 0;
-//   document.getElementById( 'container' ).appendChild( renderer.domElement );
-//
-//   controls = new THREE.TrackballControls( camera, renderer.domElement );
-//   controls.rotateSpeed = 0.5;
-//   controls.addEventListener( 'change', render );
+   renderer = new THREE.CSS3DRenderer();
+   renderer.setSize( window.innerWidth, window.innerHeight );
+   renderer.domElement.style.position = 'absolute';
+   renderer.domElement.style.top = 0;
+   document.getElementById( 'container' ).appendChild( renderer.domElement );
+
+   controls = new THREE.TrackballControls( camera, renderer.domElement );
+   controls.rotateSpeed = 0.5;
+     controls.addEventListener( 'change', render );
 
 // In argon, we use a custom version of the CSS3DRenderer called CSS3DArgonRenderer.
 // This version of the renderer supports stereo in a way that fits with Argon's renderEvent,
@@ -163,23 +163,23 @@ hud = new THREE.CSS3DArgonHUD();
 
 // argon creates the domElement for the view, which we add our renderer dom to
 app.view.setLayers([
-  {source: renderer.domElement}, 
+  {source: renderer.domElement},
   {source: hud.domElement}
 ])
 
 // argon will pass us the camera projection details in each renderEvent callback.  This
 // is necessary to handle different devices, stereo/mono switching, etc.   argon will also
 // tell us the position of the camera to correspond to user movement
-//    camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 5000 );
-//		camera.position.z = 1800;
+    camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 5000 );
+		camera.position.z = 1800;
 camera = new THREE.PerspectiveCamera();
 scene = new THREE.Scene();
 
 // add a new Object3D, periodicTable, that serves as the root of the periodic table in local coordinates.
 // Since the camera is moving in AR, and we want to move the content with us, but have it
 // oriented relative to the world, putting it in a sub-graph under the stage object
-// let's us move the location of the content with us.  Content should not be added to the 
-// scene directly unless it is going to be updated as the user moves through the world 
+// let's us move the location of the content with us.  Content should not be added to the
+// scene directly unless it is going to be updated as the user moves through the world
 // (since the world coordinate system is abitrarily chosen to be near the user, and could
 // change at any time)
 
@@ -196,9 +196,9 @@ scene.add(camera);
 // need init to run after everything loads
 window.addEventListener( 'load', init );
 
-// The original animate function was called once to start the 
+// The original animate function was called once to start the
 // requestAnimationFrame update cycle.  We don't do that with Argon
-//    animate();
+    animate();
 
 function init() {
   // some of the exact locations of content below have been changed slightly from the original
@@ -343,7 +343,7 @@ function init() {
   transform( targets.table, 5000 );
 
   // do not need to respond to windowResize events.  Argon handles this for us
-  //    window.addEventListener( 'resize', onWindowResize, false );
+     window.addEventListener( 'resize', onWindowResize, false );
 
 }
 
@@ -367,49 +367,49 @@ function transform( targets, duration ) {
 
       }
 
-      // An EXTREMELY important difference between creating desktop 3D content and 
+      // An EXTREMELY important difference between creating desktop 3D content and
       // AR content using Argon is that we should not render except when argon tells
-      // us to.  In this way, Argon can decide when to render based on the kind of Reality 
+      // us to.  In this way, Argon can decide when to render based on the kind of Reality
       // being rendered, and the device being used.  So, we do not leverage the Tween.onUpdate
-      // callback. 
+      // callback.
       new TWEEN.Tween( this )
         .to( {}, duration * 2 )
-//					.onUpdate( render )
+					.onUpdate( render )
         .start();
-  
+
 }
 
 // The original demo responded to windowResize events but updating the camera.
 // argon handles this functionality and sends the appropriate information to
 // the render callback each frame.
 
-// 			function onWindowResize() {
-//
-// 				camera.aspect = window.innerWidth / window.innerHeight;
-// 				camera.updateProjectionMatrix();
-//
-// 				renderer.setSize( window.innerWidth, window.innerHeight );
-//
-// 			}
+ 			function onWindowResize() {
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+ 				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
 
 // The original demo used a simple animation loop to trigger regular updates,
 // and manage the mouse virtual trackball controller.  Argon send update
 // messages, which we cache and trigger requestAnimationFrames from (see below)
 
-// 			function animate() {
-//
-// 				requestAnimationFrame( animate );
-//
-// 				TWEEN.update();
-// 				controls.update();
-//
-// 			}
-//
-// 			function render() {
-//
-// 				renderer.render( scene, camera );
-//
-// 			}
+ 			function animate() {
+
+				requestAnimationFrame( animate );
+
+				TWEEN.update();
+				controls.update();
+
+			}
+
+			function render() {
+
+ 				renderer.render( scene, camera );
+
+ 			}
 
 // the updateEvent is called each time the 3D world should be
 // rendered, before the renderEvent.  The state of your application
@@ -435,13 +435,13 @@ app.updateEvent.on(function () {
     }
 
     // update the moving DIVs, if need be
-    TWEEN.update();  
+    TWEEN.update();
 });
 
-// for the CSS renderer, we want to use requestAnimationFrame to 
-// limit the number of repairs of the DOM.  Otherwise, as the 
-// DOM elements are updated, extra repairs of the DOM could be 
-// initiated.  Extra repairs do not appear to happen within the 
+// for the CSS renderer, we want to use requestAnimationFrame to
+// limit the number of repairs of the DOM.  Otherwise, as the
+// DOM elements are updated, extra repairs of the DOM could be
+// initiated.  Extra repairs do not appear to happen within the
 // animation callback.
 var viewport = null;
 var subViews = null;
@@ -457,7 +457,7 @@ app.renderEvent.on(function () {
     hud.setSize(viewport.width, viewport.height);
 
     // There is 1 subview in monocular mode, 2 in stereo mode.
-    // If we are in mono view, show the buttons.  If not, hide them, 
+    // If we are in mono view, show the buttons.  If not, hide them,
     // since we can't interact with them in an HMD
     if (subViews.length > 1 || !app.focus.hasFocus) {
       hud.domElement.style.display = 'none';
@@ -465,18 +465,18 @@ app.renderEvent.on(function () {
       hud.domElement.style.display = 'block';
     }
 
-    // we pass the view number to the renderer so it knows 
+    // we pass the view number to the renderer so it knows
     // which div's to use for each view
     for (var _i = 0, _a = subViews; _i < _a.length; _i++) {
         var subview = _a[_i];
         var frustum = subview.frustum;
 
-        // set the position and orientation of the camera for 
+        // set the position and orientation of the camera for
         // this subview
         camera.position.copy(subview.pose.position);
         camera.quaternion.copy(subview.pose.orientation);
         // the underlying system provide a full projection matrix
-        // for the camera.  Use it, and then update the FOV of the 
+        // for the camera.  Use it, and then update the FOV of the
         // camera from it (needed by the CSS Perspective DIV)
         camera.projectionMatrix.fromArray(subview.frustum.projectionMatrix);
         camera.fov = THREE.Math.radToDeg(frustum.fovy);
