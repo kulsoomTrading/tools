@@ -88,6 +88,7 @@
 			}
 		</style>
 	</head>
+<a-scene 
 	<body>
 		<script src="../build/three.js"></script>
 		<script src="js/libs/tween.min.js"></script>
@@ -102,7 +103,8 @@
 			<button id="helix">HELIX</button>
 			<button id="grid">GRID</button>
 		</div>
-
+	<a-camera gps-camera="minDistance: 20;" rotation-reader>
+	</a-camera>
 		<script>
 			var table = [
 				"H", "Hydrogen", "1.00794", 1, 1,
@@ -365,4 +367,5 @@
 			}
 		</script>
 	</body>
+</a-scene>
 </html>
